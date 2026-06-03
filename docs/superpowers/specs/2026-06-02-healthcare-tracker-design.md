@@ -65,9 +65,10 @@ section set, or Docker support.
 
 ### Network & exposure
 
-- Exposed at a dedicated subdomain (e.g., `health.spicylimeslabs.com`) **only**
+- Exposed at a dedicated subdomain (e.g., `healthcare.spicylimeslabs.com`) **only**
   through the existing Cloudflare Tunnel. No inbound ports are opened on the host.
-- Tailscale remains available as an admin/LAN fallback path to the server.
+  (The current `ai.spicylimeslabs.com` tunnel can be repurposed/reconfigured for
+  this subdomain.)
 
 ## Sections & Data Model
 
@@ -152,7 +153,10 @@ Defense in depth, appropriate for protected health information (PHI):
 
 - Owner runs Cloudflare with an existing tunnel and Cloudflare Access already
   configured (`ai.spicylimeslabs.com` currently fronts an OpenWebUI Docker stack
-  with a `cloudflared` container, managed in Portainer on a LAN server).
-- Tailscale is on all important servers and provides an admin/LAN access path.
+  with a `cloudflared` container, managed in Portainer on a LAN server). This
+  tunnel/subdomain can be repurposed to `healthcare.spicylimeslabs.com` for this
+  app.
+- Access to this app is handled entirely by the Cloudflare Tunnel plus Cloudflare
+  Access; Tailscale is **not** part of this project's access model.
 - Owner also has JaguarPC reseller hosting and an existing NextCloud instance, but
   the Docker + Cloudflare Tunnel path on the LAN server was chosen over those.
