@@ -1,5 +1,5 @@
 ## HEALTHCARE TRACKER APP
-*A Dockerized App that Assists Individuals, Caretakers, and Friends/Family Members with keeping track of a Patient's Healthcare Information.*
+*A Dockerized App that assists Individuals, Caretakers, and Friends/Family Members with keeping track of a Patient's Healthcare Information.*
 
 ### *Work In Progress - Please check back later...*
 
