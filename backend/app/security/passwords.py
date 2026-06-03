@@ -10,7 +10,11 @@ class PasswordPolicyError(ValueError):
 
 
 def hash_password(plain: str) -> str:
-    """Hash a plaintext password using the recommended algorithm (Argon2)."""
+    """Hash a plaintext password using the recommended algorithm (Argon2).
+
+    Enforces the password policy first, so a too-weak password is never hashed.
+    """
+    validate_password_policy(plain)
     return _hasher.hash(plain)
 
 

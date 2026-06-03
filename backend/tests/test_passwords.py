@@ -26,3 +26,17 @@ def test_policy_accepts_strong_password():
 def test_policy_rejects_short_password():
     with pytest.raises(PasswordPolicyError):
         validate_password_policy("short1")
+
+
+def test_hash_rejects_short_password():
+    with pytest.raises(PasswordPolicyError):
+        hash_password("short")
+
+
+def test_policy_accepts_exact_minimum_length():
+    # Exactly 12 characters must be accepted (boundary: condition is len < 12)
+    validate_password_policy("a" * 12)  # no raise
+
+
+def test_policy_accepts_returns_none():
+    assert validate_password_policy("a-strong-passphrase-123") is None
