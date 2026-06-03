@@ -2,10 +2,11 @@
 docs/superpowers/
 docs/project/
 
-# Environment variables
+# Env / secrets
 .env
 .env.*
 !.env.example
+*.local
 
 # Python
 __pycache__/
@@ -14,6 +15,7 @@ __pycache__/
 *.pyd
 .Python
 *.egg-info/
+.pytest_cache/
 dist/
 build/
 .venv/
@@ -26,6 +28,9 @@ dist/
 .next/
 .nuxt/
 .cache/
+.vite/
+coverage/
+*.tsbuildinfo
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
