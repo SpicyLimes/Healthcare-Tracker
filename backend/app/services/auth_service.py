@@ -8,19 +8,20 @@ from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.security.passwords import hash_password, validate_password_policy, verify_password
 from app.security.tokens import generate_refresh_token, hash_refresh_token
+from app.utils.email import normalize_email
 
 
 class InvalidCurrentPasswordError(Exception):
     """Raised when the supplied current password is wrong."""
 
 
-def _normalize_email(email: str) -> str:
-    return email.strip().lower()
-
-
 def authenticate(db: Session, email: str, password: str) -> User | None:
     """Return the user if email+password are valid and the account is active, else None."""
-    user = db.scalar(select(User).where(User.email == _normalize_email(email)))
+    user = db.scalar(select(User).where(User.email == normalize_email(email)))
+    # NOTE: We return early without calling verify_password when the user is
+    # missing or inactive, which is a known timing side-channel that could reveal
+    # whether an email is registered. Mitigation is deferred to Phase 7
+    # (rate-limiting / lockout), which makes the signal economically useless.
     if user is None or not user.is_active:
         return None
     if not verify_password(password, user.hashed_password):
@@ -59,6 +60,7 @@ def rotate_refresh_token(db: Session, raw: str) -> tuple[User, str] | None:
     if record is None:
         return None
     record.revoked_at = datetime.now(timezone.utc)
+    db.flush()
     user = db.get(User, record.user_id)
     if user is None or not user.is_active:
         return None

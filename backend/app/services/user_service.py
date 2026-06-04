@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.user import Role, User
 from app.security.passwords import hash_password, validate_password_policy
+from app.utils.email import normalize_email
 
 
 class LastAdminError(Exception):
@@ -15,10 +16,6 @@ class UserNotFoundError(Exception):
     """Raised when a user id does not exist."""
 
 
-def _normalize_email(email: str) -> str:
-    return email.strip().lower()
-
-
 def _admin_count(db: Session) -> int:
     return db.scalar(select(func.count()).select_from(User).where(User.role == Role.admin)) or 0
 
@@ -27,7 +24,7 @@ def create_user(db: Session, email: str, password: str, role: Role) -> User:
     validate_password_policy(password)
     user = User(
         id=uuid.uuid4(),
-        email=_normalize_email(email),
+        email=normalize_email(email),
         hashed_password=hash_password(password),
         role=role,
         is_active=True,
