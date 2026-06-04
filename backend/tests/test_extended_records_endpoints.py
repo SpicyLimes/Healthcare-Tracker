@@ -48,14 +48,19 @@ def _crud_suite(client, db, prefix: str, create_payload: dict, update_payload: d
 
 
 def _auth_suite(client, db, prefix: str, create_payload: dict):
-    """viewer read / no-CSRF write / unauth read."""
+    """viewer read-only / CSRF-less write blocked / unauthenticated read blocked."""
     csrf = _admin(client, db)
     client.post(prefix, headers={"X-CSRF-Token": csrf}, json=create_payload)
     client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
 
     _viewer(client, db)
+    viewer_csrf = client.cookies.get("csrf_token")
     assert client.get(prefix).status_code == 200
     assert client.post(prefix, json=create_payload).status_code == 403
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": viewer_csrf})
+
+    # Unauthenticated access is blocked
+    assert client.get(prefix).status_code == 401
 
 
 def _404_suite(client, db, prefix: str, update_payload: dict):
@@ -179,12 +184,15 @@ def test_hospitalizations_422(client, db_session):
 def test_hospitalizations_doctor_fk_set_null(client, db_session):
     csrf = _admin(client, db_session)
     doc = client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Dr. Jones"})
+    assert doc.status_code == 201
     doc_id = doc.json()["id"]
     hosp = client.post("/api/hospitalizations", headers={"X-CSRF-Token": csrf},
                        json={"facility": "City Hospital", "attending_physician_id": doc_id})
+    assert hosp.status_code == 201
     hosp_id = hosp.json()["id"]
-    client.delete(f"/api/doctors/{doc_id}", headers={"X-CSRF-Token": csrf})
+    assert client.delete(f"/api/doctors/{doc_id}", headers={"X-CSRF-Token": csrf}).status_code == 204
     r = client.get(f"/api/hospitalizations/{hosp_id}")
+    assert r.status_code == 200
     assert r.json()["attending_physician_id"] is None
 
 
@@ -205,12 +213,16 @@ def test_vision_history_404(client, db_session):
 def test_vision_history_doctor_fk_set_null(client, db_session):
     csrf = _admin(client, db_session)
     doc = client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Dr. Eyes"})
+    assert doc.status_code == 201
     doc_id = doc.json()["id"]
     vis = client.post("/api/vision-history", headers={"X-CSRF-Token": csrf},
                       json={"provider_id": doc_id})
+    assert vis.status_code == 201
     vis_id = vis.json()["id"]
-    client.delete(f"/api/doctors/{doc_id}", headers={"X-CSRF-Token": csrf})
-    assert client.get(f"/api/vision-history/{vis_id}").json()["provider_id"] is None
+    assert client.delete(f"/api/doctors/{doc_id}", headers={"X-CSRF-Token": csrf}).status_code == 204
+    r = client.get(f"/api/vision-history/{vis_id}")
+    assert r.status_code == 200
+    assert r.json()["provider_id"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -230,12 +242,16 @@ def test_dental_history_404(client, db_session):
 def test_dental_history_doctor_fk_set_null(client, db_session):
     csrf = _admin(client, db_session)
     doc = client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Dr. Teeth"})
+    assert doc.status_code == 201
     doc_id = doc.json()["id"]
     den = client.post("/api/dental-history", headers={"X-CSRF-Token": csrf},
                       json={"provider_id": doc_id})
+    assert den.status_code == 201
     den_id = den.json()["id"]
-    client.delete(f"/api/doctors/{doc_id}", headers={"X-CSRF-Token": csrf})
-    assert client.get(f"/api/dental-history/{den_id}").json()["provider_id"] is None
+    assert client.delete(f"/api/doctors/{doc_id}", headers={"X-CSRF-Token": csrf}).status_code == 204
+    r = client.get(f"/api/dental-history/{den_id}")
+    assert r.status_code == 200
+    assert r.json()["provider_id"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -274,12 +290,16 @@ def test_visit_logs_404(client, db_session):
 def test_visit_logs_doctor_fk_set_null(client, db_session):
     csrf = _admin(client, db_session)
     doc = client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Dr. Primary"})
+    assert doc.status_code == 201
     doc_id = doc.json()["id"]
     vl = client.post("/api/visit-logs", headers={"X-CSRF-Token": csrf},
                      json={"doctor_id": doc_id, "reason": "Follow-up"})
+    assert vl.status_code == 201
     vl_id = vl.json()["id"]
-    client.delete(f"/api/doctors/{doc_id}", headers={"X-CSRF-Token": csrf})
-    assert client.get(f"/api/visit-logs/{vl_id}").json()["doctor_id"] is None
+    assert client.delete(f"/api/doctors/{doc_id}", headers={"X-CSRF-Token": csrf}).status_code == 204
+    r = client.get(f"/api/visit-logs/{vl_id}")
+    assert r.status_code == 200
+    assert r.json()["doctor_id"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -305,9 +325,13 @@ def test_appointments_422(client, db_session):
 def test_appointments_doctor_fk_set_null(client, db_session):
     csrf = _admin(client, db_session)
     doc = client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Dr. Appt"})
+    assert doc.status_code == 201
     doc_id = doc.json()["id"]
     appt = client.post("/api/appointments", headers={"X-CSRF-Token": csrf},
                        json={"appointment_datetime": "2026-08-01T09:00:00Z", "doctor_id": doc_id})
+    assert appt.status_code == 201
     appt_id = appt.json()["id"]
-    client.delete(f"/api/doctors/{doc_id}", headers={"X-CSRF-Token": csrf})
-    assert client.get(f"/api/appointments/{appt_id}").json()["doctor_id"] is None
+    assert client.delete(f"/api/doctors/{doc_id}", headers={"X-CSRF-Token": csrf}).status_code == 204
+    r = client.get(f"/api/appointments/{appt_id}")
+    assert r.status_code == 200
+    assert r.json()["doctor_id"] is None
