@@ -30,6 +30,7 @@ export default function UsersPage() {
   }
 
   async function onDelete(id: string) {
+    setError("");
     try {
       await deleteUser(id);
       await reload();

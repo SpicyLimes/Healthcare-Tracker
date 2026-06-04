@@ -1,12 +1,9 @@
+import { csrfHeader } from "./csrf";
+
 export interface CurrentUser {
   id: string;
   email: string;
   role: "admin" | "viewer";
-}
-
-function csrfHeader(): Record<string, string> {
-  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
-  return match ? { "X-CSRF-Token": decodeURIComponent(match[1]) } : {};
 }
 
 export async function login(email: string, password: string): Promise<CurrentUser> {
