@@ -1,5 +1,6 @@
 import type { CurrentUser } from "./auth";
 import { csrfHeader } from "./csrf";
+import { apiFetch } from "./client";
 
 export interface ManagedUser extends CurrentUser {
   is_active: boolean;
@@ -7,13 +8,13 @@ export interface ManagedUser extends CurrentUser {
 }
 
 export async function listUsers(): Promise<ManagedUser[]> {
-  const res = await fetch("/api/users");
+  const res = await apiFetch("/api/users");
   if (!res.ok) throw new Error("Failed to list users");
   return (await res.json()) as ManagedUser[];
 }
 
 export async function createUser(email: string, password: string, role: "admin" | "viewer"): Promise<ManagedUser> {
-  const res = await fetch("/api/users", {
+  const res = await apiFetch("/api/users", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...csrfHeader() },
     body: JSON.stringify({ email, password, role }),
@@ -23,6 +24,6 @@ export async function createUser(email: string, password: string, role: "admin" 
 }
 
 export async function deleteUser(id: string): Promise<void> {
-  const res = await fetch(`/api/users/${id}`, { method: "DELETE", headers: { ...csrfHeader() } });
+  const res = await apiFetch(`/api/users/${id}`, { method: "DELETE", headers: { ...csrfHeader() } });
   if (!res.ok) throw new Error("Failed to delete user");
 }

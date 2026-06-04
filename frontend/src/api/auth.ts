@@ -1,4 +1,5 @@
 import { csrfHeader } from "./csrf";
+import { apiFetch } from "./client";
 
 export interface CurrentUser {
   id: string;
@@ -21,7 +22,7 @@ export async function logout(): Promise<void> {
 }
 
 export async function getMe(): Promise<CurrentUser | null> {
-  const res = await fetch("/api/auth/me");
+  const res = await apiFetch("/api/auth/me");
   if (res.status === 401) return null;
   if (!res.ok) throw new Error("Failed to load user");
   return (await res.json()) as CurrentUser;
@@ -33,7 +34,7 @@ export async function refresh(): Promise<boolean> {
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
-  const res = await fetch("/api/auth/password", {
+  const res = await apiFetch("/api/auth/password", {
     method: "PUT",
     headers: { "Content-Type": "application/json", ...csrfHeader() },
     body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
