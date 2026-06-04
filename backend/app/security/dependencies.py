@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import Cookie, Depends, HTTPException, status
+from fastapi import Cookie, Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -41,3 +41,13 @@ def require_admin(current: User = Depends(get_current_user)) -> User:
     if current.role != Role.admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin required")
     return current
+
+
+def verify_csrf(
+    request: Request,
+    x_csrf_token: str | None = Header(default=None),
+) -> None:
+    """Double-submit CSRF check for state-changing requests."""
+    cookie_token = request.cookies.get("csrf_token")
+    if not cookie_token or not x_csrf_token or cookie_token != x_csrf_token:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF check failed")
