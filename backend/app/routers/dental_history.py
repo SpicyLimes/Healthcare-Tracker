@@ -1,3 +1,4 @@
+from app.models.document import DocumentSection
 from app.models.extended_records import DentalHistory
 from app.routers.records import build_list_router
 from app.schemas.extended_records import DentalHistoryCreate, DentalHistoryUpdate, DentalHistoryResponse
@@ -9,4 +10,5 @@ router = build_list_router(
     create_schema=DentalHistoryCreate,
     update_schema=DentalHistoryUpdate,
     response_schema=DentalHistoryResponse,
+    document_section=DocumentSection.dental_history,
 )

@@ -1,3 +1,4 @@
+from app.models.document import DocumentSection
 from app.models.extended_records import Insurance
 from app.routers.records import build_list_router
 from app.schemas.extended_records import InsuranceCreate, InsuranceUpdate, InsuranceResponse
@@ -9,4 +10,5 @@ router = build_list_router(
     create_schema=InsuranceCreate,
     update_schema=InsuranceUpdate,
     response_schema=InsuranceResponse,
+    document_section=DocumentSection.insurances,
 )

@@ -2,7 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.document import DocumentSection
+from app.models.profile import Profile
 from app.models.user import User
+from app.routers.records import attach_document_routes
 from app.schemas.records import ProfileResponse, ProfileWrite
 from app.security.dependencies import get_current_user, require_admin, verify_csrf
 from app.services import profile_service
@@ -30,3 +33,7 @@ def put_profile(
     current: User = Depends(require_admin),
 ):
     return profile_service.upsert_profile(db, payload.model_dump(), created_by=current.id)
+
+
+# Profile has a UUID primary key; attach document upload/list routes keyed by that id.
+attach_document_routes(router, DocumentSection.profile, Profile)

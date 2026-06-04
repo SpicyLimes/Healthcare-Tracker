@@ -1,3 +1,4 @@
+from app.models.document import DocumentSection
 from app.models.extended_records import VisionHistory
 from app.routers.records import build_list_router
 from app.schemas.extended_records import VisionHistoryCreate, VisionHistoryUpdate, VisionHistoryResponse
@@ -9,4 +10,5 @@ router = build_list_router(
     create_schema=VisionHistoryCreate,
     update_schema=VisionHistoryUpdate,
     response_schema=VisionHistoryResponse,
+    document_section=DocumentSection.vision_history,
 )
