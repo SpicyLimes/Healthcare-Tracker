@@ -17,8 +17,12 @@ export default function DoctorPicker({ doctorId, doctorOther, onChange, disabled
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
 
+  // Sync showOther when parent changes doctorOther externally (e.g., form reset or record load)
+  useEffect(() => {
+    setShowOther(doctorId === null && doctorOther !== null);
+  }, [doctorId, doctorOther]);
+
   const selectValue = doctorId ?? (showOther ? "__other__" : "");
-  const otherValue = doctorOther ?? "";
 
   function handleSelect(e: React.ChangeEvent<HTMLSelectElement>) {
     const val = e.target.value;
@@ -46,7 +50,7 @@ export default function DoctorPicker({ doctorId, doctorOther, onChange, disabled
       {showOther && (
         <input
           type="text"
-          value={otherValue}
+          value={doctorOther ?? ""}
           disabled={disabled}
           onChange={(e) => onChange(null, e.target.value)}
           placeholder="Doctor name"
