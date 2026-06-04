@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     # Cookies: secure=True in production (HTTPS only); may be False for local HTTP dev
     cookie_secure: bool = False
 
+    # File uploads
+    uploads_root: str = "/app/uploads"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
