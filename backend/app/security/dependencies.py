@@ -26,7 +26,11 @@ def get_current_user(
     user_id = claims.get("sub")
     if not user_id:
         raise _CREDENTIALS_EXCEPTION
-    user = db.get(User, uuid.UUID(user_id))
+    try:
+        uid = uuid.UUID(user_id)
+    except ValueError:
+        raise _CREDENTIALS_EXCEPTION
+    user = db.get(User, uid)
     if user is None or not user.is_active:
         raise _CREDENTIALS_EXCEPTION
     return user
