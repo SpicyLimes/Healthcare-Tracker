@@ -17,6 +17,10 @@ export default function HomePage() {
       <p>Signed in as {user?.email} ({user?.role})</p>
       {health && <p>Backend: {health.status} — Database: {health.database}</p>}
       <nav style={{ display: "flex", gap: "1rem" }}>
+        <Link to="/profile">Profile</Link>
+        <Link to="/medications">Medications</Link>
+        <Link to="/doctors">Doctors</Link>
+        <Link to="/ailments">Ailment history</Link>
         <Link to="/change-password">Change password</Link>
         {user?.role === "admin" && <Link to="/users">Manage users</Link>}
         <button onClick={logout}>Log out</button>
