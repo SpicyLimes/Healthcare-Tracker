@@ -9,7 +9,7 @@ export default function AppointmentsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Appointment[]>([]);
-  const [form, setForm] = useState<AppointmentInput>({ appointment_datetime: "" });
+  const [form, setForm] = useState<AppointmentInput>({ appointment_datetime: "", status: "upcoming" });
   const [error, setError] = useState("");
 
   async function reload() { setRows(await appointmentsApi.list()); }
@@ -18,7 +18,7 @@ export default function AppointmentsPage() {
   async function onAdd(e: FormEvent) {
     e.preventDefault();
     setError("");
-    try { await appointmentsApi.create(form); setForm({ appointment_datetime: "" }); await reload(); }
+    try { await appointmentsApi.create(form); setForm({ appointment_datetime: "", status: "upcoming" }); await reload(); }
     catch { setError("Could not add record"); }
   }
 
