@@ -11,12 +11,17 @@ RUN pip install --no-cache-dir \
     "uvicorn[standard]==0.34.0" \
     "sqlalchemy==2.0.36" \
     "psycopg[binary]==3.2.3" \
-    "pydantic-settings==2.6.1"
+    "pydantic-settings==2.6.1" \
+    "pyjwt==2.13.0" \
+    "pwdlib[argon2]==0.3.0" \
+    "alembic==1.18.4" \
+    "email-validator==2.2.0"
 
-# Copy application code
+# Copy Alembic config and application code (migrations live under app/migrations)
+COPY alembic.ini ./
 COPY app ./app
 
 EXPOSE 8000
 
-# Run the API. Host 0.0.0.0 so it is reachable from other containers.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Apply migrations, then run the API. Host 0.0.0.0 for inter-container reach.
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

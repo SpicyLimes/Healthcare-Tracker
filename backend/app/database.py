@@ -12,9 +12,18 @@ class Base(DeclarativeBase):
 
 
 def get_db():
-    """FastAPI dependency that yields a database session and closes it after use."""
+    """FastAPI dependency that yields a database session.
+
+    Commits on successful request handling and rolls back if the handler
+    raises, then always closes the session. Services flush their writes within
+    the request; the commit here is what actually persists them.
+    """
     db: Session = SessionLocal()
     try:
         yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()

@@ -70,7 +70,26 @@ environment variables (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`,
 frontend (host port `8080`) behind your own reverse proxy with TLS as
 appropriate for your environment.
 
-> **Status:** Phase 1 (foundation) establishes the containerized stack and the
-> health-check connectivity path. Authentication, user roles, the record
-> sections listed above, document uploads, and related features are planned for
-> subsequent phases.
+> **Status:** The foundation establishes the containerized stack and the
+> health-check connectivity path; authentication and user roles are in place
+> (see below). The record sections listed above, document uploads, and related
+> features are planned for subsequent phases.
+
+### Authentication
+
+The app uses email/password login with two roles: **Admin** (full access and user
+management) and **Viewer** (read-only). There is no public sign-up.
+
+- **First admin:** On first startup with an empty database, an initial admin is
+  created from `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` (see
+  `.env.example`). `INITIAL_ADMIN_PASSWORD` must be at least 12 characters or
+  startup fails. Change the password after first login.
+- **Sessions:** Short-lived access tokens plus refresh tokens, delivered as
+  httpOnly cookies; the client refreshes transparently. State-changing requests
+  are CSRF-protected.
+- **Database schema** is managed with Alembic migrations. The backend image runs
+  `alembic upgrade head` on startup; to run migrations manually:
+  `cd backend && alembic upgrade head`.
+
+Set `JWT_SECRET` to a long random value and `COOKIE_SECURE=true` in any
+environment served over HTTPS.
