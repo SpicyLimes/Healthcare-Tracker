@@ -1,3 +1,5 @@
+import pytest
+
 from app.models.user import Role
 from app.services import user_service
 
@@ -57,3 +59,37 @@ def test_change_password_requires_correct_current(client, db_session):
     good = client.put("/api/auth/password", headers={"X-CSRF-Token": csrf},
                       json={"current_password": "a-strong-passphrase-123", "new_password": "new-strong-passphrase-456"})
     assert good.status_code == 204
+
+
+@pytest.mark.parametrize("method,path", [
+    ("POST", "/api/auth/refresh"),
+    ("POST", "/api/auth/logout"),
+    ("PUT", "/api/auth/password"),
+])
+def test_csrf_missing_header_rejected(client, db_session, method, path):
+    _login(client, db_session)
+    resp = client.request(method, path, json={})
+    assert resp.status_code == 403
+
+
+def test_csrf_wrong_token_rejected(client, db_session):
+    _login(client, db_session)
+    resp = client.post("/api/auth/refresh", headers={"X-CSRF-Token": "wrong-value"})
+    assert resp.status_code == 403
+
+
+def test_refresh_without_cookie_is_unauthorized(client, db_session):
+    # Establish a CSRF cookie via login, then DELETE the refresh cookie so rotation fails.
+    _login(client, db_session)
+    csrf = client.cookies.get("csrf_token")
+    client.cookies.delete("refresh_token")
+    resp = client.post("/api/auth/refresh", headers={"X-CSRF-Token": csrf})
+    assert resp.status_code == 401
+
+
+def test_refresh_with_invalid_token_is_unauthorized(client, db_session):
+    _login(client, db_session)
+    csrf = client.cookies.get("csrf_token")
+    client.cookies.set("refresh_token", "not-a-real-refresh-token")
+    resp = client.post("/api/auth/refresh", headers={"X-CSRF-Token": csrf})
+    assert resp.status_code == 401

@@ -19,5 +19,6 @@ def set_auth_cookies(response: Response, access_token: str, refresh_token: str, 
 
 
 def clear_auth_cookies(response: Response) -> None:
+    kwargs = {"secure": settings.cookie_secure, "samesite": "strict", "path": "/"}
     for name in (ACCESS_COOKIE, REFRESH_COOKIE, CSRF_COOKIE):
-        response.delete_cookie(name, path="/")
+        response.delete_cookie(name, **kwargs)
