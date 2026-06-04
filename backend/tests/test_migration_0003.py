@@ -48,6 +48,9 @@ def test_migration_0003_round_trip(fresh_db_url, monkeypatch):
     command.downgrade(cfg, "base")
     eng = create_engine(fresh_db_url)
     tables = set(inspect(eng).get_table_names())
-    assert "insurances" not in tables
-    assert "appointments" not in tables
+    assert not tables & {
+        "insurances", "pharmacies", "family_history", "surgeries",
+        "hospitalizations", "vision_history", "dental_history",
+        "vaccinations", "visit_logs", "appointments",
+    }
     eng.dispose()
