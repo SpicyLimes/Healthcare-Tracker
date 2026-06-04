@@ -51,7 +51,8 @@ def save_document(
             detail="File exceeds the 20 MB size limit.",
         )
 
-    stored_name = f"{uuid.uuid4()}_{file.filename}"
+    safe_filename = os.path.basename(file.filename or "upload")
+    stored_name = f"{uuid.uuid4()}_{safe_filename}"
     upload_dir = os.path.join(settings.uploads_root, section.value)
     os.makedirs(upload_dir, exist_ok=True)
     file_path = os.path.join(upload_dir, stored_name)
@@ -59,7 +60,7 @@ def save_document(
         f.write(data)
 
     doc = Document(
-        filename=file.filename,
+        filename=safe_filename,
         stored_filename=stored_name,
         section=section,
         record_id=str(record_id),
