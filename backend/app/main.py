@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from app.config import settings
 from app.database import SessionLocal
-from app.routers import auth, health, users
+from app.routers import ailments, auth, doctors, health, medications, users
 from app.services import user_service
 
 
@@ -32,3 +32,6 @@ app = FastAPI(title="Healthcare Tracker API", version="0.2.0", lifespan=lifespan
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(medications.router)
+app.include_router(doctors.router)
+app.include_router(ailments.router)
