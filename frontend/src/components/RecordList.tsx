@@ -12,27 +12,27 @@ export interface Field {
   type?: string;
 }
 
-interface RecordApi<T> {
+interface RecordApi<T, TInput = Record<string, string>> {
   list: () => Promise<T[]>;
-  create: (input: Record<string, string>) => Promise<T>;
+  create: (input: TInput) => Promise<T>;
   remove: (id: string) => Promise<void>;
 }
 
-interface RecordListProps<T extends { id: string }> {
+interface RecordListProps<T extends { id: string }, TInput = Record<string, string>> {
   title: string;
-  api: RecordApi<T>;
+  api: RecordApi<T, TInput>;
   columns: Column<T>[];
   fields: Field[];
   isAdmin: boolean;
 }
 
-export default function RecordList<T extends { id: string }>({
+export default function RecordList<T extends { id: string }, TInput = Record<string, string>>({
   title,
   api,
   columns,
   fields,
   isAdmin,
-}: RecordListProps<T>) {
+}: RecordListProps<T, TInput>) {
   const [rows, setRows] = useState<T[]>([]);
   const [form, setForm] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
@@ -53,7 +53,7 @@ export default function RecordList<T extends { id: string }>({
       const payload = Object.fromEntries(
         Object.entries(form).filter(([, v]) => v !== ""),
       ) as Record<string, string>;
-      await api.create(payload);
+      await api.create(payload as TInput);
       setForm({});
       await reload();
     } catch {
