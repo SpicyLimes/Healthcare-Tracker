@@ -16,11 +16,21 @@ export default function HomePage() {
       <h1>Healthcare Tracker</h1>
       <p>Signed in as {user?.email} ({user?.role})</p>
       {health && <p>Backend: {health.status} — Database: {health.database}</p>}
-      <nav style={{ display: "flex", gap: "1rem" }}>
+      <nav style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
         <Link to="/profile">Profile</Link>
         <Link to="/medications">Medications</Link>
         <Link to="/doctors">Doctors</Link>
         <Link to="/ailments">Ailment history</Link>
+        <Link to="/insurance">Insurance</Link>
+        <Link to="/pharmacies">Pharmacies</Link>
+        <Link to="/family-history">Family history</Link>
+        <Link to="/surgeries">Surgeries</Link>
+        <Link to="/hospitalizations">Hospitalizations</Link>
+        <Link to="/vision-history">Vision history</Link>
+        <Link to="/dental-history">Dental history</Link>
+        <Link to="/vaccinations">Vaccinations</Link>
+        <Link to="/visit-logs">Visit logs</Link>
+        <Link to="/appointments">Appointments</Link>
         <Link to="/change-password">Change password</Link>
         {user?.role === "admin" && <Link to="/users">Manage users</Link>}
         <button onClick={logout}>Log out</button>
