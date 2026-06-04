@@ -17,6 +17,12 @@ async def lifespan(app: FastAPI):
         db.commit()
         if created:
             print(f"[seed] created initial admin: {settings.initial_admin_email}")
+    except Exception as exc:  # noqa: BLE001 - surface a clear startup error
+        db.rollback()
+        raise RuntimeError(
+            "Failed to seed the initial admin. Check INITIAL_ADMIN_EMAIL and that "
+            "INITIAL_ADMIN_PASSWORD meets the password policy (min 12 characters)."
+        ) from exc
     finally:
         db.close()
     yield
