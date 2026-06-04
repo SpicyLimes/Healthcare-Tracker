@@ -34,6 +34,7 @@ class Document(Base):
     section: Mapped[DocumentSection] = mapped_column(
         Enum(DocumentSection, name="documentsection"), nullable=False
     )
+    # Polymorphic reference — stores UUID of the owning record as string; no DB-level FK by design
     record_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     mime_type: Mapped[str] = mapped_column(String, nullable=False)
     file_size: Mapped[int] = mapped_column(Integer, nullable=False)

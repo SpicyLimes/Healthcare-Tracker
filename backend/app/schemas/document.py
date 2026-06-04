@@ -1,6 +1,5 @@
 # backend/app/schemas/document.py
 from datetime import datetime
-from typing import Optional
 import uuid
 
 from pydantic import BaseModel, ConfigDict
@@ -13,8 +12,8 @@ class DocumentRead(BaseModel):
     id: int
     filename: str
     section: DocumentSection
-    record_id: Optional[str]
+    record_id: str | None = None
     mime_type: str
     file_size: int
     uploaded_at: datetime
-    uploaded_by: Optional[uuid.UUID]
+    uploaded_by: uuid.UUID | None = None
