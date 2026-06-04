@@ -1,0 +1,32 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.models.user import User
+from app.schemas.records import ProfileResponse, ProfileWrite
+from app.security.dependencies import get_current_user, require_admin, verify_csrf
+from app.services import profile_service
+from app.services.errors import NotFoundError
+
+router = APIRouter(prefix="/api/profile", tags=["profile"])
+
+
+@router.get("", response_model=ProfileResponse, dependencies=[Depends(get_current_user)])
+def get_profile(db: Session = Depends(get_db)):
+    try:
+        return profile_service.get_profile(db)
+    except NotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not set")
+
+
+@router.put(
+    "",
+    response_model=ProfileResponse,
+    dependencies=[Depends(require_admin), Depends(verify_csrf)],
+)
+def put_profile(
+    payload: ProfileWrite,
+    db: Session = Depends(get_db),
+    current: User = Depends(require_admin),
+):
+    return profile_service.upsert_profile(db, payload.model_dump(), created_by=current.id)

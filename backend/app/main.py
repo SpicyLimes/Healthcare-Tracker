@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from app.config import settings
 from app.database import SessionLocal
-from app.routers import ailments, auth, doctors, health, medications, users
+from app.routers import ailments, auth, doctors, health, medications, profile, users
 from app.services import user_service
 
 
@@ -35,3 +35,4 @@ app.include_router(users.router)
 app.include_router(medications.router)
 app.include_router(doctors.router)
 app.include_router(ailments.router)
+app.include_router(profile.router)
