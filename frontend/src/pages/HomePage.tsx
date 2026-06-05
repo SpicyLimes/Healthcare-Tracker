@@ -31,6 +31,7 @@ export default function HomePage() {
         <Link to="/vaccinations">Vaccinations</Link>
         <Link to="/visit-logs">Visit logs</Link>
         <Link to="/appointments">Appointments</Link>
+        <Link to="/documents">Documents</Link>
         <Link to="/change-password">Change password</Link>
         {user?.role === "admin" && <Link to="/users">Manage users</Link>}
         <button onClick={logout}>Log out</button>

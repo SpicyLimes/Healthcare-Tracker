@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { dentalHistoryApi, type DentalHistory, type DentalHistoryInput } from "../api/dentalHistory";
 import DoctorPicker from "../components/DoctorPicker";
 import { useAuth } from "../auth/useAuth";
+import DocumentsPanel from "../components/DocumentsPanel";
 
 export default function DentalHistoryPage() {
   const { user } = useAuth();
@@ -49,12 +50,13 @@ export default function DentalHistoryPage() {
         </form>
       )}
       <table>
-        <thead><tr><th>Date</th><th>Procedure</th>{isAdmin && <th />}</tr></thead>
+        <thead><tr><th>Date</th><th>Procedure</th>{isAdmin && <th />}<th /></tr></thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.id}>
               <td>{r.visit_date ?? ""}</td><td>{r.procedure ?? ""}</td>
               {isAdmin && <td><button onClick={() => onDelete(r.id)}>Delete</button></td>}
+              <td><DocumentsPanel section="dental_history" recordId={r.id} isAdmin={isAdmin} /></td>
             </tr>
           ))}
         </tbody>

@@ -1,6 +1,7 @@
 import RecordList, { type Column, type Field } from "../components/RecordList";
 import { medicationsApi, type Medication } from "../api/medications";
 import { useAuth } from "../auth/useAuth";
+import DocumentsPanel from "../components/DocumentsPanel";
 
 const columns: Column<Medication>[] = [
   { header: "Name", render: (m) => m.name },
@@ -19,13 +20,17 @@ const fields: Field[] = [
 
 export default function MedicationsPage() {
   const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   return (
     <RecordList
       title="Medications"
       api={medicationsApi}
       columns={columns}
       fields={fields}
-      isAdmin={user?.role === "admin"}
+      isAdmin={isAdmin}
+      renderRowExtra={(row) => (
+        <DocumentsPanel section="medications" recordId={row.id} isAdmin={isAdmin} />
+      )}
     />
   );
 }

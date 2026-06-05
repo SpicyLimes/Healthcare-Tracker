@@ -24,6 +24,7 @@ interface RecordListProps<T extends { id: string }, TInput = Record<string, stri
   columns: Column<T>[];
   fields: Field[];
   isAdmin: boolean;
+  renderRowExtra?: (row: T) => React.ReactNode;
 }
 
 export default function RecordList<T extends { id: string }, TInput = Record<string, string>>({
@@ -32,6 +33,7 @@ export default function RecordList<T extends { id: string }, TInput = Record<str
   columns,
   fields,
   isAdmin,
+  renderRowExtra,
 }: RecordListProps<T, TInput>) {
   const [rows, setRows] = useState<T[]>([]);
   const [form, setForm] = useState<Record<string, string>>({});
@@ -98,6 +100,7 @@ export default function RecordList<T extends { id: string }, TInput = Record<str
               <th key={c.header} style={{ textAlign: "left", paddingRight: "1rem" }}>{c.header}</th>
             ))}
             {isAdmin && <th />}
+            {renderRowExtra && <th />}
           </tr>
         </thead>
         <tbody>
@@ -110,6 +113,9 @@ export default function RecordList<T extends { id: string }, TInput = Record<str
                 <td>
                   <button onClick={() => onDelete(row.id)}>Delete</button>
                 </td>
+              )}
+              {renderRowExtra && (
+                <td>{renderRowExtra(row)}</td>
               )}
             </tr>
           ))}

@@ -1,6 +1,7 @@
 import RecordList, { type Column, type Field } from "../components/RecordList";
 import { ailmentsApi, type Ailment } from "../api/ailments";
 import { useAuth } from "../auth/useAuth";
+import DocumentsPanel from "../components/DocumentsPanel";
 
 const columns: Column<Ailment>[] = [
   { header: "Condition", render: (a) => a.condition },
@@ -17,13 +18,17 @@ const fields: Field[] = [
 
 export default function AilmentsPage() {
   const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   return (
     <RecordList
       title="Ailment History"
       api={ailmentsApi}
       columns={columns}
       fields={fields}
-      isAdmin={user?.role === "admin"}
+      isAdmin={isAdmin}
+      renderRowExtra={(row) => (
+        <DocumentsPanel section="ailments" recordId={row.id} isAdmin={isAdmin} />
+      )}
     />
   );
 }

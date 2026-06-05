@@ -4,6 +4,13 @@ import MedicationsPage from "./MedicationsPage";
 import * as medsApi from "../api/medications";
 import * as useAuthModule from "../auth/useAuth";
 
+vi.mock("../api/documents", () => ({
+  listDocumentsForRecord: vi.fn().mockResolvedValue([]),
+  uploadDocument: vi.fn(),
+  deleteDocument: vi.fn(),
+  getDownloadUrl: vi.fn().mockReturnValue("#"),
+}));
+
 afterEach(() => vi.restoreAllMocks());
 
 function mockAuth(role: "admin" | "viewer") {

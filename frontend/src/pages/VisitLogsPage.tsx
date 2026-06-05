@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { visitLogsApi, type VisitLog, type VisitLogInput } from "../api/visitLogs";
 import DoctorPicker from "../components/DoctorPicker";
 import { useAuth } from "../auth/useAuth";
+import DocumentsPanel from "../components/DocumentsPanel";
 
 export default function VisitLogsPage() {
   const { user } = useAuth();
@@ -49,12 +50,13 @@ export default function VisitLogsPage() {
         </form>
       )}
       <table>
-        <thead><tr><th>Date</th><th>Reason</th><th>Summary</th>{isAdmin && <th />}</tr></thead>
+        <thead><tr><th>Date</th><th>Reason</th><th>Summary</th>{isAdmin && <th />}<th /></tr></thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.id}>
               <td>{r.visit_date ?? ""}</td><td>{r.reason ?? ""}</td><td>{r.summary ?? ""}</td>
               {isAdmin && <td><button onClick={() => onDelete(r.id)}>Delete</button></td>}
+              <td><DocumentsPanel section="visit_logs" recordId={r.id} isAdmin={isAdmin} /></td>
             </tr>
           ))}
         </tbody>

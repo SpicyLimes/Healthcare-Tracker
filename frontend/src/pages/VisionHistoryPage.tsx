@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { visionHistoryApi, type VisionHistory, type VisionHistoryInput } from "../api/visionHistory";
 import DoctorPicker from "../components/DoctorPicker";
 import { useAuth } from "../auth/useAuth";
+import DocumentsPanel from "../components/DocumentsPanel";
 
 export default function VisionHistoryPage() {
   const { user } = useAuth();
@@ -52,12 +53,13 @@ export default function VisionHistoryPage() {
         </form>
       )}
       <table>
-        <thead><tr><th>Date</th><th>OD</th><th>OS</th>{isAdmin && <th />}</tr></thead>
+        <thead><tr><th>Date</th><th>OD</th><th>OS</th>{isAdmin && <th />}<th /></tr></thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.id}>
               <td>{r.visit_date ?? ""}</td><td>{r.rx_od ?? ""}</td><td>{r.rx_os ?? ""}</td>
               {isAdmin && <td><button onClick={() => onDelete(r.id)}>Delete</button></td>}
+              <td><DocumentsPanel section="vision_history" recordId={r.id} isAdmin={isAdmin} /></td>
             </tr>
           ))}
         </tbody>

@@ -20,6 +20,7 @@ import DentalHistoryPage from "./pages/DentalHistoryPage";
 import VaccinationsPage from "./pages/VaccinationsPage";
 import VisitLogsPage from "./pages/VisitLogsPage";
 import AppointmentsPage from "./pages/AppointmentsPage";
+import DocumentsPage from "./pages/DocumentsPage";
 
 export default function App() {
   return (
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="/vaccinations" element={<ProtectedRoute><VaccinationsPage /></ProtectedRoute>} />
           <Route path="/visit-logs" element={<ProtectedRoute><VisitLogsPage /></ProtectedRoute>} />
           <Route path="/appointments" element={<ProtectedRoute><AppointmentsPage /></ProtectedRoute>} />
+          <Route path="/documents" element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

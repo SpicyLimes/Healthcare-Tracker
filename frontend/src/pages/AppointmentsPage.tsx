@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { appointmentsApi, type Appointment, type AppointmentInput, type AppointmentStatus } from "../api/appointments";
 import DoctorPicker from "../components/DoctorPicker";
 import { useAuth } from "../auth/useAuth";
+import DocumentsPanel from "../components/DocumentsPanel";
 
 const STATUSES: AppointmentStatus[] = ["upcoming", "completed", "cancelled", "rescheduled"];
 
@@ -57,12 +58,13 @@ export default function AppointmentsPage() {
         </form>
       )}
       <table>
-        <thead><tr><th>Date/time</th><th>Reason</th><th>Status</th>{isAdmin && <th />}</tr></thead>
+        <thead><tr><th>Date/time</th><th>Reason</th><th>Status</th>{isAdmin && <th />}<th /></tr></thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.id}>
               <td>{r.appointment_datetime}</td><td>{r.reason ?? ""}</td><td>{r.status}</td>
               {isAdmin && <td><button onClick={() => onDelete(r.id)}>Delete</button></td>}
+              <td><DocumentsPanel section="appointments" recordId={r.id} isAdmin={isAdmin} /></td>
             </tr>
           ))}
         </tbody>

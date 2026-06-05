@@ -20,7 +20,7 @@ export default function DocumentsPage() {
 
   useEffect(() => {
     listAllDocuments(section || undefined)
-      .then(setDocs)
+      .then((data) => { setError(""); setDocs(data); })
       .catch(() => setError("Failed to load documents"));
   }, [section]);
 
@@ -39,9 +39,9 @@ export default function DocumentsPage() {
         </select>
       </label>
 
-      {docs.length === 0 ? (
+      {docs.length === 0 && !error ? (
         <p>No documents found.</p>
-      ) : (
+      ) : docs.length > 0 ? (
         <table>
           <thead>
             <tr>
@@ -74,7 +74,7 @@ export default function DocumentsPage() {
             ))}
           </tbody>
         </table>
-      )}
+      ) : null}
     </section>
   );
 }

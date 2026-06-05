@@ -1,6 +1,7 @@
 import RecordList, { type Column, type Field } from "../components/RecordList";
 import { vaccinationsApi, type Vaccination } from "../api/vaccinations";
 import { useAuth } from "../auth/useAuth";
+import DocumentsPanel from "../components/DocumentsPanel";
 
 const columns: Column<Vaccination>[] = [
   { header: "Vaccine", render: (r) => r.vaccine },
@@ -19,5 +20,17 @@ const fields: Field[] = [
 
 export default function VaccinationsPage() {
   const { user } = useAuth();
-  return <RecordList title="Vaccinations" api={vaccinationsApi} columns={columns} fields={fields} isAdmin={user?.role === "admin"} />;
+  const isAdmin = user?.role === "admin";
+  return (
+    <RecordList
+      title="Vaccinations"
+      api={vaccinationsApi}
+      columns={columns}
+      fields={fields}
+      isAdmin={isAdmin}
+      renderRowExtra={(row) => (
+        <DocumentsPanel section="vaccinations" recordId={row.id} isAdmin={isAdmin} />
+      )}
+    />
+  );
 }

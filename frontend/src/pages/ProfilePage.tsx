@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { getProfile, saveProfile, type ProfileInput } from "../api/profile";
 import { useAuth } from "../auth/useAuth";
+import DocumentsPanel from "../components/DocumentsPanel";
 
 const EMPTY: ProfileInput = {
   full_name: "",
@@ -33,6 +34,7 @@ export default function ProfilePage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [form, setForm] = useState<ProfileInput>(EMPTY);
+  const [profileId, setProfileId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
 
@@ -40,6 +42,7 @@ export default function ProfilePage() {
     getProfile()
       .then((p) => {
         if (p) {
+          setProfileId(p.id);
           setForm({
             full_name: p.full_name,
             date_of_birth: p.date_of_birth ?? null,
@@ -67,7 +70,8 @@ export default function ProfilePage() {
         Object.entries(form).filter(([, v]) => v !== null && v !== ""),
       ) as unknown as ProfileInput;
       payload.full_name = form.full_name;
-      await saveProfile(payload);
+      const result = await saveProfile(payload);
+      setProfileId(result.id);
       setSaved(true);
     } catch {
       setError("Could not save profile");
@@ -104,6 +108,9 @@ export default function ProfilePage() {
         ))}
         {isAdmin && <button type="submit">Save</button>}
       </form>
+      {profileId && (
+        <DocumentsPanel section="profile" recordId={profileId} isAdmin={isAdmin} />
+      )}
     </main>
   );
 }

@@ -1,6 +1,7 @@
 import RecordList, { type Column, type Field } from "../components/RecordList";
 import { insurancesApi, type Insurance } from "../api/insurances";
 import { useAuth } from "../auth/useAuth";
+import DocumentsPanel from "../components/DocumentsPanel";
 
 const columns: Column<Insurance>[] = [
   { header: "Insurer", render: (r) => r.insurer_name },
@@ -18,5 +19,17 @@ const fields: Field[] = [
 
 export default function InsurancePage() {
   const { user } = useAuth();
-  return <RecordList title="Insurance" api={insurancesApi} columns={columns} fields={fields} isAdmin={user?.role === "admin"} />;
+  const isAdmin = user?.role === "admin";
+  return (
+    <RecordList
+      title="Insurance"
+      api={insurancesApi}
+      columns={columns}
+      fields={fields}
+      isAdmin={isAdmin}
+      renderRowExtra={(row) => (
+        <DocumentsPanel section="insurances" recordId={row.id} isAdmin={isAdmin} />
+      )}
+    />
+  );
 }

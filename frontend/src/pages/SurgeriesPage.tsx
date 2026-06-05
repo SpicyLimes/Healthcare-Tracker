@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { surgeriesApi, type Surgery, type SurgeryInput } from "../api/surgeries";
 import DoctorPicker from "../components/DoctorPicker";
 import { useAuth } from "../auth/useAuth";
+import DocumentsPanel from "../components/DocumentsPanel";
 
 export default function SurgeriesPage() {
   const { user } = useAuth();
@@ -55,7 +56,7 @@ export default function SurgeriesPage() {
         </form>
       )}
       <table>
-        <thead><tr><th>Procedure</th><th>Date</th><th>Hospital</th>{isAdmin && <th />}</tr></thead>
+        <thead><tr><th>Procedure</th><th>Date</th><th>Hospital</th>{isAdmin && <th />}<th /></tr></thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.id}>
@@ -63,6 +64,7 @@ export default function SurgeriesPage() {
               <td>{r.surgery_date ?? ""}</td>
               <td>{r.hospital ?? ""}</td>
               {isAdmin && <td><button onClick={() => onDelete(r.id)}>Delete</button></td>}
+              <td><DocumentsPanel section="surgeries" recordId={r.id} isAdmin={isAdmin} /></td>
             </tr>
           ))}
         </tbody>
