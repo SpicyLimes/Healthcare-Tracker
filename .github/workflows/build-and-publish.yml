@@ -21,6 +21,8 @@ jobs:
             context: ./backend
           - name: frontend
             context: ./frontend
+          - name: backup
+            context: ./backend/backup
     steps:
       - name: Checkout
         uses: actions/checkout@v4

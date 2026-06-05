@@ -20,8 +20,8 @@ def authenticate(db: Session, email: str, password: str) -> User | None:
     user = db.scalar(select(User).where(User.email == normalize_email(email)))
     # NOTE: We return early without calling verify_password when the user is
     # missing or inactive, which is a known timing side-channel that could reveal
-    # whether an email is registered. Mitigation is deferred to Phase 7
-    # (rate-limiting / lockout), which makes the signal economically useless.
+    # whether an email is registered. The login rate limit (10 req/min) makes
+    # the signal economically useless to exploit.
     if user is None or not user.is_active:
         return None
     if not verify_password(password, user.hashed_password):

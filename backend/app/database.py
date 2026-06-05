@@ -8,7 +8,7 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
 class Base(DeclarativeBase):
-    """Base class for all ORM models (used in later phases)."""
+    pass
 
 
 def get_db():
