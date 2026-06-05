@@ -15,15 +15,16 @@ fi
 
 echo "[restore] $(date -u +%FT%TZ) — restoring from ${DATE}"
 
+# Strip SQLAlchemy driver prefix so psql gets a valid libpq URL
+LIBPQ_URL=$(echo "${DATABASE_URL}" | sed 's|postgresql+[^:]*://|postgresql://|')
+
 # Restore DB
 echo "[restore] restoring database..."
-# Extract db name from DATABASE_URL (postgresql://user:pass@host:port/dbname)
-DB_NAME=$(echo "${DATABASE_URL}" | sed 's/.*\///')
-# Connect to postgres (default db) to drop/recreate target db
-BASE_URL=$(echo "${DATABASE_URL}" | sed "s|/${DB_NAME}$|/postgres|")
+DB_NAME=$(echo "${LIBPQ_URL}" | sed 's/.*\///')
+BASE_URL=$(echo "${LIBPQ_URL}" | sed "s|/${DB_NAME}$|/postgres|")
 psql "${BASE_URL}" -c "DROP DATABASE IF EXISTS \"${DB_NAME}\";"
 psql "${BASE_URL}" -c "CREATE DATABASE \"${DB_NAME}\";"
-gunzip -c "${SRC}/db.sql.gz" | psql "${DATABASE_URL}"
+gunzip -c "${SRC}/db.sql.gz" | psql "${LIBPQ_URL}"
 echo "[restore] database restored"
 
 # Restore uploads
