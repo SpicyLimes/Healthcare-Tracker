@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
+from app import __version__
 from app.config import settings
 from app.database import SessionLocal
 from app.routers import (
@@ -35,7 +36,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Healthcare Tracker API", version="0.7.0", lifespan=lifespan)
+app = FastAPI(title="Healthcare Tracker API", version=__version__, lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.include_router(health.router)
