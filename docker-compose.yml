@@ -40,7 +40,8 @@ services:
   frontend:
     build: ./frontend
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "1337:80"
 
@@ -54,7 +55,7 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - uploads_data:/app/uploads:ro
+      - uploads_data:/app/uploads
       - backup_data:/backups
     restart: unless-stopped
 
