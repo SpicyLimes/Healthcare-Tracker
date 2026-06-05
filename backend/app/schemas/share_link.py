@@ -1,13 +1,22 @@
-# backend/app/schemas/share_link.py
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AfterValidator, BaseModel, ConfigDict
+
+
+def _must_be_future(v: datetime) -> datetime:
+    if v.astimezone(timezone.utc) <= datetime.now(timezone.utc):
+        raise ValueError("expires_at must be in the future")
+    return v
+
+
+FutureDatetime = Annotated[datetime, AfterValidator(_must_be_future)]
 
 
 class ShareLinkCreate(BaseModel):
     label: str
-    expires_at: datetime
+    expires_at: FutureDatetime
     allowed_sections: list[str] = []
 
 
