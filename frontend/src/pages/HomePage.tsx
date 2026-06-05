@@ -33,6 +33,8 @@ export default function HomePage() {
         <Link to="/appointments">Appointments</Link>
         <Link to="/documents">Documents</Link>
         <Link to="/change-password">Change password</Link>
+        {user?.role === "admin" && <Link to="/share-links">Share Links</Link>}
+        {user?.role === "admin" && <Link to="/audit-log">Audit Log</Link>}
         {user?.role === "admin" && <Link to="/users">Manage users</Link>}
         <button onClick={logout}>Log out</button>
       </nav>
