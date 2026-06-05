@@ -11,6 +11,8 @@ from app.security.cookies import REFRESH_COOKIE, clear_auth_cookies, set_auth_co
 from app.security.dependencies import get_current_user, verify_csrf
 from app.security.tokens import create_access_token
 from app.services import auth_service
+from app.models.audit_log import AuditAction, ActorType
+from app.services.audit_service import log_event
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -29,6 +31,8 @@ def login(request: Request, payload: LoginRequest, response: Response, db: Sessi
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     _issue_session(db, response, user)
+    log_event(db, action=AuditAction.create, actor_type=ActorType.user,
+              actor_user_id=user.id, detail=f"User logged in: {user.email}")
     return user
 
 
@@ -47,10 +51,12 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(verify_csrf)])
-def logout(request: Request, response: Response, db: Session = Depends(get_db)):
+def logout(request: Request, response: Response, db: Session = Depends(get_db), current: User = Depends(get_current_user)):
     raw = request.cookies.get(REFRESH_COOKIE)
     if raw:
         auth_service.revoke_refresh_token(db, raw)
+    log_event(db, action=AuditAction.delete, actor_type=ActorType.user,
+              actor_user_id=current.id, detail=f"User logged out: {current.email}")
     clear_auth_cookies(response)
 
 
@@ -69,3 +75,5 @@ def change_password(
         auth_service.change_password(db, current, payload.current_password, payload.new_password)
     except auth_service.InvalidCurrentPasswordError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
+    log_event(db, action=AuditAction.update, actor_type=ActorType.user,
+              actor_user_id=current.id, detail=f"Password changed: {current.email}")
