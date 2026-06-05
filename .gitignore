@@ -37,6 +37,7 @@ yarn-error.log*
 
 # Docker
 *.log
+backups/
 
 # OS
 .DS_Store
