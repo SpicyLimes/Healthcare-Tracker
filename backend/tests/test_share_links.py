@@ -87,3 +87,34 @@ def test_share_token_rejected_by_authenticated_endpoint(client, db_session):
     client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
     r = client.get("/api/medications", cookies={"access_token": token})
     assert r.status_code == 401
+
+
+def test_forged_jwt_with_known_link_id_is_rejected(client, db_session):
+    """A JWT signed with the correct secret but wrong token_hash is rejected."""
+    import jwt as pyjwt
+    from app.config import settings
+    csrf = _admin(client, db_session)
+    data = _create_link(client, csrf)
+    link_id = data["id"]
+    # Forge a JWT with the correct link_id but different payload (different iat)
+    forged = pyjwt.encode(
+        {"sub": link_id, "type": "share", "exp": 9999999999, "iat": 1},
+        settings.jwt_secret,
+        algorithm=settings.jwt_algorithm,
+    )
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+    r = client.get(f"/api/guest/sections?token={forged}")
+    assert r.status_code == 401
+
+
+def test_create_share_link_with_past_expiry_rejected(client, db_session):
+    """Creating a share link with expires_at in the past returns 422."""
+    from datetime import datetime, timedelta, timezone
+    csrf = _admin(client, db_session)
+    past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    r = client.post(
+        "/api/share-links",
+        headers={"X-CSRF-Token": csrf},
+        json={"label": "Expired", "expires_at": past, "allowed_sections": []},
+    )
+    assert r.status_code == 422
