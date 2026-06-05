@@ -50,49 +50,59 @@ cd frontend && npm install && npm test
 
 ## Deployment
 
-Images are built and published to the GitHub Container Registry (GHCR) by the
-GitHub Actions workflow in [.github/workflows/build-and-publish.yml](.github/workflows/build-and-publish.yml)
-on every push to `main`. The published images are:
+### Quick Start
 
-- `ghcr.io/spicylimes/healthcare-tracker-backend`
-- `ghcr.io/spicylimes/healthcare-tracker-frontend`
-- `ghcr.io/spicylimes/healthcare-tracker-backup`
+Requires Docker and Docker Compose. No other dependencies.
 
-To run the published images, use [docker-compose.prod.yml](docker-compose.prod.yml),
-which pulls the GHCR images instead of building from source. Supply all required
-environment variables via your deployment environment or a `.env` file — see
-[.env.example](.env.example) for the full list. Place the frontend (host port
-`8080`) behind your own reverse proxy with TLS as appropriate for your
-environment.
+```bash
+# 1. Download the production compose file
+curl -O https://raw.githubusercontent.com/SpicyLimes/Healthcare-Tracker/main/docker-compose.prod.yml
+
+# 2. Create your config file
+curl -O https://raw.githubusercontent.com/SpicyLimes/Healthcare-Tracker/main/.env.example
+mv .env.example .env
+
+# 3. Edit .env — fill in every value marked CHANGE_ME (takes ~2 minutes)
+nano .env   # or any editor
+
+# 4. Start the stack — images are pulled automatically from GHCR
+docker compose -f docker-compose.prod.yml up -d
+```
+
+That's it. The app handles the rest:
+- Database schema is created and migrated automatically on startup
+- Your first admin account is created from `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD`
+- Nightly backups start writing to `BACKUP_HOST_PATH` (default: `./backups`) automatically
+- Change your admin password after first login
+
+The app is available on **port 8080**. Put it behind your reverse proxy or Cloudflare Tunnel as appropriate.
+
+---
 
 ### Authentication
 
-The app uses email/password login with two roles: **Admin** (full access and
-user management) and **Viewer** (read-only). There is no public sign-up.
+Two roles: **Admin** (full access and user management) and **Viewer** (read-only). No public sign-up — the admin creates all accounts.
 
-- **First admin:** On first startup with an empty database, an initial admin is
-  created from `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` (see
-  `.env.example`). `INITIAL_ADMIN_PASSWORD` must be at least 12 characters or
-  startup fails. Change the password after first login.
-- **Sessions:** Short-lived access tokens plus refresh tokens delivered as
-  httpOnly cookies; the client refreshes transparently. State-changing requests
-  are CSRF-protected.
-- **Database schema** is managed with Alembic migrations. The backend runs
-  `alembic upgrade head` on startup automatically.
-
-Set `JWT_SECRET` to a long random value and `COOKIE_SECURE=true` in any
-environment served over HTTPS.
+- `INITIAL_ADMIN_PASSWORD` must be at least 12 characters or startup fails
+- Set `JWT_SECRET` to a long random string: `openssl rand -hex 32`
+- Set `COOKIE_SECURE=true` in any environment served over HTTPS
 
 ### Backups
 
-The `backup` container runs a nightly cron job (2:00 AM) that dumps the
-database and archives the uploads volume to `BACKUP_HOST_PATH` on the host.
-The 7 most recent daily backups are kept; older ones are pruned automatically.
-
-To restore from a backup:
+The `backup` container runs nightly at 2:00 AM. The 7 most recent daily backups are kept automatically. To restore:
 
 ```bash
 docker compose -f docker-compose.prod.yml down
 docker compose -f docker-compose.prod.yml run --rm backup restore YYYY-MM-DD
 docker compose -f docker-compose.prod.yml up -d
 ```
+
+### CI / Building from source
+
+Images are published to GHCR automatically on every push to `main`:
+
+- `ghcr.io/spicylimes/healthcare-tracker-backend`
+- `ghcr.io/spicylimes/healthcare-tracker-frontend`
+- `ghcr.io/spicylimes/healthcare-tracker-backup`
+
+To build from source instead, use [docker-compose.yml](docker-compose.yml) with `docker compose up -d --build`.
