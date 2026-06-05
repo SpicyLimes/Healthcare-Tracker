@@ -9,7 +9,8 @@ echo "[backup] $(date -u +%FT%TZ) — starting backup for ${DATE}"
 
 # DB dump
 echo "[backup] dumping database..."
-pg_dump "${DATABASE_URL}" | gzip > "${DEST}/db.sql.gz"
+pg_dump "${DATABASE_URL}" > "${DEST}/db.sql"
+gzip "${DEST}/db.sql"
 echo "[backup] database dump complete: ${DEST}/db.sql.gz"
 
 # Uploads archive
