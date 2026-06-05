@@ -3,6 +3,7 @@ from datetime import date, datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select as sa_select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -43,13 +44,27 @@ def list_audit_log(
 
     entries = q.order_by(AuditLog.timestamp.desc()).offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).all()
 
+    # Batch-fetch all referenced users and share links to avoid N+1
+    user_ids = {e.actor_user_id for e in entries if e.actor_user_id}
+    link_ids = {e.actor_share_link_id for e in entries if e.actor_share_link_id}
+
+    users_by_id = {}
+    if user_ids:
+        for u in db.scalars(sa_select(User).where(User.id.in_(user_ids))).all():
+            users_by_id[u.id] = u
+
+    links_by_id = {}
+    if link_ids:
+        for lnk in db.scalars(sa_select(ShareLink).where(ShareLink.id.in_(link_ids))).all():
+            links_by_id[lnk.id] = lnk
+
     result = []
     for entry in entries:
         if entry.actor_type == ActorType.user and entry.actor_user_id:
-            user = db.get(User, entry.actor_user_id)
+            user = users_by_id.get(entry.actor_user_id)
             actor_label = user.email if user else f"deleted user ({entry.actor_user_id})"
         elif entry.actor_type == ActorType.guest and entry.actor_share_link_id:
-            link = db.get(ShareLink, entry.actor_share_link_id)
+            link = links_by_id.get(entry.actor_share_link_id)
             actor_label = link.label if link else f"deleted link ({entry.actor_share_link_id})"
         else:
             actor_label = "unknown"
