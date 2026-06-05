@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+import app.config as app_config
 from app.main import app
 from app.database import Base, get_db
 
@@ -45,3 +46,10 @@ def client(db_session):
     app.dependency_overrides[get_db] = _override_get_db
     yield TestClient(app)
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=False)
+def tmp_uploads_dir(tmp_path, monkeypatch):
+    """Redirect all file uploads to a temporary directory for tests."""
+    monkeypatch.setattr(app_config.settings, "uploads_root", str(tmp_path))
+    return tmp_path
