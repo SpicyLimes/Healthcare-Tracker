@@ -28,6 +28,8 @@ services:
         condition: service_healthy
     expose:
       - "8000"
+    volumes:
+      - uploads_data:/app/uploads
 
   frontend:
     build: ./frontend
@@ -38,3 +40,4 @@ services:
 
 volumes:
   db_data:
+  uploads_data:
