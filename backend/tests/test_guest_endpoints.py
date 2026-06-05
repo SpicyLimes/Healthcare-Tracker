@@ -114,3 +114,70 @@ def test_guest_token_rejected_by_authenticated_endpoint(client, db_session):
     client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
     r = client.get("/api/medications", cookies={"access_token": token})
     assert r.status_code == 401
+
+
+def test_guest_can_get_single_record(client, db_session):
+    csrf = _admin(client, db_session)
+    vax = client.post(
+        "/api/vaccinations",
+        headers={"X-CSRF-Token": csrf},
+        json={"vaccine": "GuestRecordTest"},
+    ).json()
+    token = _create_link(client, csrf, sections=["vaccinations"])
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+    r = client.get(f"/api/guest/vaccinations/{vax['id']}?token={token}")
+    assert r.status_code == 200
+    assert r.json()["vaccine"] == "GuestRecordTest"
+
+
+def test_guest_single_record_wrong_section_returns_403(client, db_session):
+    csrf = _admin(client, db_session)
+    vax = client.post(
+        "/api/vaccinations",
+        headers={"X-CSRF-Token": csrf},
+        json={"vaccine": "ScopeTest"},
+    ).json()
+    token = _create_link(client, csrf, sections=["medications"])
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+    r = client.get(f"/api/guest/vaccinations/{vax['id']}?token={token}")
+    assert r.status_code == 403
+
+
+def test_guest_can_list_documents_for_record(client, db_session):
+    csrf = _admin(client, db_session)
+    vax = client.post(
+        "/api/vaccinations",
+        headers={"X-CSRF-Token": csrf},
+        json={"vaccine": "DocListTest"},
+    ).json()
+    token = _create_link(client, csrf, sections=["vaccinations"])
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+    r = client.get(f"/api/guest/vaccinations/{vax['id']}/documents?token={token}")
+    assert r.status_code == 200
+    assert isinstance(r.json(), list)
+
+
+def test_guest_document_download_returns_404_for_missing_file(client, db_session, tmp_uploads_dir):
+    import io
+    import os
+    import pathlib
+    csrf = _admin(client, db_session)
+    vax = client.post(
+        "/api/vaccinations",
+        headers={"X-CSRF-Token": csrf},
+        json={"vaccine": "DownloadTest"},
+    ).json()
+    upload_r = client.post(
+        f"/api/vaccinations/{vax['id']}/documents",
+        headers={"X-CSRF-Token": csrf},
+        files={"file": ("test.txt", io.BytesIO(b"hello"), "text/plain")},
+    )
+    assert upload_r.status_code == 201
+    doc_id = upload_r.json()["id"]
+    for f in pathlib.Path(tmp_uploads_dir).rglob("*"):
+        if f.is_file():
+            os.remove(f)
+    token = _create_link(client, csrf, sections=["vaccinations"])
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+    r = client.get(f"/api/guest/documents/{doc_id}/download?token={token}")
+    assert r.status_code == 404
