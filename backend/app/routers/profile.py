@@ -25,7 +25,7 @@ def get_profile(db: Session = Depends(get_db)):
 @router.put(
     "",
     response_model=ProfileResponse,
-    dependencies=[Depends(require_admin), Depends(verify_csrf)],
+    dependencies=[Depends(verify_csrf)],
 )
 def put_profile(
     payload: ProfileWrite,

@@ -7,9 +7,12 @@ mkdir -p "${DEST}"
 
 echo "[backup] $(date -u +%FT%TZ) — starting backup for ${DATE}"
 
+# Strip SQLAlchemy driver prefix so pg_dump gets a valid libpq URL
+LIBPQ_URL=$(echo "${DATABASE_URL}" | sed 's|postgresql+[^:]*://|postgresql://|')
+
 # DB dump
 echo "[backup] dumping database..."
-pg_dump "${DATABASE_URL}" > "${DEST}/db.sql"
+pg_dump "${LIBPQ_URL}" > "${DEST}/db.sql"
 gzip "${DEST}/db.sql"
 echo "[backup] database dump complete: ${DEST}/db.sql.gz"
 

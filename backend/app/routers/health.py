@@ -3,9 +3,8 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app import __version__ as APP_VERSION
 from app.database import get_db
-
-APP_VERSION = "0.7.0"
 
 router = APIRouter(prefix="/api", tags=["health"])
 

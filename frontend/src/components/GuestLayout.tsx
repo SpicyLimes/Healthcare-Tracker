@@ -1,6 +1,5 @@
-// frontend/src/components/GuestLayout.tsx
 import type { ReactNode } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useGuest } from "../auth/GuestContext";
 
 const SECTION_LABELS: Record<string, string> = {
@@ -24,9 +23,7 @@ interface Props {
 }
 
 export default function GuestLayout({ children, expired }: Props) {
-  const { token, allowedSections, expiresAt } = useGuest();
-  const [searchParams] = useSearchParams();
-  const rawToken = token || searchParams.get("token") || "";
+  const { allowedSections, expiresAt } = useGuest();
 
   if (expired) {
     return (
@@ -49,7 +46,7 @@ export default function GuestLayout({ children, expired }: Props) {
       </header>
       <nav style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "1rem" }}>
         {allowedSections.map((s) => (
-          <Link key={s} to={`/guest/sections/${s}?token=${encodeURIComponent(rawToken)}`}>
+          <Link key={s} to={`/guest/sections/${s}`}>
             {SECTION_LABELS[s] ?? s}
           </Link>
         ))}

@@ -108,3 +108,58 @@ def test_audit_log_failure_does_not_break_operation(client, db_session, monkeypa
         json={"vaccine": "ShouldSucceed"},
     )
     assert r.status_code == 201
+
+
+def test_update_record_writes_audit_entry(client, db_session):
+    csrf = _admin(client, db_session)
+    vax = client.post(
+        "/api/vaccinations",
+        headers={"X-CSRF-Token": csrf},
+        json={"vaccine": "FluShot"},
+    ).json()
+    client.put(
+        f"/api/vaccinations/{vax['id']}",
+        headers={"X-CSRF-Token": csrf},
+        json={"vaccine": "FluShot Updated"},
+    )
+    entries = client.get("/api/audit-log").json()
+    assert any(e["action"] == "update" for e in entries)
+
+
+def test_audit_log_filter_by_section(client, db_session):
+    csrf = _admin(client, db_session)
+    client.post("/api/vaccinations", headers={"X-CSRF-Token": csrf}, json={"vaccine": "SectionTest"})
+    r = client.get("/api/audit-log?section=vaccinations")
+    assert r.status_code == 200
+    entries = r.json()
+    assert all(e["section"] == "vaccinations" for e in entries if e["section"])
+
+
+def test_audit_log_filter_date_from(client, db_session):
+    from datetime import date
+    csrf = _admin(client, db_session)
+    client.post("/api/vaccinations", headers={"X-CSRF-Token": csrf}, json={"vaccine": "DateTest"})
+    today = date.today().isoformat()
+    r = client.get(f"/api/audit-log?date_from={today}")
+    assert r.status_code == 200
+    assert len(r.json()) > 0
+
+
+def test_audit_log_filter_date_to(client, db_session):
+    from datetime import date, timedelta
+    csrf = _admin(client, db_session)
+    client.post("/api/vaccinations", headers={"X-CSRF-Token": csrf}, json={"vaccine": "DateToTest"})
+    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+    r = client.get(f"/api/audit-log?date_to={tomorrow}")
+    assert r.status_code == 200
+    assert len(r.json()) > 0
+
+
+def test_audit_log_date_from_excludes_future(client, db_session):
+    from datetime import date, timedelta
+    csrf = _admin(client, db_session)
+    client.post("/api/vaccinations", headers={"X-CSRF-Token": csrf}, json={"vaccine": "ExcludeTest"})
+    future = (date.today() + timedelta(days=30)).isoformat()
+    r = client.get(f"/api/audit-log?date_from={future}")
+    assert r.status_code == 200
+    assert r.json() == []

@@ -14,7 +14,7 @@ export default function GuestRecordPage() {
   const [record, setRecord] = useState<Record<string, unknown> | null>(null);
   const [docs, setDocs] = useState<DocumentRecord[]>([]);
   const [expired, setExpired] = useState(false);
-  const [error] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!rawToken) { setExpired(true); return; }
@@ -23,7 +23,7 @@ export default function GuestRecordPage() {
       .catch(() => setExpired(true));
     listGuestDocuments(section, recordId, rawToken)
       .then(setDocs)
-      .catch(() => setDocs([]));
+      .catch(() => { setDocs([]); setError("Failed to load documents"); });
   }, [section, recordId, rawToken]);
 
   if (expired) return <GuestLayout expired>{null}</GuestLayout>;

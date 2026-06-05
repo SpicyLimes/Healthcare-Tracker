@@ -42,7 +42,8 @@ services:
   frontend:
     image: ghcr.io/spicylimes/healthcare-tracker-frontend:latest
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "1337:80"
     restart: unless-stopped
@@ -57,7 +58,7 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - uploads_data:/app/uploads:ro
+      - uploads_data:/app/uploads
       - ${BACKUP_HOST_PATH}:/backups
     restart: unless-stopped
 

@@ -16,7 +16,7 @@ export default function LoginPage() {
     setError("");
     try {
       await login(email, password);
-      navigate(from);
+      navigate(from.startsWith("/") ? from : "/");
     } catch {
       setError("Invalid email or password");
     }
