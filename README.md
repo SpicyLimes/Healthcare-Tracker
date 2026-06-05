@@ -31,8 +31,8 @@ Requires Docker and Docker Compose.
 ```bash
 cp .env.example .env        # adjust values as needed for local dev
 docker compose up -d --build
-# App:           http://localhost:8080
-# Health check:  http://localhost:8080/api/health
+# App:           http://localhost:1337
+# Health check:  http://localhost:1337/api/health
 docker compose down
 ```
 
@@ -75,7 +75,7 @@ That's it. The app handles the rest:
 - Nightly backups start writing to `BACKUP_HOST_PATH` (default: `./backups`) automatically
 - Change your admin password after first login
 
-The app is available on **port 8080**. How you expose it — reverse proxy, VPN, tunnel, or LAN-only — is entirely up to you.
+The app is available on **port 1337**. How you expose it — reverse proxy, VPN, tunnel, or LAN-only — is entirely up to you.
 
 ---
 

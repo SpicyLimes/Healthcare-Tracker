@@ -42,7 +42,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "8080:80"
+      - "1337:80"
 
   backup:
     build: ./backend/backup

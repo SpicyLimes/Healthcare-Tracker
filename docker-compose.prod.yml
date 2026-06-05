@@ -44,7 +44,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "8080:80"
+      - "1337:80"
     restart: unless-stopped
 
   backup:
@@ -67,7 +67,7 @@ services:
 #   2. Fill in all CHANGE_ME values in .env
 #   3. docker compose -f docker-compose.prod.yml up -d
 #
-# The app runs on port 8080. How you expose it (reverse proxy,
+# The app runs on port 1337. How you expose it (reverse proxy,
 # Cloudflare Tunnel, VPN, etc.) is up to you.
 # Nightly backups are written to BACKUP_HOST_PATH (default: ./backups).
 # ---------------------------------------------------------------
