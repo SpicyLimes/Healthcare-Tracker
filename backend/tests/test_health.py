@@ -12,3 +12,9 @@ def test_health_reports_database_status(client):
     # In the test environment the DB may be up ("connected") or unreachable
     # ("unavailable"); either is a valid string, but the key must be present.
     assert body["database"] in {"connected", "unavailable"}
+
+
+def test_health_includes_version(client):
+    response = client.get("/api/health")
+    body = response.json()
+    assert body["version"] == "0.7.0"

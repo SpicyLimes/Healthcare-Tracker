@@ -15,7 +15,9 @@ RUN pip install --no-cache-dir \
     "pyjwt==2.13.0" \
     "pwdlib[argon2]==0.3.0" \
     "alembic==1.18.4" \
-    "email-validator==2.2.0"
+    "email-validator==2.2.0" \
+    "python-multipart==0.0.32" \
+    "slowapi==0.1.9"
 
 # Copy Alembic config and application code (migrations live under app/migrations)
 COPY alembic.ini ./

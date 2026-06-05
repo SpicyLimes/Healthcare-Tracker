@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.limiter import limiter
 from app.models.user import User
 from app.schemas.auth import ChangePasswordRequest, LoginRequest, MeResponse
 from app.security.cookies import REFRESH_COOKIE, clear_auth_cookies, set_auth_cookies
@@ -22,7 +23,8 @@ def _issue_session(db: Session, response: Response, user: User) -> None:
 
 
 @router.post("/login", response_model=MeResponse)
-def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login(request: Request, payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = auth_service.authenticate(db, payload.email, payload.password)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")

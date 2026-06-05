@@ -6,6 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 import app.config as app_config
+from app.limiter import limiter
 from app.main import app
 from app.database import Base, get_db
 
@@ -46,6 +47,13 @@ def client(db_session):
     app.dependency_overrides[get_db] = _override_get_db
     yield TestClient(app)
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Reset the slowapi limiter storage before each test to prevent cross-test bleed."""
+    limiter._storage.reset()
+    yield
 
 
 @pytest.fixture(autouse=False)

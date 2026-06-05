@@ -29,6 +29,14 @@ services:
         condition: service_healthy
     expose:
       - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - uploads_data:/app/uploads
     restart: unless-stopped
 
   frontend:
@@ -39,10 +47,33 @@ services:
       - "8080:80"
     restart: unless-stopped
 
-# The frontend listens on host port 8080. Put it behind your own reverse proxy
-# and TLS termination as appropriate for your environment.
-# Provide POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, and DATABASE_URL via
-# your deployment's environment / secrets — never commit real secrets.
+  backup:
+    image: ghcr.io/spicylimes/healthcare-tracker-backup:latest
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads:ro
+      - ${BACKUP_HOST_PATH}:/backups
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
+# The frontend listens on host port 8080 for LAN access.
+# External traffic is routed through the Cloudflare Tunnel (cloudflared service).
+# Provide all environment variables via your deployment's .env file.
 
 volumes:
   db_data:
+  uploads_data:

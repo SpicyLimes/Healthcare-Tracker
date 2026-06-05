@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 
+APP_VERSION = "0.7.0"
+
 router = APIRouter(prefix="/api", tags=["health"])
 
 
@@ -16,4 +18,4 @@ def health(db: Session = Depends(get_db)):
         db.execute(text("SELECT 1"))
     except SQLAlchemyError:
         database_status = "unavailable"
-    return {"status": "ok", "database": database_status}
+    return {"status": "ok", "version": APP_VERSION, "database": database_status}
