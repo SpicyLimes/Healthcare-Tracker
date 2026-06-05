@@ -75,7 +75,7 @@ That's it. The app handles the rest:
 - Nightly backups start writing to `BACKUP_HOST_PATH` (default: `./backups`) automatically
 - Change your admin password after first login
 
-The app is available on **port 8080**. Put it behind your reverse proxy or Cloudflare Tunnel as appropriate.
+The app is available on **port 8080**. How you expose it — reverse proxy, VPN, tunnel, or LAN-only — is entirely up to you.
 
 ---
 

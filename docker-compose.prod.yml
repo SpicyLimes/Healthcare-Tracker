@@ -61,22 +61,14 @@ services:
       - ${BACKUP_HOST_PATH}:/backups
     restart: unless-stopped
 
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    command: tunnel --no-autoupdate run
-    environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
-    depends_on:
-      - frontend
-    restart: unless-stopped
-
 # ---------------------------------------------------------------
 # Quick Start:
 #   1. cp .env.example .env
 #   2. Fill in all CHANGE_ME values in .env
 #   3. docker compose -f docker-compose.prod.yml up -d
 #
-# App is available on port 8080 (LAN) and via your Cloudflare Tunnel.
+# The app runs on port 8080. How you expose it (reverse proxy,
+# Cloudflare Tunnel, VPN, etc.) is up to you.
 # Nightly backups are written to BACKUP_HOST_PATH (default: ./backups).
 # ---------------------------------------------------------------
 
