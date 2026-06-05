@@ -38,6 +38,21 @@ services:
     ports:
       - "8080:80"
 
+  backup:
+    build: ./backend/backup
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads:ro
+      - backup_data:/backups
+    restart: unless-stopped
+
 volumes:
   db_data:
   uploads_data:
+  backup_data:
