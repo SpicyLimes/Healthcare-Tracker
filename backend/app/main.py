@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
 from app.database import SessionLocal
@@ -10,6 +12,7 @@ from app.routers import (
     pharmacies, profile, share_links, surgeries, users, vaccinations, vision_history,
     visit_logs,
 )
+from app.limiter import limiter
 from app.services import user_service
 
 
@@ -33,6 +36,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Healthcare Tracker API", version="0.7.0", lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(users.router)
