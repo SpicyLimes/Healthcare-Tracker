@@ -163,7 +163,7 @@ def attach_document_routes(
         "/{record_id}/documents",
         response_model=DocumentRead,
         status_code=status.HTTP_201_CREATED,
-        dependencies=[Depends(require_admin), Depends(verify_csrf)],
+        dependencies=[Depends(verify_csrf)],
     )
     def upload_record_document(
         record_id: _uuid.UUID,
