@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Healthcare Tracker API", version="0.6.0", lifespan=lifespan)
+app = FastAPI(title="Healthcare Tracker API", version="0.7.0", lifespan=lifespan)
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(users.router)
