@@ -1,5 +1,6 @@
 import hashlib
 import secrets
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -41,3 +42,13 @@ def generate_refresh_token() -> str:
 def hash_refresh_token(raw: str) -> str:
     """Hash a refresh token for storage (never store the raw token)."""
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def create_share_token(share_link_id: uuid.UUID, expires_at: datetime) -> str:
+    """Create a signed JWT for a guest share link."""
+    payload = {
+        "sub": str(share_link_id),
+        "type": "share",
+        "exp": expires_at,
+    }
+    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)

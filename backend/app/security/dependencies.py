@@ -1,6 +1,9 @@
 import uuid
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Optional
 
-from fastapi import Cookie, Depends, Header, HTTPException, Request, status
+from fastapi import Cookie, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -22,6 +25,8 @@ def get_current_user(
     try:
         claims = decode_access_token(access_token)
     except TokenError:
+        raise _CREDENTIALS_EXCEPTION
+    if claims.get("type") == "share":
         raise _CREDENTIALS_EXCEPTION
     user_id = claims.get("sub")
     if not user_id:
@@ -51,3 +56,53 @@ def verify_csrf(
     cookie_token = request.cookies.get("csrf_token")
     if not cookie_token or not x_csrf_token or cookie_token != x_csrf_token:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF check failed")
+
+
+@dataclass
+class GuestContext:
+    share_link_id: uuid.UUID
+    allowed_sections: list[str]  # empty = all sections allowed
+
+
+def get_guest_access(
+    token: str = Query(..., alias="token"),
+    db: Session = Depends(get_db),
+) -> GuestContext:
+    """Validate a guest share token. Returns GuestContext or raises 401/403."""
+    from app.models.share_link import ShareLink
+    from app.security.tokens import decode_access_token, TokenError
+
+    invalid = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired link")
+    revoked_exc = HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This link has been revoked")
+
+    try:
+        claims = decode_access_token(token)
+    except TokenError:
+        raise invalid
+
+    if claims.get("type") != "share":
+        raise invalid
+
+    try:
+        link_id = uuid.UUID(claims["sub"])
+    except (KeyError, ValueError):
+        raise invalid
+
+    link = db.get(ShareLink, link_id)
+    if link is None:
+        raise invalid
+    if link.revoked:
+        raise revoked_exc
+    if link.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        raise invalid
+
+    return GuestContext(share_link_id=link_id, allowed_sections=link.allowed_sections)
+
+
+def require_guest_section_access(section: str, ctx: GuestContext) -> None:
+    """Raise 403 if the guest token does not allow access to this section."""
+    if ctx.allowed_sections and section not in ctx.allowed_sections:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"This link does not grant access to section '{section}'",
+        )
