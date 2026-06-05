@@ -7,8 +7,10 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.audit_log import AuditAction, ActorType
 from app.models.user import User
 from app.security.dependencies import get_current_user, require_admin, verify_csrf
+from app.services.audit_service import log_event
 from app.services.crud_service import CRUDService
 from app.services.errors import NotFoundError
 
@@ -45,32 +47,61 @@ def build_list_router(
         "",
         response_model=response_schema,
         status_code=status.HTTP_201_CREATED,
-        dependencies=[Depends(require_admin), Depends(verify_csrf)],
+        dependencies=[Depends(verify_csrf)],
     )
     def create_record(
         payload: create_schema,
         db: Session = Depends(get_db),
         current: User = Depends(require_admin),
     ):
-        return service.create(db, payload.model_dump(), created_by=current.id)
+        record = service.create(db, payload.model_dump(), created_by=current.id)
+        log_event(
+            db,
+            action=AuditAction.create,
+            actor_type=ActorType.user,
+            actor_user_id=current.id,
+            section=prefix.lstrip("/api/").replace("-", "_"),
+            record_id=str(record.id),
+            detail=f"Created record in {tag}",
+        )
+        return record
 
     @router.put(
         "/{record_id}",
         response_model=response_schema,
-        dependencies=[Depends(require_admin), Depends(verify_csrf)],
+        dependencies=[Depends(verify_csrf)],
     )
-    def update_record(record_id: uuid.UUID, payload: update_schema, db: Session = Depends(get_db)):
+    def update_record(
+        record_id: uuid.UUID,
+        payload: update_schema,
+        db: Session = Depends(get_db),
+        current: User = Depends(require_admin),
+    ):
         try:
-            return service.update(db, record_id, payload.model_dump(exclude_unset=True))
+            record = service.update(db, record_id, payload.model_dump(exclude_unset=True))
         except NotFoundError:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+        log_event(
+            db,
+            action=AuditAction.update,
+            actor_type=ActorType.user,
+            actor_user_id=current.id,
+            section=prefix.lstrip("/api/").replace("-", "_"),
+            record_id=str(record_id),
+            detail=f"Updated record in {tag}",
+        )
+        return record
 
     @router.delete(
         "/{record_id}",
         status_code=status.HTTP_204_NO_CONTENT,
-        dependencies=[Depends(require_admin), Depends(verify_csrf)],
+        dependencies=[Depends(verify_csrf)],
     )
-    def delete_record(record_id: uuid.UUID, db: Session = Depends(get_db)):
+    def delete_record(
+        record_id: uuid.UUID,
+        db: Session = Depends(get_db),
+        current: User = Depends(require_admin),
+    ):
         if document_section is not None:
             from app.services.documents import delete_documents_for_record
             delete_documents_for_record(db, document_section, str(record_id))
@@ -78,6 +109,15 @@ def build_list_router(
             service.delete(db, record_id)
         except NotFoundError:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+        log_event(
+            db,
+            action=AuditAction.delete,
+            actor_type=ActorType.user,
+            actor_user_id=current.id,
+            section=prefix.lstrip("/api/").replace("-", "_"),
+            record_id=str(record_id),
+            detail=f"Deleted record in {tag}",
+        )
 
     if document_section is not None:
         attach_document_routes(router, document_section, model)

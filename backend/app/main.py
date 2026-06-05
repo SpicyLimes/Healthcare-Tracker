@@ -5,9 +5,9 @@ from fastapi import FastAPI
 from app.config import settings
 from app.database import SessionLocal
 from app.routers import (
-    ailments, appointments, auth, dental_history, documents, doctors,
-    family_history, health, hospitalizations, insurances, medications,
-    pharmacies, profile, surgeries, users, vaccinations, vision_history,
+    ailments, appointments, audit_log, auth, dental_history, documents, doctors,
+    family_history, guest, health, hospitalizations, insurances, medications,
+    pharmacies, profile, share_links, surgeries, users, vaccinations, vision_history,
     visit_logs,
 )
 from app.services import user_service
@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Healthcare Tracker API", version="0.5.0", lifespan=lifespan)
+app = FastAPI(title="Healthcare Tracker API", version="0.6.0", lifespan=lifespan)
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(users.router)
@@ -51,3 +51,6 @@ app.include_router(vaccinations.router)
 app.include_router(visit_logs.router)
 app.include_router(appointments.router)
 app.include_router(documents.router)
+app.include_router(share_links.router)
+app.include_router(audit_log.router)
+app.include_router(guest.router)
