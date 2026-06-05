@@ -1,4 +1,3 @@
-// frontend/src/pages/GuestSectionPage.tsx
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
 import { listGuestRecords } from "../api/guest";
@@ -38,7 +37,7 @@ export default function GuestSectionPage() {
             {(records as Record<string, unknown>[]).map((row) => (
               <tr key={String(row.id)}>
                 <td style={{ paddingRight: "1rem" }}>
-                  <Link to={`/guest/sections/${section}/${row.id}?token=${encodeURIComponent(rawToken)}`}>
+                  <Link to={`/guest/sections/${section}/${row.id}`}>
                     View record
                   </Link>
                 </td>
