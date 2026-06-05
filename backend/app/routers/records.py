@@ -60,7 +60,7 @@ def build_list_router(
             action=AuditAction.create,
             actor_type=ActorType.user,
             actor_user_id=current.id,
-            section=prefix.lstrip("/api/").replace("-", "_"),
+            section=prefix.removeprefix("/api/").replace("-", "_"),
             record_id=str(record.id),
             detail=f"Created record in {tag}",
         )
@@ -86,7 +86,7 @@ def build_list_router(
             action=AuditAction.update,
             actor_type=ActorType.user,
             actor_user_id=current.id,
-            section=prefix.lstrip("/api/").replace("-", "_"),
+            section=prefix.removeprefix("/api/").replace("-", "_"),
             record_id=str(record_id),
             detail=f"Updated record in {tag}",
         )
@@ -114,7 +114,7 @@ def build_list_router(
             action=AuditAction.delete,
             actor_type=ActorType.user,
             actor_user_id=current.id,
-            section=prefix.lstrip("/api/").replace("-", "_"),
+            section=prefix.removeprefix("/api/").replace("-", "_"),
             record_id=str(record_id),
             detail=f"Deleted record in {tag}",
         )

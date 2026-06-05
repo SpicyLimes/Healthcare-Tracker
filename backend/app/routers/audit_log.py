@@ -1,5 +1,5 @@
 # backend/app/routers/audit_log.py
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -35,9 +35,9 @@ def list_audit_log(
     if section:
         q = q.filter(AuditLog.section == section)
     if date_from:
-        q = q.filter(AuditLog.timestamp >= date_from)
+        start = datetime.combine(date_from, datetime.min.time()).replace(tzinfo=timezone.utc)
+        q = q.filter(AuditLog.timestamp >= start)
     if date_to:
-        from datetime import datetime, timezone
         end = datetime.combine(date_to, datetime.max.time()).replace(tzinfo=timezone.utc)
         q = q.filter(AuditLog.timestamp <= end)
 

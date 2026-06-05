@@ -1,4 +1,5 @@
 # backend/app/routers/guest.py
+import logging
 import os
 import uuid
 from typing import Any
@@ -16,6 +17,8 @@ from app.schemas.document import DocumentRead
 from app.security.dependencies import GuestContext, get_guest_access, require_guest_section_access
 from app.services.audit_service import log_event
 from app.services.documents import INLINE_MIME_TYPES, get_documents_for_record
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/guest", tags=["guest"])
 
@@ -106,7 +109,11 @@ def download_guest_document(
         record_id=doc.record_id,
         detail=f"Guest downloaded document: {doc.filename}",
     )
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        logger.exception("Guest handler commit failed")
+        db.rollback()
     return FileResponse(
         path=file_path,
         media_type=doc.mime_type,
@@ -135,7 +142,11 @@ def list_guest_records(
         section=section,
         detail=f"Guest listed {section}",
     )
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        logger.exception("Guest handler commit failed")
+        db.rollback()
     return [schema.model_validate(row) for row in rows]
 
 
@@ -163,7 +174,11 @@ def get_guest_record(
         record_id=str(record_id),
         detail=f"Guest viewed record in {section}",
     )
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        logger.exception("Guest handler commit failed")
+        db.rollback()
     return schema.model_validate(row)
 
 
@@ -190,5 +205,9 @@ def list_guest_documents(
         record_id=str(record_id),
         detail=f"Guest listed documents in {section}",
     )
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        logger.exception("Guest handler commit failed")
+        db.rollback()
     return docs
