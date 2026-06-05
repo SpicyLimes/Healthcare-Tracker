@@ -1,3 +1,4 @@
+import logging
 import uuid as _uuid
 import uuid
 from typing import TYPE_CHECKING, Type
@@ -13,6 +14,8 @@ from app.security.dependencies import get_current_user, require_admin, verify_cs
 from app.services.audit_service import log_event
 from app.services.crud_service import CRUDService
 from app.services.errors import NotFoundError
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from app.models.document import DocumentSection
@@ -55,15 +58,18 @@ def build_list_router(
         current: User = Depends(require_admin),
     ):
         record = service.create(db, payload.model_dump(), created_by=current.id)
-        log_event(
-            db,
-            action=AuditAction.create,
-            actor_type=ActorType.user,
-            actor_user_id=current.id,
-            section=prefix.removeprefix("/api/").replace("-", "_"),
-            record_id=str(record.id),
-            detail=f"Created record in {tag}",
-        )
+        try:
+            log_event(
+                db,
+                action=AuditAction.create,
+                actor_type=ActorType.user,
+                actor_user_id=current.id,
+                section=prefix.removeprefix("/api/").replace("-", "_"),
+                record_id=str(record.id),
+                detail=f"Created record in {tag}",
+            )
+        except Exception:
+            logger.exception("Audit log failed for create in %s — ignoring", tag)
         return record
 
     @router.put(
@@ -81,15 +87,18 @@ def build_list_router(
             record = service.update(db, record_id, payload.model_dump(exclude_unset=True))
         except NotFoundError:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-        log_event(
-            db,
-            action=AuditAction.update,
-            actor_type=ActorType.user,
-            actor_user_id=current.id,
-            section=prefix.removeprefix("/api/").replace("-", "_"),
-            record_id=str(record_id),
-            detail=f"Updated record in {tag}",
-        )
+        try:
+            log_event(
+                db,
+                action=AuditAction.update,
+                actor_type=ActorType.user,
+                actor_user_id=current.id,
+                section=prefix.removeprefix("/api/").replace("-", "_"),
+                record_id=str(record_id),
+                detail=f"Updated record in {tag}",
+            )
+        except Exception:
+            logger.exception("Audit log failed for update in %s — ignoring", tag)
         return record
 
     @router.delete(
@@ -109,15 +118,18 @@ def build_list_router(
             service.delete(db, record_id)
         except NotFoundError:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-        log_event(
-            db,
-            action=AuditAction.delete,
-            actor_type=ActorType.user,
-            actor_user_id=current.id,
-            section=prefix.removeprefix("/api/").replace("-", "_"),
-            record_id=str(record_id),
-            detail=f"Deleted record in {tag}",
-        )
+        try:
+            log_event(
+                db,
+                action=AuditAction.delete,
+                actor_type=ActorType.user,
+                actor_user_id=current.id,
+                section=prefix.removeprefix("/api/").replace("-", "_"),
+                record_id=str(record_id),
+                detail=f"Deleted record in {tag}",
+            )
+        except Exception:
+            logger.exception("Audit log failed for delete in %s — ignoring", tag)
 
     if document_section is not None:
         attach_document_routes(router, document_section, model)
