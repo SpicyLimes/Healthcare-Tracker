@@ -4,13 +4,14 @@ import os
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
+from app.limiter import limiter
 from app.models.audit_log import AuditAction, ActorType
 from app.models.document import Document
 from app.schemas.document import DocumentRead
@@ -79,7 +80,8 @@ def _get_section_map() -> dict[str, tuple[Any, Any]]:
 
 
 @router.get("/sections")
-def get_allowed_sections(ctx: GuestContext = Depends(get_guest_access)):
+@limiter.limit("30/minute")
+def get_allowed_sections(request: Request, response: Response, ctx: GuestContext = Depends(get_guest_access)):
     """Return the list of sections this token grants access to."""
     from app.models.document import DocumentSection
     all_sections = [s.value for s in DocumentSection]
@@ -87,7 +89,10 @@ def get_allowed_sections(ctx: GuestContext = Depends(get_guest_access)):
 
 
 @router.get("/documents/{doc_id}/download")
+@limiter.limit("30/minute")
 def download_guest_document(
+    request: Request,
+    response: Response,
     doc_id: int,
     ctx: GuestContext = Depends(get_guest_access),
     db: Session = Depends(get_db),
@@ -123,7 +128,10 @@ def download_guest_document(
 
 
 @router.get("/{section}")
+@limiter.limit("30/minute")
 def list_guest_records(
+    request: Request,
+    response: Response,
     section: str,
     ctx: GuestContext = Depends(get_guest_access),
     db: Session = Depends(get_db),
@@ -151,7 +159,10 @@ def list_guest_records(
 
 
 @router.get("/{section}/{record_id}")
+@limiter.limit("30/minute")
 def get_guest_record(
+    request: Request,
+    response: Response,
     section: str,
     record_id: uuid.UUID,
     ctx: GuestContext = Depends(get_guest_access),
@@ -183,7 +194,10 @@ def get_guest_record(
 
 
 @router.get("/{section}/{record_id}/documents", response_model=list[DocumentRead])
+@limiter.limit("30/minute")
 def list_guest_documents(
+    request: Request,
+    response: Response,
     section: str,
     record_id: uuid.UUID,
     ctx: GuestContext = Depends(get_guest_access),
