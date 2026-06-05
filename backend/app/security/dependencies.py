@@ -69,6 +69,7 @@ def get_guest_access(
     db: Session = Depends(get_db),
 ) -> GuestContext:
     """Validate a guest share token. Returns GuestContext or raises 401/403."""
+    import hashlib
     from app.models.share_link import ShareLink
     from app.security.tokens import decode_access_token, TokenError
 
@@ -91,9 +92,15 @@ def get_guest_access(
     link = db.get(ShareLink, link_id)
     if link is None:
         raise invalid
+
+    # Verify the raw token matches the stored hash — prevents JWT forgery using a known link_id
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    if link.token_hash != token_hash:
+        raise invalid
+
     if link.revoked:
         raise revoked_exc
-    if link.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+    if link.expires_at.astimezone(timezone.utc) < datetime.now(timezone.utc):
         raise invalid
 
     return GuestContext(share_link_id=link_id, allowed_sections=link.allowed_sections)
