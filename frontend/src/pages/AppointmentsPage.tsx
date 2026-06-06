@@ -7,6 +7,7 @@ import {
   type AppointmentType,
 } from "../api/appointments";
 import DoctorPicker from "../components/DoctorPicker";
+import { doctorsApi, type Doctor } from "../api/doctors";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
 import { AppShell } from "@/components/app-shell";
@@ -52,11 +53,20 @@ export default function AppointmentsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Appointment[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<AppointmentInput>(EMPTY);
   const [error, setError] = useState("");
 
   async function reload() { setRows(await appointmentsApi.list()); }
-  useEffect(() => { reload().catch(() => setError("Failed to load appointments")); }, []);
+  useEffect(() => {
+    reload().catch(() => setError("Failed to load appointments"));
+    doctorsApi.list().then(setDoctors).catch(() => {});
+  }, []);
+
+  function resolveDoctorName(id: string | null, other: string | null): string {
+    if (id) return doctors.find((d) => d.id === id)?.name ?? other ?? "";
+    return other ?? "";
+  }
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -185,6 +195,8 @@ export default function AppointmentsPage() {
                   <tr className="border-b border-border bg-muted/50">
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date / Time</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Doctor</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Location</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reason</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
                     {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
@@ -198,6 +210,10 @@ export default function AppointmentsPage() {
                       <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                         <td className="px-4 py-3 font-medium text-foreground">{formatDatetime(r.appointment_datetime)}</td>
                         <td className="px-4 py-3 text-muted-foreground">{typeLabel}</td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {resolveDoctorName(r.doctor_id, r.doctor_other)}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{r.location ?? "—"}</td>
                         <td className="px-4 py-3 text-muted-foreground">{r.reason ?? "—"}</td>
                         <td className="px-4 py-3">
                           <Badge variant={STATUS_VARIANT[r.status]} className="capitalize">
@@ -219,7 +235,7 @@ export default function AppointmentsPage() {
                   })}
                   {rows.length === 0 && (
                     <tr>
-                      <td colSpan={isAdmin ? 6 : 5} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                      <td colSpan={isAdmin ? 8 : 7} className="px-4 py-8 text-center text-sm text-muted-foreground">
                         No appointment records yet.
                       </td>
                     </tr>
