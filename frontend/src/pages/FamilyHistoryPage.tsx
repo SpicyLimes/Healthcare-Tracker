@@ -59,6 +59,44 @@ export default function FamilyHistoryPage() {
   return (
     <AppShell>
       <PageLayout title="Family Health History" description="Hereditary conditions and family medical history.">
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/40">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Relative</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Condition</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Age of Onset</th>
+                {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id} className="border-b border-border last:border-0">
+                  <td className="px-4 py-3 font-medium text-foreground">{r.relative}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{r.condition}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{r.age_of_onset ?? ""}</td>
+                  {isAdmin && (
+                    <td className="px-4 py-3">
+                      <Button variant="ghost" size="sm" onClick={() => onDelete(r.id)}>
+                        Delete
+                      </Button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={isAdmin ? 4 : 3} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    No family history records yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+
         {isAdmin && (
           <Card>
             <CardContent className="py-6">
@@ -115,43 +153,6 @@ export default function FamilyHistoryPage() {
           </Card>
         )}
 
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-
-        <div className="mt-4 overflow-x-auto rounded-xl border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Relative</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Condition</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Age of Onset</th>
-                {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3 font-medium text-foreground">{r.relative}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.condition}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.age_of_onset ?? ""}</td>
-                  {isAdmin && (
-                    <td className="px-4 py-3">
-                      <Button variant="ghost" size="sm" onClick={() => onDelete(r.id)}>
-                        Delete
-                      </Button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={isAdmin ? 4 : 3} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                    No family history records yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
       </PageLayout>
     </AppShell>
   );

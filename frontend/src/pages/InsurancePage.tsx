@@ -62,6 +62,46 @@ export default function InsurancePage() {
   return (
     <AppShell>
       <PageLayout title="Insurance" description="Health insurance policies and contact information.">
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/40">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Insurer</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Policy #</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Group #</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Phone</th>
+                {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id} className="border-b border-border last:border-0">
+                  <td className="px-4 py-3 font-medium text-foreground">{r.insurer_name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{r.policy_number ?? ""}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{r.group_number ?? ""}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{r.contact_phone ?? ""}</td>
+                  {isAdmin && (
+                    <td className="px-4 py-3">
+                      <Button variant="ghost" size="sm" onClick={() => onDelete(r.id)}>
+                        Delete
+                      </Button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={isAdmin ? 5 : 4} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    No insurance records yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+
         {isAdmin && (
           <Card>
             <CardContent className="py-6">
@@ -139,46 +179,6 @@ export default function InsurancePage() {
             </CardContent>
           </Card>
         )}
-
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-
-        <div className="mt-4 overflow-x-auto rounded-xl border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Insurer</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Policy #</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Group #</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Phone</th>
-                {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3 font-medium text-foreground">{r.insurer_name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.policy_number ?? ""}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.group_number ?? ""}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.contact_phone ?? ""}</td>
-                  {isAdmin && (
-                    <td className="px-4 py-3">
-                      <Button variant="ghost" size="sm" onClick={() => onDelete(r.id)}>
-                        Delete
-                      </Button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={isAdmin ? 5 : 4} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                    No insurance records yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
 
         {rows.map((r) => (
           <div key={r.id} className="mt-4">

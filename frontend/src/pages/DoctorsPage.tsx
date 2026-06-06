@@ -60,6 +60,41 @@ export default function DoctorsPage() {
         title="Doctors & Specialists"
         description="Manage your physicians, specialists, and care providers."
       >
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/40">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Specialty</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Practice</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Phone</th>
+                {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/20">
+                  <td className="px-4 py-3 font-medium text-foreground">{r.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{r.specialty ?? ""}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{r.practice ?? ""}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{r.phone ?? ""}</td>
+                  {isAdmin && (
+                    <td className="px-4 py-3">
+                      <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
+                        Delete
+                      </Button>
+                    </td>
+                  )}
+                  <td className="px-4 py-3">
+                    <DocumentsPanel section="doctors" recordId={r.id} isAdmin={isAdmin} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         {isAdmin && (
           <Card>
             <CardContent className="py-6">
@@ -145,41 +180,6 @@ export default function DoctorsPage() {
             </CardContent>
           </Card>
         )}
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <div className="mt-4 overflow-x-auto rounded-xl border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Specialty</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Practice</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Phone</th>
-                {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                  <td className="px-4 py-3 font-medium text-foreground">{r.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.specialty ?? ""}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.practice ?? ""}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.phone ?? ""}</td>
-                  {isAdmin && (
-                    <td className="px-4 py-3">
-                      <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
-                        Delete
-                      </Button>
-                    </td>
-                  )}
-                  <td className="px-4 py-3">
-                    <DocumentsPanel section="doctors" recordId={r.id} isAdmin={isAdmin} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </PageLayout>
     </AppShell>
   );

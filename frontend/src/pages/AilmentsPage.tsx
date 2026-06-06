@@ -58,6 +58,43 @@ export default function AilmentsPage() {
         title="Ailment History"
         description="Track diagnoses, conditions, and their current status."
       >
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/40">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Condition</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Onset Date</th>
+                {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/20">
+                  <td className="px-4 py-3 font-medium text-foreground">{r.condition}</td>
+                  <td className="px-4 py-3">
+                    <Badge variant={r.status === "active" ? "default" : "secondary"}>
+                      {r.status}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">{r.onset_date ?? ""}</td>
+                  {isAdmin && (
+                    <td className="px-4 py-3">
+                      <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
+                        Delete
+                      </Button>
+                    </td>
+                  )}
+                  <td className="px-4 py-3">
+                    <DocumentsPanel section="ailments" recordId={r.id} isAdmin={isAdmin} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         {isAdmin && (
           <Card>
             <CardContent className="py-6">
@@ -116,43 +153,6 @@ export default function AilmentsPage() {
             </CardContent>
           </Card>
         )}
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <div className="mt-4 overflow-x-auto rounded-xl border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Condition</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Onset Date</th>
-                {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                  <td className="px-4 py-3 font-medium text-foreground">{r.condition}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={r.status === "active" ? "default" : "secondary"}>
-                      {r.status}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.onset_date ?? ""}</td>
-                  {isAdmin && (
-                    <td className="px-4 py-3">
-                      <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
-                        Delete
-                      </Button>
-                    </td>
-                  )}
-                  <td className="px-4 py-3">
-                    <DocumentsPanel section="ailments" recordId={r.id} isAdmin={isAdmin} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </PageLayout>
     </AppShell>
   );
