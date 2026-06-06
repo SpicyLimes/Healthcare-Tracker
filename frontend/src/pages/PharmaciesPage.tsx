@@ -16,7 +16,6 @@ export default function PharmaciesPage() {
     name: "",
     address: "",
     phone: "",
-    fax: "",
     notes: "",
   });
 
@@ -40,7 +39,7 @@ export default function PharmaciesPage() {
         Object.entries(form).filter(([, v]) => v !== ""),
       ) as typeof form;
       await pharmaciesApi.create(payload);
-      setForm({ name: "", address: "", phone: "", fax: "", notes: "" });
+      setForm({ name: "", address: "", phone: "", notes: "" });
       await reload();
     } catch {
       setError("Could not add pharmacy");
@@ -123,16 +122,6 @@ export default function PharmaciesPage() {
                       value={form.phone}
                       onChange={(e) => set("phone", e.target.value)}
                       placeholder="e.g. +1 555-555-0100"
-                    />
-                  </FormField>
-
-                  <FormField label="Fax" htmlFor="fax">
-                    <Input
-                      id="fax"
-                      type="tel"
-                      value={form.fax}
-                      onChange={(e) => set("fax", e.target.value)}
-                      placeholder="e.g. +1 555-555-0101"
                     />
                   </FormField>
 

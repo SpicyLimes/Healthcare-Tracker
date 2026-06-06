@@ -18,7 +18,6 @@ export default function InsurancePage() {
     policy_number: "",
     group_number: "",
     contact_phone: "",
-    contact_address: "",
     notes: "",
   });
 
@@ -42,7 +41,7 @@ export default function InsurancePage() {
         Object.entries(form).filter(([, v]) => v !== ""),
       ) as typeof form;
       await insurancesApi.create(payload);
-      setForm({ insurer_name: "", policy_number: "", group_number: "", contact_phone: "", contact_address: "", notes: "" });
+      setForm({ insurer_name: "", policy_number: "", group_number: "", contact_phone: "", notes: "" });
       await reload();
     } catch {
       setError("Could not add insurance record");
@@ -149,17 +148,6 @@ export default function InsurancePage() {
                       placeholder="e.g. +1 800-555-0100"
                     />
                   </FormField>
-
-                  <div className="sm:col-span-2">
-                    <FormField label="Contact address" htmlFor="contact_address">
-                      <Textarea
-                        id="contact_address"
-                        value={form.contact_address}
-                        onChange={(e) => set("contact_address", e.target.value)}
-                        placeholder="Mailing address..."
-                      />
-                    </FormField>
-                  </div>
 
                   <div className="sm:col-span-2">
                     <FormField label="Notes" htmlFor="notes">
