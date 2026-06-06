@@ -1,5 +1,6 @@
 // frontend/src/components/DocumentsPanel.tsx
 import { useEffect, useRef, useState } from "react";
+import { ChevronDown, ChevronRight, Trash2, Upload } from "lucide-react";
 import {
   deleteDocument,
   getDownloadUrl,
@@ -7,6 +8,7 @@ import {
   uploadDocument,
   type DocumentRecord,
 } from "../api/documents";
+import { Button } from "@/components/ui/button";
 
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
@@ -87,66 +89,86 @@ export default function DocumentsPanel({ section, recordId, isAdmin }: Props) {
   }
 
   return (
-    <div style={{ marginTop: "0.5rem" }}>
-      <button
+    <div className="mt-1">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 gap-1 px-2 text-xs text-muted-foreground"
         onClick={() => setExpanded((v) => !v)}
-        style={{ fontSize: "0.8rem", background: "none", border: "none", cursor: "pointer", padding: 0 }}
         aria-expanded={expanded}
       >
-        {expanded ? "▲" : "▶"} Documents ({docs.length})
-      </button>
+        {expanded ? (
+          <ChevronDown className="h-3 w-3" />
+        ) : (
+          <ChevronRight className="h-3 w-3" />
+        )}
+        Documents ({docs.length})
+      </Button>
 
       {expanded && (
-        <div style={{ marginTop: "0.5rem", paddingLeft: "1rem" }}>
-          {uploadError && <p role="alert" style={{ color: "red", fontSize: "0.85rem" }}>{uploadError}</p>}
+        <div className="mt-2 pl-2">
+          {uploadError && (
+            <p role="alert" className="mb-2 text-xs text-destructive">
+              {uploadError}
+            </p>
+          )}
 
           {isAdmin && (
             <>
               <input
                 ref={fileInputRef}
                 type="file"
-                style={{ display: "none" }}
+                className="hidden"
                 onChange={handleFileChange}
                 aria-label="Upload document"
               />
-              <button
+              <Button
+                variant="outline"
+                size="sm"
+                className="mb-3 h-7 gap-1.5 text-xs"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={loading}
-                style={{ fontSize: "0.85rem", marginBottom: "0.5rem" }}
               >
-                {loading ? "Uploading…" : "Upload"}
-              </button>
+                <Upload className="h-3 w-3" />
+                {loading ? "Uploading…" : "Upload Document"}
+              </Button>
             </>
           )}
 
           {docs.length === 0 ? (
-            <p style={{ fontSize: "0.85rem", color: "#666" }}>No documents attached.</p>
+            <p className="text-xs text-muted-foreground">No documents attached.</p>
           ) : (
-            <table style={{ fontSize: "0.85rem", borderCollapse: "collapse" }}>
+            <table className="w-full text-xs">
               <tbody>
                 {docs.map((doc) => (
                   <tr key={doc.id}>
-                    <td style={{ paddingRight: "1rem" }}>
+                    <td className="py-1 pr-3">
                       <a
                         href={getDownloadUrl(doc.id)}
                         target="_blank"
                         rel="noopener noreferrer"
+                        className="text-primary underline-offset-2 hover:underline"
                       >
                         {doc.filename}
                       </a>
                     </td>
-                    <td style={{ paddingRight: "1rem", color: "#666" }}>{formatBytes(doc.file_size)}</td>
-                    <td style={{ paddingRight: "1rem", color: "#666" }}>
+                    <td className="py-1 pr-3 text-muted-foreground">
+                      {formatBytes(doc.file_size)}
+                    </td>
+                    <td className="py-1 pr-3 text-muted-foreground">
                       {new Date(doc.uploaded_at).toLocaleDateString()}
                     </td>
                     {isAdmin && (
-                      <td>
-                        <button
+                      <td className="py-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                           onClick={() => handleDelete(doc.id)}
-                          style={{ fontSize: "0.8rem" }}
+                          aria-label="Delete document"
                         >
-                          Delete
-                        </button>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </td>
                     )}
                   </tr>
