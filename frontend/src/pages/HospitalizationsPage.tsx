@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { hospitalizationsApi, type Hospitalization, type HospitalizationInput } from "../api/hospitalizations";
+import { doctorsApi, type Doctor } from "../api/doctors";
 import DoctorPicker from "../components/DoctorPicker";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -13,11 +14,15 @@ export default function HospitalizationsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Hospitalization[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<HospitalizationInput>({ facility: "" });
   const [error, setError] = useState("");
 
   async function reload() { setRows(await hospitalizationsApi.list()); }
-  useEffect(() => { reload().catch(() => setError("Failed to load hospitalizations")); }, []);
+  useEffect(() => {
+    reload().catch(() => setError("Failed to load hospitalizations"));
+    doctorsApi.list().then(setDoctors).catch(() => {});
+  }, []);
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -29,6 +34,11 @@ export default function HospitalizationsPage() {
   async function onDelete(id: string) {
     try { await hospitalizationsApi.remove(id); await reload(); }
     catch { setError("Could not delete record"); }
+  }
+
+  function resolveDoctorName(id: string | null, other: string | null): string {
+    if (id) return doctors.find((d) => d.id === id)?.name ?? other ?? "";
+    return other ?? "";
   }
 
   return (
@@ -92,7 +102,7 @@ export default function HospitalizationsPage() {
 
                   {/* Attending Physician (full width) */}
                   <div className="sm:col-span-2">
-                    <FormField label="Attending Physician" htmlFor="attending_physician">
+                    <FormField label="Doctor" htmlFor="attending_physician">
                       <DoctorPicker
                         doctorId={form.attending_physician_id ?? null}
                         doctorOther={form.attending_physician_other ?? null}
@@ -144,6 +154,8 @@ export default function HospitalizationsPage() {
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Admission</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Discharge</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reason</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Doctor</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Outcome</th>
                     {isAdmin && <th className="px-4 py-3" />}
                     <th className="px-4 py-3" />
                   </tr>
@@ -155,6 +167,10 @@ export default function HospitalizationsPage() {
                       <td className="px-4 py-3 text-muted-foreground">{r.admission_date ?? ""}</td>
                       <td className="px-4 py-3 text-muted-foreground">{r.discharge_date ?? ""}</td>
                       <td className="px-4 py-3 text-muted-foreground">{r.reason ?? ""}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {resolveDoctorName(r.attending_physician_id, r.attending_physician_other)}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{r.outcome ?? ""}</td>
                       {isAdmin && (
                         <td className="px-4 py-3">
                           <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
@@ -169,7 +185,7 @@ export default function HospitalizationsPage() {
                   ))}
                   {rows.length === 0 && (
                     <tr>
-                      <td colSpan={isAdmin ? 6 : 5} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                      <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-muted-foreground">
                         No hospitalization records yet.
                       </td>
                     </tr>
