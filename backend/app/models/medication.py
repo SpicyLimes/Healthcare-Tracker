@@ -33,6 +33,9 @@ class Medication(Base):
     frequency: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     route: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     prescribing_doctor: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    prescribing_doctor_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("doctors.id", ondelete="SET NULL"), nullable=True
+    )
     start_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     end_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

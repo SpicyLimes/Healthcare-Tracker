@@ -47,6 +47,7 @@ class MedicationCreate(BaseModel):
     frequency: str | None = None
     route: str | None = None
     prescribing_doctor: str | None = None
+    prescribing_doctor_id: uuid.UUID | None = None
     start_date: date | None = None
     end_date: date | None = None
     is_active: bool = True
@@ -60,6 +61,7 @@ class MedicationUpdate(BaseModel):
     frequency: str | None = None
     route: str | None = None
     prescribing_doctor: str | None = None
+    prescribing_doctor_id: uuid.UUID | None = None
     start_date: date | None = None
     end_date: date | None = None
     is_active: bool | None = None
@@ -76,6 +78,7 @@ class MedicationResponse(BaseModel):
     frequency: str | None
     route: str | None
     prescribing_doctor: str | None
+    prescribing_doctor_id: uuid.UUID | None
     start_date: date | None
     end_date: date | None
     is_active: bool
@@ -129,6 +132,7 @@ class AilmentCreate(BaseModel):
     onset_date: date | None = None
     status: AilmentStatus = AilmentStatus.active
     treating_doctor: str | None = None
+    treating_doctor_id: uuid.UUID | None = None
     notes: str | None = None
 
 
@@ -137,6 +141,7 @@ class AilmentUpdate(BaseModel):
     onset_date: date | None = None
     status: AilmentStatus | None = None
     treating_doctor: str | None = None
+    treating_doctor_id: uuid.UUID | None = None
     notes: str | None = None
 
 
@@ -148,6 +153,7 @@ class AilmentResponse(BaseModel):
     onset_date: date | None
     status: AilmentStatus
     treating_doctor: str | None
+    treating_doctor_id: uuid.UUID | None
     notes: str | None
     created_at: datetime
     updated_at: datetime

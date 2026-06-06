@@ -255,6 +255,7 @@ class VisitLogCreate(BaseModel):
     reason: str | None = None
     summary: str | None = None
     follow_up: str | None = None
+    follow_up_date: date | None = None
     notes: str | None = None
 
 class VisitLogUpdate(BaseModel):
@@ -264,6 +265,7 @@ class VisitLogUpdate(BaseModel):
     reason: str | None = None
     summary: str | None = None
     follow_up: str | None = None
+    follow_up_date: date | None = None
     notes: str | None = None
 
 class VisitLogResponse(BaseModel):
@@ -275,6 +277,7 @@ class VisitLogResponse(BaseModel):
     reason: str | None
     summary: str | None
     follow_up: str | None
+    follow_up_date: date | None
     notes: str | None
     created_at: datetime
     updated_at: datetime

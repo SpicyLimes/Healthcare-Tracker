@@ -151,6 +151,7 @@ class VisitLog(Base):
     reason: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     follow_up: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    follow_up_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
