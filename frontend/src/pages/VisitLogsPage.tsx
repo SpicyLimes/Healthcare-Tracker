@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { visitLogsApi, type VisitLog, type VisitLogInput } from "../api/visitLogs";
+import { doctorsApi, type Doctor } from "../api/doctors";
 import DoctorPicker from "../components/DoctorPicker";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -17,6 +18,7 @@ const EMPTY: VisitLogInput = {
   reason: null,
   summary: null,
   follow_up: null,
+  follow_up_date: null,
   notes: null,
 };
 
@@ -24,11 +26,15 @@ export default function VisitLogsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<VisitLog[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<VisitLogInput>(EMPTY);
   const [error, setError] = useState("");
 
   async function reload() { setRows(await visitLogsApi.list()); }
-  useEffect(() => { reload().catch(() => setError("Failed to load visit logs")); }, []);
+  useEffect(() => {
+    reload().catch(() => setError("Failed to load visit logs"));
+    doctorsApi.list().then(setDoctors).catch(() => {});
+  }, []);
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -40,6 +46,11 @@ export default function VisitLogsPage() {
   async function onDelete(id: string) {
     try { await visitLogsApi.remove(id); await reload(); }
     catch { setError("Could not delete record"); }
+  }
+
+  function resolveDoctorName(id: string | null, other: string | null): string {
+    if (id) return doctors.find((d) => d.id === id)?.name ?? other ?? "";
+    return other ?? "";
   }
 
   return (
@@ -102,9 +113,9 @@ export default function VisitLogsPage() {
                     </FormField>
                   </div>
 
-                  {/* Follow-up (full width) */}
+                  {/* Follow-up Notes (full width) */}
                   <div className="sm:col-span-2">
-                    <FormField label="Follow-up" htmlFor="follow_up">
+                    <FormField label="Follow-up Notes" htmlFor="follow_up">
                       <Textarea
                         id="follow_up"
                         placeholder="Follow-up instructions or next steps…"
@@ -113,6 +124,16 @@ export default function VisitLogsPage() {
                       />
                     </FormField>
                   </div>
+
+                  {/* Follow-up Date */}
+                  <FormField label="Follow-up Date" htmlFor="follow_up_date">
+                    <Input
+                      id="follow_up_date"
+                      type="date"
+                      value={form.follow_up_date ?? ""}
+                      onChange={(e) => setForm((s) => ({ ...s, follow_up_date: e.target.value || null }))}
+                    />
+                  </FormField>
 
                   {/* Notes (full width) */}
                   <div className="sm:col-span-2">
@@ -144,6 +165,8 @@ export default function VisitLogsPage() {
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Doctor</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reason</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Summary</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Follow-up Date</th>
                     {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
                     <th className="px-4 py-3" />
                   </tr>
@@ -152,8 +175,12 @@ export default function VisitLogsPage() {
                   {rows.map((r) => (
                     <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 font-medium text-foreground">{formatDate(r.visit_date)}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{r.doctor_other ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{resolveDoctorName(r.doctor_id, r.doctor_other)}</td>
                       <td className="px-4 py-3 text-muted-foreground">{r.reason ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">
+                        {r.summary ? r.summary.slice(0, 60) + (r.summary.length > 60 ? "…" : "") : ""}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.follow_up_date ?? ""}</td>
                       {isAdmin && (
                         <td className="px-4 py-3">
                           <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
@@ -168,7 +195,7 @@ export default function VisitLogsPage() {
                   ))}
                   {rows.length === 0 && (
                     <tr>
-                      <td colSpan={isAdmin ? 5 : 4} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                      <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-muted-foreground">
                         No visit log records yet.
                       </td>
                     </tr>
