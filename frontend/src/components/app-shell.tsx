@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { NavSidebar } from "@/components/nav-sidebar"
 import { useTheme } from "@/components/theme-provider"
+import { AccentPicker } from "@/components/accent-picker"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { theme, toggleTheme } = useTheme()
@@ -80,6 +81,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           {/* Spacer */}
           <div className="flex-1" />
+
+          {/* Accent color picker */}
+          <AccentPicker isDark={theme === "dark"} />
 
           {/* Theme toggle */}
           <Button variant="ghost" size="icon-sm" onClick={toggleTheme}>
