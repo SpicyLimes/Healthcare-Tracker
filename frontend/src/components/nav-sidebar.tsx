@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   User, Pill, Stethoscope, HeartPulse, Shield, Building2, Users,
   Scissors, Hospital, Eye, Smile, Syringe, ClipboardList, CalendarDays,
-  FolderOpen, KeyRound, Share2, ScrollText, UserCog, LogOut, Activity,
+  FolderOpen, KeyRound, Share2, ScrollText, UserCog, LogOut,
   LayoutDashboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -112,9 +112,7 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
             collapsed ? "justify-center px-0" : "gap-2.5 px-4"
           )}
         >
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary">
-            <Activity className="size-4 text-primary-foreground" />
-          </div>
+          <img src="/logo.png" alt="Healthcare Tracker" className="size-8 shrink-0 rounded-lg" />
           {!collapsed && (
             <span className="text-sm font-semibold text-foreground">
               Healthcare Tracker
