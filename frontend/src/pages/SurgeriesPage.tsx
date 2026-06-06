@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { surgeriesApi, type Surgery, type SurgeryInput } from "../api/surgeries";
+import { doctorsApi, type Doctor } from "../api/doctors";
 import DoctorPicker from "../components/DoctorPicker";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -13,11 +14,15 @@ export default function SurgeriesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Surgery[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<SurgeryInput>({ procedure: "" });
   const [error, setError] = useState("");
 
   async function reload() { setRows(await surgeriesApi.list()); }
-  useEffect(() => { reload().catch(() => setError("Failed to load surgeries")); }, []);
+  useEffect(() => {
+    reload().catch(() => setError("Failed to load surgeries"));
+    doctorsApi.list().then(setDoctors).catch(() => {});
+  }, []);
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -32,6 +37,11 @@ export default function SurgeriesPage() {
   async function onDelete(id: string) {
     try { await surgeriesApi.remove(id); await reload(); }
     catch { setError("Could not delete record"); }
+  }
+
+  function resolveDoctorName(id: string | null, other: string | null): string {
+    if (id) return doctors.find((d) => d.id === id)?.name ?? other ?? "";
+    return other ?? "";
   }
 
   return (
@@ -133,6 +143,7 @@ export default function SurgeriesPage() {
                   <tr className="border-b border-border bg-muted/50">
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Procedure</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Surgeon</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Hospital</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Outcome</th>
                     {isAdmin && <th className="px-4 py-3" />}
@@ -144,6 +155,9 @@ export default function SurgeriesPage() {
                     <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 font-medium text-foreground">{r.procedure}</td>
                       <td className="px-4 py-3 text-muted-foreground">{r.surgery_date ?? ""}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {resolveDoctorName(r.surgeon_id, r.surgeon_other)}
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground">{r.hospital ?? ""}</td>
                       <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{r.outcome ?? ""}</td>
                       {isAdmin && (
@@ -160,7 +174,7 @@ export default function SurgeriesPage() {
                   ))}
                   {rows.length === 0 && (
                     <tr>
-                      <td colSpan={isAdmin ? 6 : 5} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                      <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-muted-foreground">
                         No surgery records yet.
                       </td>
                     </tr>
