@@ -16,6 +16,9 @@ class UserNotFoundError(Exception):
     """Raised when a user id does not exist."""
 
 
+_UNSET = object()
+
+
 def _admin_count(db: Session) -> int:
     return db.scalar(select(func.count()).select_from(User).where(User.role == Role.admin)) or 0
 
@@ -45,7 +48,13 @@ def list_users(db: Session) -> list[User]:
     return list(db.scalars(select(User).order_by(User.created_at)))
 
 
-def update_user(db: Session, user_id: uuid.UUID, role: Role | None, is_active: bool | None) -> User:
+def update_user(
+    db: Session,
+    user_id: uuid.UUID,
+    role: Role | None,
+    is_active: bool | None,
+    full_name: object = _UNSET,
+) -> User:
     user = get_user(db, user_id)
     # Guard: don't demote or deactivate the last admin
     if user.role == Role.admin and _admin_count(db) == 1:
@@ -55,6 +64,9 @@ def update_user(db: Session, user_id: uuid.UUID, role: Role | None, is_active: b
         user.role = role
     if is_active is not None:
         user.is_active = is_active
+    if full_name is not _UNSET:
+        # None clears the name; "" also clears it (treat empty string as null)
+        user.full_name = full_name if full_name else None
     db.flush()
     return user
 
