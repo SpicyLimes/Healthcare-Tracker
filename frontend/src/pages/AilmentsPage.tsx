@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { ailmentsApi, type Ailment, type AilmentInput, type AilmentStatus } from "../api/ailments";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
+import { doctorsApi, type Doctor } from "../api/doctors";
+import DoctorPicker from "../components/DoctorPicker";
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +16,7 @@ const EMPTY: AilmentInput = {
   onset_date: null,
   status: "active",
   treating_doctor: null,
+  treating_doctor_id: null,
   notes: null,
 };
 
@@ -23,12 +26,14 @@ export default function AilmentsPage() {
   const [rows, setRows] = useState<Ailment[]>([]);
   const [form, setForm] = useState<AilmentInput>(EMPTY);
   const [error, setError] = useState("");
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
 
   async function reload() {
     setRows(await ailmentsApi.list());
   }
   useEffect(() => {
     reload().catch(() => setError("Failed to load ailments"));
+    doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
 
   async function onAdd(e: FormEvent) {
@@ -52,6 +57,11 @@ export default function AilmentsPage() {
     }
   }
 
+  function resolveDoctorName(id: string | null, other: string | null): string {
+    if (id) return doctors.find((d) => d.id === id)?.name ?? other ?? "";
+    return other ?? "";
+  }
+
   return (
     <AppShell>
       <PageLayout
@@ -65,6 +75,7 @@ export default function AilmentsPage() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Condition</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Onset Date</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Treating Doctor</th>
                 {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
                 <th />
               </tr>
@@ -79,6 +90,9 @@ export default function AilmentsPage() {
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{r.onset_date ?? ""}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {resolveDoctorName(r.treating_doctor_id, r.treating_doctor)}
+                  </td>
                   {isAdmin && (
                     <td className="px-4 py-3">
                       <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
@@ -130,11 +144,10 @@ export default function AilmentsPage() {
                     />
                   </FormField>
                   <FormField label="Treating Doctor" htmlFor="ail-doctor">
-                    <Input
-                      id="ail-doctor"
-                      placeholder="Doctor name"
-                      value={form.treating_doctor ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, treating_doctor: e.target.value || null }))}
+                    <DoctorPicker
+                      doctorId={form.treating_doctor_id ?? null}
+                      doctorOther={form.treating_doctor ?? null}
+                      onChange={(id, other) => setForm((s) => ({ ...s, treating_doctor_id: id, treating_doctor: other }))}
                     />
                   </FormField>
                 </div>
