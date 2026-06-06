@@ -65,8 +65,9 @@ def update_user(
     if is_active is not None:
         user.is_active = is_active
     if full_name is not _UNSET:
-        # None clears the name; "" also clears it (treat empty string as null)
-        user.full_name = full_name if full_name else None
+        # None/""/whitespace-only all clear the name
+        stripped = full_name.strip() if isinstance(full_name, str) else None
+        user.full_name = stripped if stripped else None
     db.flush()
     return user
 
