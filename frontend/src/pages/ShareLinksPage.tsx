@@ -4,6 +4,13 @@ import {
   listShareLinks, createShareLink, revokeShareLink,
   type ShareLink, type ShareLinkCreated,
 } from "../api/shareLinks";
+import { AppShell } from "@/components/app-shell";
+import { PageLayout } from "@/components/page-layout";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { FormField, Input } from "@/components/ui/form-field";
+import { formatDate } from "@/lib/format";
 
 const ALL_SECTIONS = [
   "surgeries", "hospitalizations", "vision_history", "dental_history",
@@ -85,90 +92,147 @@ export default function ShareLinksPage() {
   }
 
   return (
-    <section style={{ fontFamily: "system-ui", padding: "2rem" }}>
-      <h1>Share Links</h1>
-      {error && <p role="alert" style={{ color: "red" }}>{error}</p>}
+    <AppShell>
+      <PageLayout
+        title="Share Links"
+        description="Generate time-limited links for doctor access."
+        action={
+          <Button variant={showForm ? "outline" : "default"} onClick={() => setShowForm((v) => !v)}>
+            {showForm ? "Cancel" : "Create Link"}
+          </Button>
+        }
+      >
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
-      {created && (
-        <div role="dialog" aria-label="Share link created" style={{ border: "1px solid #ccc", padding: "1rem", marginBottom: "1rem", background: "#f9f9f9" }}>
-          <p><strong>Share link created.</strong> Save this link now — it cannot be retrieved again.</p>
-          <code style={{ wordBreak: "break-all" }}>{window.location.origin}{created.token_url}</code>
-          <br />
-          <button onClick={() => handleCopy(created.token_url)} style={{ marginTop: "0.5rem" }}>
-            {copied ? "Copied!" : "Copy link"}
-          </button>
-          <button onClick={() => setCreated(null)} style={{ marginLeft: "1rem" }}>Dismiss</button>
-        </div>
-      )}
-
-      <button onClick={() => setShowForm((v) => !v)} style={{ marginBottom: "1rem" }}>
-        {showForm ? "Cancel" : "Create Link"}
-      </button>
-
-      {showForm && (
-        <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxWidth: "30rem", marginBottom: "1rem" }}>
-          <label style={{ display: "flex", flexDirection: "column" }}>
-            Label
-            <input required value={label} onChange={(e) => setLabel(e.target.value)} />
-          </label>
-          <label style={{ display: "flex", flexDirection: "column" }}>
-            Expiry
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              {[7, 30, 90].map((d) => (
-                <button key={d} type="button" onClick={() => setExpiresAt(addDays(d))}>
-                  {d} days
-                </button>
-              ))}
-              <input type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
+        {created && (
+          <div
+            role="dialog"
+            aria-label="Share link created"
+            className="mb-4 rounded-xl border border-border bg-card p-4"
+          >
+            <p className="font-medium text-foreground">
+              Share link created. Save this link now — it cannot be retrieved again.
+            </p>
+            <code className="mt-2 block break-all text-sm text-muted-foreground">
+              {window.location.origin}{created.token_url}
+            </code>
+            <div className="mt-3 flex gap-2">
+              <Button size="sm" onClick={() => handleCopy(created.token_url)}>
+                {copied ? "Copied!" : "Copy link"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setCreated(null)}>
+                Dismiss
+              </Button>
             </div>
-          </label>
-          <fieldset>
-            <legend>Sections (none = all)</legend>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-              {ALL_SECTIONS.map((s) => (
-                <label key={s} style={{ display: "flex", gap: "0.25rem", alignItems: "center" }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedSections.includes(s)}
-                    onChange={() => toggleSection(s)}
+          </div>
+        )}
+
+        {showForm && (
+          <Card className="mb-6">
+            <CardContent className="py-6">
+              <form onSubmit={handleCreate} className="flex flex-col gap-5">
+                <FormField label="Label" htmlFor="sl-label">
+                  <Input
+                    id="sl-label"
+                    required
+                    placeholder="e.g. Dr. Smith visit"
+                    value={label}
+                    onChange={(e) => setLabel(e.target.value)}
                   />
-                  {s.replace(/_/g, " ")}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          <button type="submit">Create</button>
-        </form>
-      )}
+                </FormField>
 
-      <table>
-        <thead>
-          <tr>
-            <th style={{ textAlign: "left", paddingRight: "1rem" }}>Label</th>
-            <th style={{ textAlign: "left", paddingRight: "1rem" }}>Sections</th>
-            <th style={{ textAlign: "left", paddingRight: "1rem" }}>Expires</th>
-            <th style={{ textAlign: "left", paddingRight: "1rem" }}>Status</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {links.map((link) => (
-            <tr key={link.id}>
-              <td style={{ paddingRight: "1rem" }}>{link.label}</td>
-              <td style={{ paddingRight: "1rem" }}>
-                {link.allowed_sections.length === 0 ? "All" : link.allowed_sections.join(", ")}
-              </td>
-              <td style={{ paddingRight: "1rem" }}>{new Date(link.expires_at).toLocaleDateString()}</td>
-              <td style={{ paddingRight: "1rem" }}>{linkStatus(link)}</td>
-              <td>
-                {linkStatus(link) === "Active" && (
-                  <button onClick={() => handleRevoke(link.id)}>Revoke</button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
+                <div>
+                  <p className="mb-2 text-sm font-medium text-foreground">Expiry</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[7, 30, 90].map((d) => (
+                      <Button
+                        key={d}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setExpiresAt(addDays(d))}
+                      >
+                        {d} days
+                      </Button>
+                    ))}
+                    <Input
+                      type="datetime-local"
+                      value={expiresAt}
+                      onChange={(e) => setExpiresAt(e.target.value)}
+                      className="w-auto"
+                    />
+                  </div>
+                </div>
+
+                <fieldset className="border-0 p-0">
+                  <legend className="mb-2 text-sm font-medium text-foreground">
+                    Sections <span className="text-muted-foreground">(none = all)</span>
+                  </legend>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2">
+                    {ALL_SECTIONS.map((s) => (
+                      <label key={s} className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+                        <input
+                          type="checkbox"
+                          className="rounded border-border"
+                          checked={selectedSections.includes(s)}
+                          onChange={() => toggleSection(s)}
+                        />
+                        {s.replace(/_/g, " ")}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <div className="flex justify-end">
+                  <Button type="submit">Create</Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/40">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Label</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Sections</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expires</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {links.map((link) => {
+                const status = linkStatus(link);
+                return (
+                  <tr key={link.id} className="border-b border-border last:border-0 hover:bg-muted/20">
+                    <td className="px-4 py-3 font-medium text-foreground">{link.label}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {link.allowed_sections.length === 0
+                        ? "All"
+                        : link.allowed_sections.map((s) => s.replace(/_/g, " ")).join(", ")}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{formatDate(link.expires_at)}</td>
+                    <td className="px-4 py-3">
+                      <Badge variant={status === "Active" ? "default" : "secondary"}>
+                        {status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      {status === "Active" && (
+                        <Button variant="destructive" size="sm" onClick={() => handleRevoke(link.id)}>
+                          Revoke
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </PageLayout>
+    </AppShell>
   );
 }
