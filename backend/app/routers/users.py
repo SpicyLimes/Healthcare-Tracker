@@ -43,7 +43,10 @@ def create_user(payload: UserCreateRequest, db: Session = Depends(get_db)):
 )
 def update_user(user_id: uuid.UUID, payload: UserUpdateRequest, db: Session = Depends(get_db)):
     try:
-        return user_service.update_user(db, user_id, payload.role, payload.is_active)
+        kwargs = {}
+        if payload.full_name is not None or "full_name" in payload.model_fields_set:
+            kwargs["full_name"] = payload.full_name
+        return user_service.update_user(db, user_id, payload.role, payload.is_active, **kwargs)
     except user_service.LastAdminError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
     except user_service.UserNotFoundError:

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.limiter import limiter
 from app.models.user import User
-from app.schemas.auth import ChangePasswordRequest, LoginRequest, MeResponse
+from app.schemas.auth import ChangePasswordRequest, LoginRequest, MeResponse, UpdateNameRequest
 from app.security.cookies import REFRESH_COOKIE, clear_auth_cookies, set_auth_cookies
 from app.security.dependencies import get_current_user, verify_csrf
 from app.security.tokens import create_access_token
@@ -77,3 +77,14 @@ def change_password(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
     log_event(db, action=AuditAction.update, actor_type=ActorType.user,
               actor_user_id=current.id, detail=f"Password changed: {current.email}")
+
+
+@router.put("/name", response_model=MeResponse, dependencies=[Depends(get_current_user), Depends(verify_csrf)])
+def update_name(
+    payload: UpdateNameRequest,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    current.full_name = payload.full_name
+    db.flush()
+    return current

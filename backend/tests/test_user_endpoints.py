@@ -51,3 +51,43 @@ def test_viewer_is_blocked_from_user_management(client, db_session):
 def test_user_management_requires_authentication(client, db_session):
     resp = client.get("/api/users")
     assert resp.status_code == 401
+
+
+def test_admin_can_set_full_name(client, db_session):
+    csrf = _admin_login(client, db_session)
+    carol = user_service.create_user(db_session, "carol@example.com", "a-strong-passphrase-123", Role.viewer)
+    resp = client.put(
+        f"/api/users/{carol.id}",
+        headers={"X-CSRF-Token": csrf},
+        json={"full_name": "Carol Smith"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["full_name"] == "Carol Smith"
+
+
+def test_admin_can_clear_full_name(client, db_session):
+    csrf = _admin_login(client, db_session)
+    carol = user_service.create_user(db_session, "carol@example.com", "a-strong-passphrase-123", Role.viewer)
+    carol.full_name = "Carol Smith"
+    db_session.flush()
+    resp = client.put(
+        f"/api/users/{carol.id}",
+        headers={"X-CSRF-Token": csrf},
+        json={"full_name": ""},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["full_name"] is None
+
+
+def test_update_without_full_name_leaves_name_unchanged(client, db_session):
+    csrf = _admin_login(client, db_session)
+    carol = user_service.create_user(db_session, "carol@example.com", "a-strong-passphrase-123", Role.viewer)
+    carol.full_name = "Carol Smith"
+    db_session.flush()
+    resp = client.put(
+        f"/api/users/{carol.id}",
+        headers={"X-CSRF-Token": csrf},
+        json={"role": "viewer"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["full_name"] == "Carol Smith"

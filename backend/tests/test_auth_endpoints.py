@@ -93,3 +93,31 @@ def test_refresh_with_invalid_token_is_unauthorized(client, db_session):
     client.cookies.set("refresh_token", "not-a-real-refresh-token")
     resp = client.post("/api/auth/refresh", headers={"X-CSRF-Token": csrf})
     assert resp.status_code == 401
+
+
+def test_user_can_set_own_name(client, db_session):
+    _login(client, db_session)
+    csrf = client.cookies.get("csrf_token")
+    resp = client.put(
+        "/api/auth/name",
+        headers={"X-CSRF-Token": csrf},
+        json={"full_name": "Devin Rauch"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["full_name"] == "Devin Rauch"
+    me = client.get("/api/auth/me")
+    assert me.json()["full_name"] == "Devin Rauch"
+
+
+def test_user_can_clear_own_name(client, db_session):
+    _login(client, db_session)
+    csrf = client.cookies.get("csrf_token")
+    client.put("/api/auth/name", headers={"X-CSRF-Token": csrf}, json={"full_name": "Devin Rauch"})
+    resp = client.put("/api/auth/name", headers={"X-CSRF-Token": csrf}, json={"full_name": None})
+    assert resp.status_code == 200
+    assert resp.json()["full_name"] is None
+
+
+def test_set_name_requires_authentication(client, db_session):
+    resp = client.put("/api/auth/name", json={"full_name": "Anyone"})
+    assert resp.status_code == 401
