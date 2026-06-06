@@ -30,23 +30,21 @@ export default function GuestRecordPage() {
 
   return (
     <GuestLayout>
-      <h1 style={{ textTransform: "capitalize" }}>{section.replace(/_/g, " ")} — Record</h1>
-      {error && <p role="alert">{error}</p>}
+      <h1 className="text-2xl font-semibold capitalize mb-4">{section.replace(/_/g, " ")} — Record</h1>
+      {error && <p role="alert" className="text-destructive mb-4">{error}</p>}
       {record && (
-        <table style={{ marginBottom: "1rem" }}>
-          <tbody>
+        <div className="rounded-xl border border-border overflow-hidden mb-6">
+          <dl className="divide-y divide-border">
             {Object.entries(record)
               .filter(([k]) => k !== "id")
               .map(([k, v]) => (
-                <tr key={k}>
-                  <th style={{ textAlign: "left", paddingRight: "1rem", fontWeight: "normal", color: "#666" }}>
-                    {k.replace(/_/g, " ")}
-                  </th>
-                  <td>{v === null || v === undefined ? "—" : String(v)}</td>
-                </tr>
+                <div key={k} className="grid grid-cols-3 px-4 py-3 text-sm">
+                  <dt className="font-medium text-muted-foreground capitalize">{k.replace(/_/g, " ")}</dt>
+                  <dd className="col-span-2 text-foreground">{v === null || v === undefined ? "—" : String(v)}</dd>
+                </div>
               ))}
-          </tbody>
-        </table>
+          </dl>
+        </div>
       )}
       {docs.length > 0 && (
         <>
