@@ -27,32 +27,50 @@ export default function GuestSectionPage() {
 
   return (
     <GuestLayout>
-      <h1 style={{ textTransform: "capitalize" }}>{section.replace(/_/g, " ")}</h1>
-      {error && <p role="alert">{error}</p>}
+      <h1 className="text-2xl font-semibold capitalize mb-4">{section.replace(/_/g, " ")}</h1>
+      {error && <p role="alert" className="text-destructive mb-4">{error}</p>}
       {records.length === 0 ? (
-        <p>No records found.</p>
+        <p className="text-muted-foreground">No records found.</p>
       ) : (
-        <table>
-          <tbody>
-            {(records as Record<string, unknown>[]).map((row) => (
-              <tr key={String(row.id)}>
-                <td style={{ paddingRight: "1rem" }}>
-                  <Link to={`/guest/sections/${section}/${row.id}`}>
-                    View record
-                  </Link>
-                </td>
-                {Object.entries(row)
-                  .filter(([k]) => k !== "id")
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/40">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
+                {Object.keys((records as Record<string, unknown>[])[0])
+                  .filter((k) => k !== "id")
                   .slice(0, 4)
-                  .map(([k, v]) => (
-                    <td key={k} style={{ paddingRight: "1rem" }}>
-                      {v === null || v === undefined ? "" : String(v)}
-                    </td>
+                  .map((k) => (
+                    <th key={k} className="px-4 py-3 text-left font-medium text-muted-foreground capitalize">
+                      {k.replace(/_/g, " ")}
+                    </th>
                   ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {(records as Record<string, unknown>[]).map((row) => (
+                <tr key={String(row.id)} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-3">
+                    <Link
+                      to={`/guest/sections/${section}/${row.id}`}
+                      className="text-primary font-medium hover:underline underline-offset-4"
+                    >
+                      View record
+                    </Link>
+                  </td>
+                  {Object.entries(row)
+                    .filter(([k]) => k !== "id")
+                    .slice(0, 4)
+                    .map(([k, v]) => (
+                      <td key={k} className="px-4 py-3 text-foreground">
+                        {v === null || v === undefined ? "" : String(v)}
+                      </td>
+                    ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </GuestLayout>
   );

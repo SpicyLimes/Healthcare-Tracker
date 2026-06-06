@@ -4,7 +4,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models.extended_records import AppointmentStatus
+from app.models.extended_records import AppointmentStatus, AppointmentType
 
 
 # ---- Insurance ----
@@ -217,6 +217,7 @@ class DentalHistoryResponse(BaseModel):
 # ---- Vaccination ----
 class VaccinationCreate(BaseModel):
     vaccine: str
+    manufacturer: str | None = None
     administered_date: date | None = None
     lot_number: str | None = None
     administrator: str | None = None
@@ -225,6 +226,7 @@ class VaccinationCreate(BaseModel):
 
 class VaccinationUpdate(BaseModel):
     vaccine: str | None = None
+    manufacturer: str | None = None
     administered_date: date | None = None
     lot_number: str | None = None
     administrator: str | None = None
@@ -235,6 +237,7 @@ class VaccinationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     vaccine: str
+    manufacturer: str | None
     administered_date: date | None
     lot_number: str | None
     administrator: str | None
@@ -282,6 +285,7 @@ class AppointmentCreate(BaseModel):
     appointment_datetime: datetime
     doctor_id: uuid.UUID | None = None
     doctor_other: str | None = None
+    appointment_type: AppointmentType | None = None
     location: str | None = None
     reason: str | None = None
     status: AppointmentStatus = AppointmentStatus.upcoming
@@ -291,6 +295,7 @@ class AppointmentUpdate(BaseModel):
     appointment_datetime: datetime | None = None
     doctor_id: uuid.UUID | None = None
     doctor_other: str | None = None
+    appointment_type: AppointmentType | None = None
     location: str | None = None
     reason: str | None = None
     status: AppointmentStatus | None = None
@@ -302,6 +307,7 @@ class AppointmentResponse(BaseModel):
     appointment_datetime: datetime
     doctor_id: uuid.UUID | None
     doctor_other: str | None
+    appointment_type: AppointmentType | None
     location: str | None
     reason: str | None
     status: AppointmentStatus

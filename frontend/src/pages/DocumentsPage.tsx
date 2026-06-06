@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
 import { listAllDocuments, getDownloadUrl, type DocumentRecord } from "../api/documents";
+import { AppShell } from "@/components/app-shell";
+import { PageLayout } from "@/components/page-layout";
+import { Button } from "@/components/ui/button";
+import { FormField, Select } from "@/components/ui/form-field";
+import { formatDate } from "@/lib/format";
 
 const SECTIONS = [
   "surgeries", "hospitalizations", "vision_history", "dental_history",
@@ -25,56 +30,62 @@ export default function DocumentsPage() {
   }, [section]);
 
   return (
-    <section style={{ fontFamily: "system-ui", padding: "2rem" }}>
-      <h1>Documents</h1>
-      {error && <p role="alert">{error}</p>}
+    <AppShell>
+      <PageLayout title="Documents" description="All uploaded medical documents.">
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
-      <label style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "1rem" }}>
-        Filter by section:
-        <select value={section} onChange={(e) => setSection(e.target.value)}>
-          <option value="">All sections</option>
-          {SECTIONS.map((s) => (
-            <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
-          ))}
-        </select>
-      </label>
+        <div className="mb-4">
+          <FormField label="Filter by section" htmlFor="doc-section">
+            <Select
+              id="doc-section"
+              value={section}
+              onChange={(e) => setSection(e.target.value)}
+            >
+              <option value="">All sections</option>
+              {SECTIONS.map((s) => (
+                <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
+              ))}
+            </Select>
+          </FormField>
+        </div>
 
-      {docs.length === 0 && !error ? (
-        <p>No documents found.</p>
-      ) : docs.length > 0 ? (
-        <table>
-          <thead>
-            <tr>
-              <th style={{ textAlign: "left", paddingRight: "1rem" }}>Section</th>
-              <th style={{ textAlign: "left", paddingRight: "1rem" }}>Filename</th>
-              <th style={{ textAlign: "left", paddingRight: "1rem" }}>Size</th>
-              <th style={{ textAlign: "left", paddingRight: "1rem" }}>Uploaded</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {docs.map((doc) => (
-              <tr key={doc.id}>
-                <td style={{ paddingRight: "1rem" }}>
-                  <span style={{ background: "#e8f4fd", padding: "0.1rem 0.4rem", borderRadius: "4px", fontSize: "0.8rem" }}>
-                    {doc.section.replace(/_/g, " ")}
-                  </span>
-                </td>
-                <td style={{ paddingRight: "1rem" }}>{doc.filename}</td>
-                <td style={{ paddingRight: "1rem" }}>{formatBytes(doc.file_size)}</td>
-                <td style={{ paddingRight: "1rem" }}>
-                  {new Date(doc.uploaded_at).toLocaleDateString()}
-                </td>
-                <td>
-                  <a href={getDownloadUrl(doc.id)} target="_blank" rel="noopener noreferrer">
-                    Open
-                  </a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : null}
-    </section>
+        {docs.length === 0 && !error ? (
+          <p className="text-sm text-muted-foreground">No documents found.</p>
+        ) : docs.length > 0 ? (
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/40">
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Filename</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Section</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Size</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Uploaded</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {docs.map((doc) => (
+                  <tr key={doc.id} className="border-b border-border last:border-0 hover:bg-muted/20">
+                    <td className="px-4 py-3 font-medium text-foreground">{doc.filename}</td>
+                    <td className="px-4 py-3 text-muted-foreground capitalize">
+                      {doc.section.replace(/_/g, " ")}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{formatBytes(doc.file_size)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{formatDate(doc.uploaded_at)}</td>
+                    <td className="px-4 py-3">
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={getDownloadUrl(doc.id)} target="_blank" rel="noopener noreferrer">
+                          Open
+                        </a>
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </PageLayout>
+    </AppShell>
   );
 }

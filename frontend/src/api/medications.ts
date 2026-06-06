@@ -8,6 +8,7 @@ export interface Medication {
   kind: MedicationKind;
   dose: string | null;
   frequency: string | null;
+  route: string | null;
   prescribing_doctor: string | null;
   start_date: string | null;
   end_date: string | null;
@@ -20,6 +21,7 @@ export interface MedicationInput {
   kind?: MedicationKind;
   dose?: string | null;
   frequency?: string | null;
+  route?: string | null;
   prescribing_doctor?: string | null;
   start_date?: string | null;
   end_date?: string | null;

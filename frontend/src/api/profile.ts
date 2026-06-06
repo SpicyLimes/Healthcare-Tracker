@@ -9,6 +9,9 @@ export interface Profile {
   allergies: string | null;
   emergency_contacts: string | null;
   primary_language: string | null;
+  height: string | null;
+  weight: string | null;
+  phone: string | null;
   notes: string | null;
 }
 
@@ -19,6 +22,9 @@ export interface ProfileInput {
   allergies?: string | null;
   emergency_contacts?: string | null;
   primary_language?: string | null;
+  height?: string | null;
+  weight?: string | null;
+  phone?: string | null;
   notes?: string | null;
 }
 

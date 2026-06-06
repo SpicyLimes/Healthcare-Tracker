@@ -15,6 +15,9 @@ class ProfileWrite(BaseModel):
     allergies: str | None = None
     emergency_contacts: str | None = None
     primary_language: str | None = None
+    height: str | None = None
+    weight: str | None = None
+    phone: str | None = None
     notes: str | None = None
 
 
@@ -28,6 +31,9 @@ class ProfileResponse(BaseModel):
     allergies: str | None
     emergency_contacts: str | None
     primary_language: str | None
+    height: str | None
+    weight: str | None
+    phone: str | None
     notes: str | None
     created_at: datetime
     updated_at: datetime
@@ -39,6 +45,7 @@ class MedicationCreate(BaseModel):
     kind: MedicationKind = MedicationKind.medication
     dose: str | None = None
     frequency: str | None = None
+    route: str | None = None
     prescribing_doctor: str | None = None
     start_date: date | None = None
     end_date: date | None = None
@@ -51,6 +58,7 @@ class MedicationUpdate(BaseModel):
     kind: MedicationKind | None = None
     dose: str | None = None
     frequency: str | None = None
+    route: str | None = None
     prescribing_doctor: str | None = None
     start_date: date | None = None
     end_date: date | None = None
@@ -66,6 +74,7 @@ class MedicationResponse(BaseModel):
     kind: MedicationKind
     dose: str | None
     frequency: str | None
+    route: str | None
     prescribing_doctor: str | None
     start_date: date | None
     end_date: date | None

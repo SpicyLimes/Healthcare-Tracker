@@ -21,9 +21,9 @@ describe("HomePage navigation", () => {
     mockAuth("viewer");
     vi.spyOn(healthApi, "fetchHealth").mockRejectedValue(new Error("no"));
     render(<MemoryRouter><HomePage /></MemoryRouter>);
-    expect(screen.getByRole("link", { name: /profile/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /medications/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /doctors/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /ailment/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /profile/i })[0]).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /medications/i })[0]).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /doctors/i })[0]).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /ailment/i })[0]).toBeInTheDocument();
   });
 });

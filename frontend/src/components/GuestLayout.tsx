@@ -27,26 +27,32 @@ export default function GuestLayout({ children, expired }: Props) {
 
   if (expired) {
     return (
-      <main style={{ fontFamily: "system-ui", padding: "2rem", textAlign: "center" }}>
-        <h1>Link Expired or Revoked</h1>
-        <p>This share link is no longer valid. Please contact the person who shared it with you.</p>
+      <main className="min-h-screen flex items-center justify-center p-8">
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl font-semibold text-foreground">Link Expired or Revoked</h1>
+          <p className="text-muted-foreground">This share link is no longer valid. Please contact the person who shared it with you.</p>
+        </div>
       </main>
     );
   }
 
   return (
-    <main style={{ fontFamily: "system-ui", padding: "2rem" }}>
-      <header style={{ borderBottom: "1px solid #ccc", marginBottom: "1rem", paddingBottom: "0.5rem" }}>
-        <h2 style={{ margin: 0 }}>Healthcare Records — Read Only Access</h2>
+    <main className="min-h-screen p-8 max-w-5xl mx-auto">
+      <header className="border-b border-border pb-4 mb-6">
+        <h2 className="text-xl font-semibold text-foreground">Healthcare Records — Read Only Access</h2>
         {expiresAt && (
-          <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "#666" }}>
+          <p className="mt-1 text-sm text-muted-foreground">
             This link expires on {new Date(expiresAt).toLocaleDateString()}
           </p>
         )}
       </header>
-      <nav style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+      <nav className="flex flex-wrap gap-3 mb-6">
         {allowedSections.map((s) => (
-          <Link key={s} to={`/guest/sections/${s}`}>
+          <Link
+            key={s}
+            to={`/guest/sections/${s}`}
+            className="text-sm font-medium text-primary hover:underline underline-offset-4"
+          >
             {SECTION_LABELS[s] ?? s}
           </Link>
         ))}
