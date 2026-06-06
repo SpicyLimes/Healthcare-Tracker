@@ -13,7 +13,6 @@ const EMPTY: VaccinationInput = {
   vaccine: "",
   manufacturer: null,
   administered_date: null,
-  lot_number: null,
   administrator: null,
   next_due_date: null,
   notes: null,
@@ -91,7 +90,7 @@ export default function VaccinationsPage() {
                     />
                   </FormField>
 
-                  {/* Administered Date | Lot Number */}
+                  {/* Administered Date | Next Due Date */}
                   <FormField label="Administered Date" htmlFor="administered_date">
                     <Input
                       id="administered_date"
@@ -100,15 +99,6 @@ export default function VaccinationsPage() {
                       onChange={(e) => setForm((s) => ({ ...s, administered_date: e.target.value || null }))}
                     />
                   </FormField>
-                  <FormField label="Lot #" htmlFor="lot_number">
-                    <Input
-                      id="lot_number"
-                      value={form.lot_number ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, lot_number: e.target.value || null }))}
-                    />
-                  </FormField>
-
-                  {/* Next Due Date */}
                   <FormField label="Next Due Date" htmlFor="next_due_date">
                     <Input
                       id="next_due_date"
