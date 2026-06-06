@@ -22,6 +22,9 @@ class Profile(Base):
     allergies: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     emergency_contacts: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     primary_language: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    height: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    weight: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

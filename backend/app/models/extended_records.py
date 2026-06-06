@@ -18,6 +18,17 @@ class AppointmentStatus(str, enum.Enum):
     rescheduled = "rescheduled"
 
 
+class AppointmentType(str, enum.Enum):
+    annual_checkup = "annual_checkup"
+    follow_up = "follow_up"
+    specialist = "specialist"
+    lab = "lab"
+    imaging = "imaging"
+    dental = "dental"
+    vision = "vision"
+    other = "other"
+
+
 class Insurance(Base):
     __tablename__ = "insurances"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -120,6 +131,7 @@ class Vaccination(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     vaccine: Mapped[str] = mapped_column(String, nullable=False)
+    manufacturer: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     administered_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     lot_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     administrator: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -151,6 +163,10 @@ class Appointment(Base):
     appointment_datetime: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     doctor_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("doctors.id", ondelete="SET NULL"), nullable=True)
     doctor_other: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    appointment_type: Mapped[Optional[AppointmentType]] = mapped_column(
+        Enum(AppointmentType, name="appointment_type"),
+        nullable=True,
+    )
     location: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     reason: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     status: Mapped[AppointmentStatus] = mapped_column(
