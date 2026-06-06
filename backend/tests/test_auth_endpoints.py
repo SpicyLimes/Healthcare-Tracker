@@ -65,6 +65,7 @@ def test_change_password_requires_correct_current(client, db_session):
     ("POST", "/api/auth/refresh"),
     ("POST", "/api/auth/logout"),
     ("PUT", "/api/auth/password"),
+    ("PUT", "/api/auth/name"),
 ])
 def test_csrf_missing_header_rejected(client, db_session, method, path):
     _login(client, db_session)
@@ -121,3 +122,12 @@ def test_user_can_clear_own_name(client, db_session):
 def test_set_name_requires_authentication(client, db_session):
     resp = client.put("/api/auth/name", json={"full_name": "Anyone"})
     assert resp.status_code == 401
+
+
+def test_set_name_empty_string_clears_name(client, db_session):
+    _login(client, db_session)
+    csrf = client.cookies.get("csrf_token")
+    client.put("/api/auth/name", headers={"X-CSRF-Token": csrf}, json={"full_name": "Devin Rauch"})
+    resp = client.put("/api/auth/name", headers={"X-CSRF-Token": csrf}, json={"full_name": ""})
+    assert resp.status_code == 200
+    assert resp.json()["full_name"] is None

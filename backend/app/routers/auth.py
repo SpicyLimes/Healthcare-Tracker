@@ -85,6 +85,7 @@ def update_name(
     current: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    current.full_name = payload.full_name
+    stripped = payload.full_name.strip() if isinstance(payload.full_name, str) else None
+    current.full_name = stripped if stripped else None
     db.flush()
     return current
