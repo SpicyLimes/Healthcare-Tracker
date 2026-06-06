@@ -335,3 +335,64 @@ def test_appointments_doctor_fk_set_null(client, db_session):
     r = client.get(f"/api/appointments/{appt_id}")
     assert r.status_code == 200
     assert r.json()["doctor_id"] is None
+
+
+# ---------------------------------------------------------------------------
+# New field round-trip tests
+# ---------------------------------------------------------------------------
+
+def test_profile_height_weight_phone_round_trip(client, db_session):
+    user_service.create_user(db_session, "profiletest@example.com", "a-strong-passphrase-123", Role.admin)
+    client.post("/api/auth/login", json={"email": "profiletest@example.com", "password": "a-strong-passphrase-123"})
+    csrf = client.cookies.get("csrf_token")
+    r = client.put(
+        "/api/profile",
+        headers={"X-CSRF-Token": csrf},
+        json={"full_name": "Test Patient", "height": "5'6\"", "weight": "140 lbs", "phone": "555-0100"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["height"] == "5'6\""
+    assert body["weight"] == "140 lbs"
+    assert body["phone"] == "555-0100"
+
+
+def test_medication_route_round_trip(client, db_session):
+    user_service.create_user(db_session, "medroute@example.com", "a-strong-passphrase-123", Role.admin)
+    client.post("/api/auth/login", json={"email": "medroute@example.com", "password": "a-strong-passphrase-123"})
+    csrf = client.cookies.get("csrf_token")
+    r = client.post(
+        "/api/medications",
+        headers={"X-CSRF-Token": csrf},
+        json={"name": "Lisinopril", "route": "oral"},
+    )
+    assert r.status_code == 201
+    assert r.json()["route"] == "oral"
+
+
+def test_vaccination_manufacturer_round_trip(client, db_session):
+    user_service.create_user(db_session, "vacmfr@example.com", "a-strong-passphrase-123", Role.admin)
+    client.post("/api/auth/login", json={"email": "vacmfr@example.com", "password": "a-strong-passphrase-123"})
+    csrf = client.cookies.get("csrf_token")
+    r = client.post(
+        "/api/vaccinations",
+        headers={"X-CSRF-Token": csrf},
+        json={"vaccine": "Influenza", "manufacturer": "Pfizer"},
+    )
+    assert r.status_code == 201
+    assert r.json()["manufacturer"] == "Pfizer"
+
+
+def test_appointment_type_round_trip(client, db_session):
+    from datetime import datetime, timedelta, timezone
+    user_service.create_user(db_session, "appttype@example.com", "a-strong-passphrase-123", Role.admin)
+    client.post("/api/auth/login", json={"email": "appttype@example.com", "password": "a-strong-passphrase-123"})
+    csrf = client.cookies.get("csrf_token")
+    dt = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    r = client.post(
+        "/api/appointments",
+        headers={"X-CSRF-Token": csrf},
+        json={"appointment_datetime": dt, "appointment_type": "specialist"},
+    )
+    assert r.status_code == 201
+    assert r.json()["appointment_type"] == "specialist"
