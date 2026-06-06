@@ -6,6 +6,7 @@ export interface Vaccination {
   administered_date: string | null;
   lot_number: string | null;
   administrator: string | null;
+  manufacturer: string | null;
   next_due_date: string | null;
   notes: string | null;
 }
@@ -15,6 +16,7 @@ export interface VaccinationInput {
   administered_date?: string | null;
   lot_number?: string | null;
   administrator?: string | null;
+  manufacturer?: string | null;
   next_due_date?: string | null;
   notes?: string | null;
 }
