@@ -25,10 +25,15 @@ class UserCreateRequest(BaseModel):
 class UserUpdateRequest(BaseModel):
     role: Role | None = None
     is_active: bool | None = None
+    full_name: str | None = None
 
 
 class SetPasswordRequest(BaseModel):
     new_password: str
+
+
+class UpdateNameRequest(BaseModel):
+    full_name: str | None
 
 
 class UserResponse(BaseModel):
@@ -38,6 +43,7 @@ class UserResponse(BaseModel):
     email: str
     role: Role
     is_active: bool
+    full_name: str | None = None
     created_at: datetime
 
 
@@ -47,3 +53,4 @@ class MeResponse(BaseModel):
     id: uuid.UUID
     email: str
     role: Role
+    full_name: str | None = None
