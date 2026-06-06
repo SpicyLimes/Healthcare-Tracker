@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { medicationsApi, type Medication, type MedicationInput, type MedicationKind } from "../api/medications";
+import { doctorsApi, type Doctor } from "../api/doctors";
+import DoctorPicker from "../components/DoctorPicker";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
 import { AppShell } from "@/components/app-shell";
@@ -15,8 +17,7 @@ const EMPTY: MedicationInput = {
   frequency: null,
   route: null,
   prescribing_doctor: null,
-  start_date: null,
-  end_date: null,
+  prescribing_doctor_id: null,
   is_active: true,
   notes: null,
 };
@@ -25,6 +26,7 @@ export default function MedicationsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Medication[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<MedicationInput>(EMPTY);
   const [error, setError] = useState("");
 
@@ -33,6 +35,7 @@ export default function MedicationsPage() {
   }
   useEffect(() => {
     reload().catch(() => setError("Failed to load medications"));
+    doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
 
   async function onAdd(e: FormEvent) {
@@ -56,6 +59,11 @@ export default function MedicationsPage() {
     }
   }
 
+  function resolveDoctorName(id: string | null, other: string | null): string {
+    if (id) return doctors.find((d) => d.id === id)?.name ?? other ?? "";
+    return other ?? "";
+  }
+
   return (
     <AppShell>
       <PageLayout
@@ -69,7 +77,9 @@ export default function MedicationsPage() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Kind</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Dose</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Frequency</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Route</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Prescribing Doctor</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Active</th>
                 {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
                 <th />
@@ -81,7 +91,11 @@ export default function MedicationsPage() {
                   <td className="px-4 py-3 font-medium text-foreground">{r.name}</td>
                   <td className="px-4 py-3 text-muted-foreground capitalize">{r.kind}</td>
                   <td className="px-4 py-3 text-muted-foreground">{r.dose ?? ""}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{r.frequency ?? ""}</td>
                   <td className="px-4 py-3 text-muted-foreground capitalize">{r.route ?? ""}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {resolveDoctorName(r.prescribing_doctor_id, r.prescribing_doctor)}
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground">{r.is_active ? "Yes" : "No"}</td>
                   {isAdmin && (
                     <td className="px-4 py-3">
@@ -95,6 +109,13 @@ export default function MedicationsPage() {
                   </td>
                 </tr>
               ))}
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={isAdmin ? 9 : 8} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    No medication records yet.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -105,20 +126,13 @@ export default function MedicationsPage() {
               <form onSubmit={onAdd} className="flex flex-col gap-5">
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   <FormField label="Medication Name" htmlFor="med-name">
-                    <Input
-                      id="med-name"
-                      required
-                      placeholder="e.g. Lisinopril"
+                    <Input id="med-name" required placeholder="e.g. Lisinopril"
                       value={form.name}
-                      onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
-                    />
+                      onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} />
                   </FormField>
                   <FormField label="Kind" htmlFor="med-kind">
-                    <Select
-                      id="med-kind"
-                      value={form.kind ?? "medication"}
-                      onChange={(e) => setForm((s) => ({ ...s, kind: e.target.value as MedicationKind }))}
-                    >
+                    <Select id="med-kind" value={form.kind ?? "medication"}
+                      onChange={(e) => setForm((s) => ({ ...s, kind: e.target.value as MedicationKind }))}>
                       <option value="medication">Medication</option>
                       <option value="vitamin">Vitamin</option>
                       <option value="supplement">Supplement</option>
@@ -127,29 +141,20 @@ export default function MedicationsPage() {
                 </div>
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   <FormField label="Dose" htmlFor="med-dose">
-                    <Input
-                      id="med-dose"
-                      placeholder="e.g. 10 mg"
+                    <Input id="med-dose" placeholder="e.g. 10 mg"
                       value={form.dose ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, dose: e.target.value || null }))}
-                    />
+                      onChange={(e) => setForm((s) => ({ ...s, dose: e.target.value || null }))} />
                   </FormField>
                   <FormField label="Frequency" htmlFor="med-frequency">
-                    <Input
-                      id="med-frequency"
-                      placeholder="e.g. Once daily"
+                    <Input id="med-frequency" placeholder="e.g. Once daily"
                       value={form.frequency ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, frequency: e.target.value || null }))}
-                    />
+                      onChange={(e) => setForm((s) => ({ ...s, frequency: e.target.value || null }))} />
                   </FormField>
                 </div>
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   <FormField label="Route" htmlFor="med-route">
-                    <Select
-                      id="med-route"
-                      value={form.route ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, route: e.target.value || null }))}
-                    >
+                    <Select id="med-route" value={form.route ?? ""}
+                      onChange={(e) => setForm((s) => ({ ...s, route: e.target.value || null }))}>
                       <option value="">Select…</option>
                       <option value="oral">Oral</option>
                       <option value="topical">Topical</option>
@@ -158,52 +163,25 @@ export default function MedicationsPage() {
                       <option value="other">Other</option>
                     </Select>
                   </FormField>
-                  <FormField label="Prescribing Doctor" htmlFor="med-prescriber">
-                    <Input
-                      id="med-prescriber"
-                      placeholder="Doctor name"
-                      value={form.prescribing_doctor ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, prescribing_doctor: e.target.value || null }))}
-                    />
-                  </FormField>
-                </div>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  <FormField label="Start Date" htmlFor="med-start">
-                    <Input
-                      id="med-start"
-                      type="date"
-                      value={form.start_date ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, start_date: e.target.value || null }))}
-                    />
-                  </FormField>
-                  <FormField label="End Date" htmlFor="med-end">
-                    <Input
-                      id="med-end"
-                      type="date"
-                      value={form.end_date ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, end_date: e.target.value || null }))}
-                    />
-                  </FormField>
-                </div>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   <FormField label="Status" htmlFor="med-active">
-                    <Select
-                      id="med-active"
-                      value={form.is_active === false ? "false" : "true"}
-                      onChange={(e) => setForm((s) => ({ ...s, is_active: e.target.value === "true" }))}
-                    >
+                    <Select id="med-active" value={form.is_active === false ? "false" : "true"}
+                      onChange={(e) => setForm((s) => ({ ...s, is_active: e.target.value === "true" }))}>
                       <option value="true">Active</option>
                       <option value="false">Inactive</option>
                     </Select>
                   </FormField>
                 </div>
-                <FormField label="Notes" htmlFor="med-notes">
-                  <Textarea
-                    id="med-notes"
-                    placeholder="Side effects, instructions, or other notes…"
-                    value={form.notes ?? ""}
-                    onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value || null }))}
+                <FormField label="Prescribing Doctor" htmlFor="med-prescriber">
+                  <DoctorPicker
+                    doctorId={form.prescribing_doctor_id ?? null}
+                    doctorOther={form.prescribing_doctor ?? null}
+                    onChange={(id, other) => setForm((s) => ({ ...s, prescribing_doctor_id: id, prescribing_doctor: other }))}
                   />
+                </FormField>
+                <FormField label="Notes" htmlFor="med-notes">
+                  <Textarea id="med-notes" placeholder="Side effects, instructions, or other notes…"
+                    value={form.notes ?? ""}
+                    onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value || null }))} />
                 </FormField>
                 <div className="flex justify-end">
                   <Button type="submit">Add Medication</Button>
