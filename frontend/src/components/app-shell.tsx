@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Menu, Sun, Moon, CheckCircle2, Database, PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { useInRouterContext } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
@@ -10,25 +11,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { theme, toggleTheme } = useTheme()
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const [collapsed, setCollapsed] = React.useState(false)
+  const inRouter = useInRouterContext()
 
   return (
     <div className="flex min-h-screen bg-background">
       {/* Desktop sidebar */}
-      <aside
-        className={`hidden shrink-0 border-r border-border bg-sidebar transition-all duration-200 lg:flex lg:flex-col ${
-          collapsed ? "w-14" : "w-60"
-        }`}
-      >
-        <NavSidebar collapsed={collapsed} />
-      </aside>
+      {inRouter && (
+        <aside
+          className={`hidden shrink-0 border-r border-border bg-sidebar transition-all duration-200 lg:flex lg:flex-col ${
+            collapsed ? "w-14" : "w-60"
+          }`}
+        >
+          <NavSidebar collapsed={collapsed} />
+        </aside>
+      )}
 
       {/* Mobile drawer */}
-      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" showCloseButton className="w-60 p-0">
-          <SheetTitle className="sr-only">Navigation menu</SheetTitle>
-          <NavSidebar onNavigate={() => setMobileOpen(false)} />
-        </SheetContent>
-      </Sheet>
+      {inRouter && (
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetContent side="left" showCloseButton className="w-60 p-0">
+            <SheetTitle className="sr-only">Navigation menu</SheetTitle>
+            <NavSidebar onNavigate={() => setMobileOpen(false)} />
+          </SheetContent>
+        </Sheet>
+      )}
 
       {/* Main content column */}
       <div className="flex flex-1 flex-col overflow-hidden">
