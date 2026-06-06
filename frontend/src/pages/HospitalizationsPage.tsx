@@ -44,6 +44,58 @@ export default function HospitalizationsPage() {
   return (
     <AppShell>
       <PageLayout title="Hospitalizations" description="Hospital stays and inpatient events.">
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Facility</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Admission</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Discharge</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reason</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Doctor</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Outcome</th>
+                    {isAdmin && <th className="px-4 py-3" />}
+                    <th className="px-4 py-3" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3 font-medium text-foreground">{r.facility}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.admission_date ?? ""}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.discharge_date ?? ""}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.reason ?? ""}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {resolveDoctorName(r.attending_physician_id, r.attending_physician_other)}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{r.outcome ?? ""}</td>
+                      {isAdmin && (
+                        <td className="px-4 py-3">
+                          <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
+                            Delete
+                          </Button>
+                        </td>
+                      )}
+                      <td className="px-4 py-3">
+                        <DocumentsPanel section="hospitalizations" recordId={r.id} isAdmin={isAdmin} />
+                      </td>
+                    </tr>
+                  ))}
+                  {rows.length === 0 && (
+                    <tr>
+                      <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                        No hospitalization records yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
         {error && (
           <p role="alert" className="mb-4 text-sm text-destructive">
             {error}
@@ -143,58 +195,6 @@ export default function HospitalizationsPage() {
             </CardContent>
           </Card>
         )}
-
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Facility</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Admission</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Discharge</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reason</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Doctor</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Outcome</th>
-                    {isAdmin && <th className="px-4 py-3" />}
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-medium text-foreground">{r.facility}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{r.admission_date ?? ""}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{r.discharge_date ?? ""}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{r.reason ?? ""}</td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {resolveDoctorName(r.attending_physician_id, r.attending_physician_other)}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{r.outcome ?? ""}</td>
-                      {isAdmin && (
-                        <td className="px-4 py-3">
-                          <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
-                            Delete
-                          </Button>
-                        </td>
-                      )}
-                      <td className="px-4 py-3">
-                        <DocumentsPanel section="hospitalizations" recordId={r.id} isAdmin={isAdmin} />
-                      </td>
-                    </tr>
-                  ))}
-                  {rows.length === 0 && (
-                    <tr>
-                      <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                        No hospitalization records yet.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
       </PageLayout>
     </AppShell>
   );

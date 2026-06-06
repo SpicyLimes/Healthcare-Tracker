@@ -59,6 +59,56 @@ export default function VisitLogsPage() {
         title="Visit Logs"
         description="Record doctor visits, summaries, and follow-up actions."
       >
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Doctor</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reason</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Summary</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Follow-up Date</th>
+                    {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
+                    <th className="px-4 py-3" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3 font-medium text-foreground">{formatDate(r.visit_date)}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{resolveDoctorName(r.doctor_id, r.doctor_other)}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.reason ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">
+                        {r.summary ? r.summary.slice(0, 60) + (r.summary.length > 60 ? "…" : "") : ""}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.follow_up_date ?? ""}</td>
+                      {isAdmin && (
+                        <td className="px-4 py-3">
+                          <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
+                            Delete
+                          </Button>
+                        </td>
+                      )}
+                      <td className="px-4 py-3">
+                        <DocumentsPanel section="visit_logs" recordId={r.id} isAdmin={isAdmin} />
+                      </td>
+                    </tr>
+                  ))}
+                  {rows.length === 0 && (
+                    <tr>
+                      <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                        No visit log records yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
         {error && (
           <p role="alert" className="mb-4 text-sm text-destructive">
             {error}
@@ -155,56 +205,6 @@ export default function VisitLogsPage() {
             </CardContent>
           </Card>
         )}
-
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Doctor</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reason</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Summary</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Follow-up Date</th>
-                    {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-medium text-foreground">{formatDate(r.visit_date)}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{resolveDoctorName(r.doctor_id, r.doctor_other)}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{r.reason ?? "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">
-                        {r.summary ? r.summary.slice(0, 60) + (r.summary.length > 60 ? "…" : "") : ""}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">{r.follow_up_date ?? ""}</td>
-                      {isAdmin && (
-                        <td className="px-4 py-3">
-                          <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
-                            Delete
-                          </Button>
-                        </td>
-                      )}
-                      <td className="px-4 py-3">
-                        <DocumentsPanel section="visit_logs" recordId={r.id} isAdmin={isAdmin} />
-                      </td>
-                    </tr>
-                  ))}
-                  {rows.length === 0 && (
-                    <tr>
-                      <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                        No visit log records yet.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
       </PageLayout>
     </AppShell>
   );

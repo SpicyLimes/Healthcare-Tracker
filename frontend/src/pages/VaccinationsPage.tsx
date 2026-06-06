@@ -46,6 +46,54 @@ export default function VaccinationsPage() {
         title="Vaccinations"
         description="Track immunization history, lot numbers, and upcoming booster dates."
       >
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Vaccine</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Manufacturer</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date Administered</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Administrator</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Next Due</th>
+                    {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
+                    <th className="px-4 py-3" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3 font-medium text-foreground">{r.vaccine}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.manufacturer ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{formatDate(r.administered_date)}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{r.administrator ?? "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{formatDate(r.next_due_date)}</td>
+                      {isAdmin && (
+                        <td className="px-4 py-3">
+                          <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
+                            Delete
+                          </Button>
+                        </td>
+                      )}
+                      <td className="px-4 py-3">
+                        <DocumentsPanel section="vaccinations" recordId={r.id} isAdmin={isAdmin} />
+                      </td>
+                    </tr>
+                  ))}
+                  {rows.length === 0 && (
+                    <tr>
+                      <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                        No vaccination records yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
         {error && (
           <p role="alert" className="mb-4 text-sm text-destructive">
             {error}
@@ -128,54 +176,6 @@ export default function VaccinationsPage() {
             </CardContent>
           </Card>
         )}
-
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Vaccine</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Manufacturer</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date Administered</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Administrator</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Next Due</th>
-                    {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-medium text-foreground">{r.vaccine}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{r.manufacturer ?? "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{formatDate(r.administered_date)}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{r.administrator ?? "—"}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{formatDate(r.next_due_date)}</td>
-                      {isAdmin && (
-                        <td className="px-4 py-3">
-                          <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
-                            Delete
-                          </Button>
-                        </td>
-                      )}
-                      <td className="px-4 py-3">
-                        <DocumentsPanel section="vaccinations" recordId={r.id} isAdmin={isAdmin} />
-                      </td>
-                    </tr>
-                  ))}
-                  {rows.length === 0 && (
-                    <tr>
-                      <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                        No vaccination records yet.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
       </PageLayout>
     </AppShell>
   );

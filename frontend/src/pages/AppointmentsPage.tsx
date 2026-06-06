@@ -86,6 +86,65 @@ export default function AppointmentsPage() {
         title="Appointments"
         description="Manage upcoming and past healthcare appointments."
       >
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date / Time</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Doctor</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Location</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reason</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                    {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
+                    <th className="px-4 py-3" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => {
+                    const typeLabel = APPOINTMENT_TYPES.find((t) => t.value === r.appointment_type)?.label ?? "—";
+                    return (
+                      <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 font-medium text-foreground">{formatDatetime(r.appointment_datetime)}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{typeLabel}</td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {resolveDoctorName(r.doctor_id, r.doctor_other)}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{r.location ?? "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{r.reason ?? "—"}</td>
+                        <td className="px-4 py-3">
+                          <Badge variant={STATUS_VARIANT[r.status]} className="capitalize">
+                            {r.status}
+                          </Badge>
+                        </td>
+                        {isAdmin && (
+                          <td className="px-4 py-3">
+                            <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
+                              Delete
+                            </Button>
+                          </td>
+                        )}
+                        <td className="px-4 py-3">
+                          <DocumentsPanel section="appointments" recordId={r.id} isAdmin={isAdmin} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {rows.length === 0 && (
+                    <tr>
+                      <td colSpan={isAdmin ? 8 : 7} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                        No appointment records yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
         {error && (
           <p role="alert" className="mb-4 text-sm text-destructive">
             {error}
@@ -186,65 +245,6 @@ export default function AppointmentsPage() {
             </CardContent>
           </Card>
         )}
-
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date / Time</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Doctor</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Location</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reason</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                    {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => {
-                    const typeLabel = APPOINTMENT_TYPES.find((t) => t.value === r.appointment_type)?.label ?? "—";
-                    return (
-                      <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3 font-medium text-foreground">{formatDatetime(r.appointment_datetime)}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{typeLabel}</td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {resolveDoctorName(r.doctor_id, r.doctor_other)}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">{r.location ?? "—"}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{r.reason ?? "—"}</td>
-                        <td className="px-4 py-3">
-                          <Badge variant={STATUS_VARIANT[r.status]} className="capitalize">
-                            {r.status}
-                          </Badge>
-                        </td>
-                        {isAdmin && (
-                          <td className="px-4 py-3">
-                            <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
-                              Delete
-                            </Button>
-                          </td>
-                        )}
-                        <td className="px-4 py-3">
-                          <DocumentsPanel section="appointments" recordId={r.id} isAdmin={isAdmin} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {rows.length === 0 && (
-                    <tr>
-                      <td colSpan={isAdmin ? 8 : 7} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                        No appointment records yet.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
       </PageLayout>
     </AppShell>
   );
