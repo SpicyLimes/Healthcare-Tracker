@@ -13,7 +13,6 @@ const EMPTY: DoctorInput = {
   specialty: null,
   practice: null,
   phone: null,
-  fax: null,
   address: null,
   patient_portal_url: null,
   notes: null,
@@ -68,6 +67,8 @@ export default function DoctorsPage() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Specialty</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Practice</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Phone</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Address</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Portal URL</th>
                 {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
                 <th />
               </tr>
@@ -79,6 +80,19 @@ export default function DoctorsPage() {
                   <td className="px-4 py-3 text-muted-foreground">{r.specialty ?? ""}</td>
                   <td className="px-4 py-3 text-muted-foreground">{r.practice ?? ""}</td>
                   <td className="px-4 py-3 text-muted-foreground">{r.phone ?? ""}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{r.address ?? ""}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {r.patient_portal_url ? (
+                      <a
+                        href={r.patient_portal_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline-offset-2 hover:underline"
+                      >
+                        Portal
+                      </a>
+                    ) : ""}
+                  </td>
                   {isAdmin && (
                     <td className="px-4 py-3">
                       <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
@@ -127,43 +141,23 @@ export default function DoctorsPage() {
                       onChange={(e) => setForm((s) => ({ ...s, practice: e.target.value || null }))}
                     />
                   </FormField>
-                  <FormField label="Phone" htmlFor="doc-phone">
-                    <Input
-                      id="doc-phone"
-                      type="tel"
-                      placeholder="(555) 000-0000"
-                      value={form.phone ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, phone: e.target.value || null }))}
-                    />
-                  </FormField>
                 </div>
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  <FormField label="Fax" htmlFor="doc-fax">
-                    <Input
-                      id="doc-fax"
-                      type="tel"
-                      placeholder="(555) 000-0001"
-                      value={form.fax ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, fax: e.target.value || null }))}
-                    />
+                  <FormField label="Phone" htmlFor="doc-phone">
+                    <Input id="doc-phone" type="tel" placeholder="(555) 000-0000"
+                      value={form.phone ?? ""}
+                      onChange={(e) => setForm((s) => ({ ...s, phone: e.target.value || null }))} />
                   </FormField>
                   <FormField label="Patient Portal URL" htmlFor="doc-portal">
-                    <Input
-                      id="doc-portal"
-                      type="url"
-                      placeholder="https://portal.example.com"
+                    <Input id="doc-portal" type="url" placeholder="https://portal.example.com"
                       value={form.patient_portal_url ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, patient_portal_url: e.target.value || null }))}
-                    />
+                      onChange={(e) => setForm((s) => ({ ...s, patient_portal_url: e.target.value || null }))} />
                   </FormField>
                 </div>
                 <FormField label="Address" htmlFor="doc-address">
-                  <Textarea
-                    id="doc-address"
-                    placeholder="Street address, city, state, zip"
+                  <Textarea id="doc-address" placeholder="Street address, city, state, zip"
                     value={form.address ?? ""}
-                    onChange={(e) => setForm((s) => ({ ...s, address: e.target.value || null }))}
-                  />
+                    onChange={(e) => setForm((s) => ({ ...s, address: e.target.value || null }))} />
                 </FormField>
                 <FormField label="Notes" htmlFor="doc-notes">
                   <Textarea
