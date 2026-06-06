@@ -8,6 +8,7 @@ export interface Ailment {
   onset_date: string | null;
   status: AilmentStatus;
   treating_doctor: string | null;
+  treating_doctor_id: string | null;
   notes: string | null;
 }
 
@@ -16,6 +17,7 @@ export interface AilmentInput {
   onset_date?: string | null;
   status?: AilmentStatus;
   treating_doctor?: string | null;
+  treating_doctor_id?: string | null;
   notes?: string | null;
 }
 

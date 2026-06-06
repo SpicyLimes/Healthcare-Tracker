@@ -8,6 +8,7 @@ export interface VisitLog {
   reason: string | null;
   summary: string | null;
   follow_up: string | null;
+  follow_up_date: string | null;
   notes: string | null;
 }
 
@@ -18,6 +19,7 @@ export interface VisitLogInput {
   reason?: string | null;
   summary?: string | null;
   follow_up?: string | null;
+  follow_up_date?: string | null;
   notes?: string | null;
 }
 

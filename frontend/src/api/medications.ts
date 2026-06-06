@@ -10,6 +10,7 @@ export interface Medication {
   frequency: string | null;
   route: string | null;
   prescribing_doctor: string | null;
+  prescribing_doctor_id: string | null;
   start_date: string | null;
   end_date: string | null;
   is_active: boolean;
@@ -23,8 +24,7 @@ export interface MedicationInput {
   frequency?: string | null;
   route?: string | null;
   prescribing_doctor?: string | null;
-  start_date?: string | null;
-  end_date?: string | null;
+  prescribing_doctor_id?: string | null;
   is_active?: boolean;
   notes?: string | null;
 }
