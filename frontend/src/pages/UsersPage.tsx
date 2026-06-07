@@ -11,6 +11,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [role, setRole] = useState<"admin" | "viewer">("viewer");
   const [error, setError] = useState("");
 
@@ -33,9 +34,10 @@ export default function UsersPage() {
     e.preventDefault();
     setError("");
     try {
-      await createUser(email, password, role);
+      await createUser(email, password, role, name.trim() || null);
       setEmail("");
       setPassword("");
+      setName("");
       await reload();
     } catch {
       setError("Could not create user");
@@ -160,7 +162,7 @@ export default function UsersPage() {
                 Add user
               </h2>
               <form onSubmit={onCreate}>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <FormField label="Email" htmlFor="new_user_email">
                     <Input
                       id="new_user_email"
@@ -169,6 +171,16 @@ export default function UsersPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                    />
+                  </FormField>
+
+                  <FormField label="Name (optional)" htmlFor="new_user_name">
+                    <Input
+                      id="new_user_name"
+                      type="text"
+                      placeholder="Full name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
                     />
                   </FormField>
 

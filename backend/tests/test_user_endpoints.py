@@ -91,3 +91,19 @@ def test_update_without_full_name_leaves_name_unchanged(client, db_session):
     )
     assert resp.status_code == 200
     assert resp.json()["full_name"] == "Carol Smith"
+
+
+def test_create_user_with_full_name(client, db_session):
+    csrf = _admin_login(client, db_session)
+    resp = client.post(
+        "/api/users",
+        headers={"X-CSRF-Token": csrf},
+        json={
+            "email": "named@example.com",
+            "password": "a-strong-passphrase-123",
+            "role": "viewer",
+            "full_name": "Named User",
+        },
+    )
+    assert resp.status_code == 201
+    assert resp.json()["full_name"] == "Named User"

@@ -20,6 +20,7 @@ class UserCreateRequest(BaseModel):
     email: EmailStr
     password: str
     role: Role
+    full_name: str | None = None
 
 
 class UserUpdateRequest(BaseModel):

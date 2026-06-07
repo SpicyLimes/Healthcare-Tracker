@@ -33,6 +33,11 @@ def create_user(payload: UserCreateRequest, db: Session = Depends(get_db)):
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already exists")
+    if payload.full_name:
+        stripped = payload.full_name.strip()
+        user.full_name = stripped if stripped else None
+        db.commit()
+        db.refresh(user)
     return user
 
 

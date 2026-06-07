@@ -13,11 +13,16 @@ export async function listUsers(): Promise<ManagedUser[]> {
   return (await res.json()) as ManagedUser[];
 }
 
-export async function createUser(email: string, password: string, role: "admin" | "viewer"): Promise<ManagedUser> {
+export async function createUser(
+  email: string,
+  password: string,
+  role: "admin" | "viewer",
+  full_name?: string | null,
+): Promise<ManagedUser> {
   const res = await apiFetch("/api/users", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...csrfHeader() },
-    body: JSON.stringify({ email, password, role }),
+    body: JSON.stringify({ email, password, role, full_name: full_name || null }),
   });
   if (!res.ok) throw new Error("Failed to create user");
   return (await res.json()) as ManagedUser;
