@@ -70,7 +70,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="hidden sm:inline">{user?.full_name || user?.email}</span>
             <Badge variant="secondary" className="hidden sm:inline-flex">
-              {user?.role}
+              {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : ""}
             </Badge>
             <div className="hidden items-center gap-1 sm:flex">
               <CheckCircle2 className="size-3 text-primary" />

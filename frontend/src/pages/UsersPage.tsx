@@ -120,7 +120,7 @@ export default function UsersPage() {
                       </td>
                       <td className="py-3">
                         <Badge variant={u.role === "admin" ? "default" : "secondary"}>
-                          {u.role}
+                          {u.role === "admin" ? "Admin" : "Viewer"}
                         </Badge>
                       </td>
                       <td className="py-3 text-right space-x-2">
@@ -190,8 +190,8 @@ export default function UsersPage() {
                       value={role}
                       onChange={(e) => setRole(e.target.value as "admin" | "viewer")}
                     >
-                      <option value="viewer">viewer</option>
-                      <option value="admin">admin</option>
+                      <option value="viewer">Viewer</option>
+                      <option value="admin">Admin</option>
                     </Select>
                   </FormField>
                 </div>
@@ -245,8 +245,8 @@ export default function UsersPage() {
                       value={editRole}
                       onChange={(e) => setEditRole(e.target.value as "admin" | "viewer")}
                     >
-                      <option value="viewer">viewer</option>
-                      <option value="admin">admin</option>
+                      <option value="viewer">Viewer</option>
+                      <option value="admin">Admin</option>
                     </Select>
                   </FormField>
 
