@@ -159,7 +159,10 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
 
           <div className="mt-auto pb-2">
             {!collapsed && user && (
-              <div className="mb-1 px-2 py-1 text-xs text-muted-foreground truncate">
+              <div
+                className="mb-1 px-2 py-1 text-xs text-muted-foreground truncate"
+                title={user.full_name || user.email}
+              >
                 {user.full_name || user.email}
               </div>
             )}
