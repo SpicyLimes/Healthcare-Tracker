@@ -59,8 +59,10 @@ export default function FamilyHistoryPage() {
   return (
     <AppShell>
       <PageLayout title="Family Health History" description="Hereditary conditions and family medical history.">
-        <div className="overflow-x-auto rounded-xl border border-border">
-          <table className="w-full text-sm">
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Relative</th>
@@ -93,7 +95,9 @@ export default function FamilyHistoryPage() {
               )}
             </tbody>
           </table>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 

@@ -5,6 +5,7 @@ import { calendarApi, type CalendarEvent, EVENT_TYPE_LABELS } from "../api/calen
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -321,31 +322,39 @@ export default function CalendarPage() {
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
         {!loading && !error && view === "month" && (
-          <>
-            <div className="flex items-center justify-between">
-              <button
-                onClick={prevMonth}
-                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                aria-label="Previous month"
-              >
-                <ChevronLeft className="size-4" />
-              </button>
-              <span className="text-sm font-semibold text-foreground">
-                {MONTH_NAMES[month]} {year}
-              </span>
-              <button
-                onClick={nextMonth}
-                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                aria-label="Next month"
-              >
-                <ChevronRight className="size-4" />
-              </button>
-            </div>
-            <MonthGrid events={monthEvents} year={year} month={month} />
-          </>
+          <Card>
+            <CardContent className="p-4 flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={prevMonth}
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  aria-label="Previous month"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                <span className="text-sm font-semibold text-foreground">
+                  {MONTH_NAMES[month]} {year}
+                </span>
+                <button
+                  onClick={nextMonth}
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  aria-label="Next month"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
+              <MonthGrid events={monthEvents} year={year} month={month} />
+            </CardContent>
+          </Card>
         )}
 
-        {!loading && !error && view === "agenda" && <AgendaList events={events} />}
+        {!loading && !error && view === "agenda" && (
+          <Card>
+            <CardContent className="p-0">
+              <AgendaList events={events} />
+            </CardContent>
+          </Card>
+        )}
       </PageLayout>
     </AppShell>
   );

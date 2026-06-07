@@ -68,8 +68,10 @@ export default function AilmentsPage() {
         title="Ailment History"
         description="Track diagnoses, conditions, and their current status."
       >
-        <div className="overflow-x-auto rounded-xl border border-border">
-          <table className="w-full text-sm">
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Condition</th>
@@ -107,7 +109,9 @@ export default function AilmentsPage() {
               ))}
             </tbody>
           </table>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         {isAdmin && (
           <Card>

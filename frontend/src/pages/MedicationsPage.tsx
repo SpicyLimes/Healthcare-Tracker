@@ -70,8 +70,10 @@ export default function MedicationsPage() {
         title="Medications"
         description="Track current and past medications, dosages, and prescribing doctors."
       >
-        <div className="overflow-x-auto rounded-xl border border-border">
-          <table className="w-full text-sm">
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
@@ -118,7 +120,9 @@ export default function MedicationsPage() {
               )}
             </tbody>
           </table>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         {isAdmin && (
           <Card>
