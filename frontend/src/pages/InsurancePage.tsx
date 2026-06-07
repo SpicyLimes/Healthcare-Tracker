@@ -82,7 +82,7 @@ export default function InsurancePage() {
     try {
       const payload = Object.fromEntries(
         Object.entries(editForm).map(([k, v]) => [k, v === "" ? null : v])
-      ) as InsuranceInput;
+      ) as unknown as InsuranceInput;
       await insurancesApi.update(editingRow.id, payload);
       closeEdit();
       await reload();

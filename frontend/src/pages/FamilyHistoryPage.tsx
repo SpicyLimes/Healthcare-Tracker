@@ -79,7 +79,7 @@ export default function FamilyHistoryPage() {
     try {
       const payload = Object.fromEntries(
         Object.entries(editForm).map(([k, v]) => [k, v === "" ? null : v])
-      ) as FamilyHistoryInput;
+      ) as unknown as FamilyHistoryInput;
       await familyHistoryApi.update(editingRow.id, payload);
       closeEdit();
       await reload();

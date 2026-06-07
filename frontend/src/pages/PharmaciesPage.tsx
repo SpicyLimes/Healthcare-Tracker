@@ -79,7 +79,7 @@ export default function PharmaciesPage() {
     try {
       const payload = Object.fromEntries(
         Object.entries(editForm).map(([k, v]) => [k, v === "" ? null : v])
-      ) as PharmacyInput;
+      ) as unknown as PharmacyInput;
       await pharmaciesApi.update(editingRow.id, payload);
       closeEdit();
       await reload();
