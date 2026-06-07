@@ -62,18 +62,28 @@ export default function DentalHistoryPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
+                    <th className="w-8" />
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Provider</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Procedure</th>
                     {isAdmin && <th className="px-4 py-3" />}
-                    <th className="px-4 py-3" />
-                    <th className="px-4 py-3" />
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((r) => (
                     <React.Fragment key={r.id}>
                       <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                        <td className="px-2 py-3 w-8">
+                          <button
+                            onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                            className="text-muted-foreground hover:text-foreground transition-colors"
+                            aria-label={expandedId === r.id ? "Collapse" : "Expand"}
+                          >
+                            {expandedId === r.id
+                              ? <ChevronDown className="size-4" />
+                              : <ChevronRight className="size-4" />}
+                          </button>
+                        </td>
                         <td className="px-4 py-3 font-medium text-foreground">{r.visit_date ?? ""}</td>
                         <td className="px-4 py-3 text-muted-foreground">{r.provider_other ?? ""}</td>
                         <td className="px-4 py-3 text-muted-foreground">{r.procedure ?? ""}</td>
@@ -83,28 +93,18 @@ export default function DentalHistoryPage() {
                             <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
                           </td>
                         )}
-                        <td className="px-4 py-3">
-                          <DocumentsPanel section="dental_history" recordId={r.id} isAdmin={isAdmin} />
-                        </td>
-                        {r.notes && (
-                          <td className="px-2 py-3">
-                            <button
-                              onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                              className="text-muted-foreground hover:text-foreground transition-colors"
-                              aria-label={expandedId === r.id ? "Collapse notes" : "Expand notes"}
-                            >
-                              {expandedId === r.id
-                                ? <ChevronDown className="size-4" />
-                                : <ChevronRight className="size-4" />}
-                            </button>
-                          </td>
-                        )}
-                        {!r.notes && <td />}
                       </tr>
-                      {expandedId === r.id && r.notes && (
+                      {expandedId === r.id && (
                         <tr className="bg-muted/20">
-                          <td colSpan={isAdmin ? 6 : 5} className="px-4 py-3 text-sm text-muted-foreground whitespace-pre-wrap">
-                            <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
+                          <td colSpan={isAdmin ? 5 : 4} className="px-4 py-3 text-sm text-muted-foreground">
+                            <div className="flex flex-col gap-3">
+                              {r.notes && (
+                                <div className="whitespace-pre-wrap">
+                                  <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
+                                </div>
+                              )}
+                              <DocumentsPanel section="dental_history" recordId={r.id} isAdmin={isAdmin} />
+                            </div>
                           </td>
                         </tr>
                       )}
@@ -112,7 +112,7 @@ export default function DentalHistoryPage() {
                   ))}
                   {rows.length === 0 && (
                     <tr>
-                      <td colSpan={isAdmin ? 6 : 5} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                      <td colSpan={isAdmin ? 5 : 4} className="px-4 py-8 text-center text-sm text-muted-foreground">
                         No dental history records yet.
                       </td>
                     </tr>

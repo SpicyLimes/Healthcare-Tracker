@@ -96,19 +96,29 @@ export default function AilmentsPage() {
               <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
+                <th className="w-8" />
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Condition</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Onset Date</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Treating Doctor</th>
                 {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
-                <th />
-                <th />
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <React.Fragment key={r.id}>
                   <tr className="border-b border-border last:border-0 hover:bg-muted/20">
+                    <td className="px-2 py-3 w-8">
+                      <button
+                        onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label={expandedId === r.id ? "Collapse" : "Expand"}
+                      >
+                        {expandedId === r.id
+                          ? <ChevronDown className="size-4" />
+                          : <ChevronRight className="size-4" />}
+                      </button>
+                    </td>
                     <td className="px-4 py-3 font-medium text-foreground">{r.condition}</td>
                     <td className="px-4 py-3">
                       <Badge variant={r.status === "active" ? "default" : "secondary"}>
@@ -125,28 +135,18 @@ export default function AilmentsPage() {
                         <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
                       </td>
                     )}
-                    <td className="px-4 py-3">
-                      <DocumentsPanel section="ailments" recordId={r.id} isAdmin={isAdmin} />
-                    </td>
-                    {r.notes && (
-                      <td className="px-2 py-3">
-                        <button
-                          onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                          className="text-muted-foreground hover:text-foreground transition-colors"
-                          aria-label={expandedId === r.id ? "Collapse notes" : "Expand notes"}
-                        >
-                          {expandedId === r.id
-                            ? <ChevronDown className="size-4" />
-                            : <ChevronRight className="size-4" />}
-                        </button>
-                      </td>
-                    )}
-                    {!r.notes && <td />}
                   </tr>
-                  {expandedId === r.id && r.notes && (
+                  {expandedId === r.id && (
                     <tr className="bg-muted/20">
-                      <td colSpan={isAdmin ? 7 : 6} className="px-4 py-3 text-sm text-muted-foreground whitespace-pre-wrap">
-                        <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
+                      <td colSpan={isAdmin ? 6 : 5} className="px-4 py-3 text-sm text-muted-foreground">
+                        <div className="flex flex-col gap-3">
+                          {r.notes && (
+                            <div className="whitespace-pre-wrap">
+                              <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
+                            </div>
+                          )}
+                          <DocumentsPanel section="ailments" recordId={r.id} isAdmin={isAdmin} />
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -154,7 +154,7 @@ export default function AilmentsPage() {
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  <td colSpan={isAdmin ? 6 : 5} className="px-4 py-8 text-center text-sm text-muted-foreground">
                     No ailment records yet.
                   </td>
                 </tr>

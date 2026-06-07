@@ -35,10 +35,6 @@ export default function VisitLogsPage() {
   const [editForm, setEditForm] = useState<VisitLogInput>(EMPTY);
   const [editError, setEditError] = useState("");
 
-  function hasExpandContent(r: VisitLog): boolean {
-    return !!(r.summary || r.follow_up || r.notes);
-  }
-
   async function reload() { setRows(await visitLogsApi.list()); }
   useEffect(() => {
     reload().catch(() => setError("Failed to load visit logs"));
@@ -91,20 +87,30 @@ export default function VisitLogsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
+                    <th className="w-8" />
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Doctor</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reason</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Summary</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Follow-up Date</th>
                     {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
-                    <th className="px-4 py-3" />
-                    <th className="px-4 py-3" />
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((r) => (
                     <React.Fragment key={r.id}>
                       <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                        <td className="px-2 py-3 w-8">
+                          <button
+                            onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                            className="text-muted-foreground hover:text-foreground transition-colors"
+                            aria-label={expandedId === r.id ? "Collapse" : "Expand"}
+                          >
+                            {expandedId === r.id
+                              ? <ChevronDown className="size-4" />
+                              : <ChevronRight className="size-4" />}
+                          </button>
+                        </td>
                         <td className="px-4 py-3 font-medium text-foreground">{formatDate(r.visit_date)}</td>
                         <td className="px-4 py-3 text-muted-foreground">{resolveDoctorName(r.doctor_id, r.doctor_other)}</td>
                         <td className="px-4 py-3 text-muted-foreground">{r.reason ?? "—"}</td>
@@ -118,45 +124,31 @@ export default function VisitLogsPage() {
                             <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
                           </td>
                         )}
-                        <td className="px-4 py-3">
-                          <DocumentsPanel section="visit_logs" recordId={r.id} isAdmin={isAdmin} />
-                        </td>
-                        {hasExpandContent(r) && (
-                          <td className="px-2 py-3">
-                            <button
-                              onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                              className="text-muted-foreground hover:text-foreground transition-colors"
-                              aria-label={expandedId === r.id ? "Collapse notes" : "Expand notes"}
-                            >
-                              {expandedId === r.id
-                                ? <ChevronDown className="size-4" />
-                                : <ChevronRight className="size-4" />}
-                            </button>
-                          </td>
-                        )}
-                        {!hasExpandContent(r) && <td />}
                       </tr>
-                      {expandedId === r.id && hasExpandContent(r) && (
+                      {expandedId === r.id && (
                         <tr className="bg-muted/20">
-                          <td colSpan={isAdmin ? 8 : 7} className="px-4 py-3 text-sm text-muted-foreground space-y-2">
-                            {r.summary && (
-                              <div>
-                                <span className="font-medium text-foreground mr-2">Summary:</span>
-                                <span className="whitespace-pre-wrap">{r.summary}</span>
-                              </div>
-                            )}
-                            {r.follow_up && (
-                              <div>
-                                <span className="font-medium text-foreground mr-2">Follow-up:</span>
-                                <span className="whitespace-pre-wrap">{r.follow_up}</span>
-                              </div>
-                            )}
-                            {r.notes && (
-                              <div>
-                                <span className="font-medium text-foreground mr-2">Notes:</span>
-                                <span className="whitespace-pre-wrap">{r.notes}</span>
-                              </div>
-                            )}
+                          <td colSpan={isAdmin ? 7 : 6} className="px-4 py-3 text-sm text-muted-foreground">
+                            <div className="flex flex-col gap-3">
+                              {r.summary && (
+                                <div>
+                                  <span className="font-medium text-foreground mr-2">Summary:</span>
+                                  <span className="whitespace-pre-wrap">{r.summary}</span>
+                                </div>
+                              )}
+                              {r.follow_up && (
+                                <div>
+                                  <span className="font-medium text-foreground mr-2">Follow-up:</span>
+                                  <span className="whitespace-pre-wrap">{r.follow_up}</span>
+                                </div>
+                              )}
+                              {r.notes && (
+                                <div>
+                                  <span className="font-medium text-foreground mr-2">Notes:</span>
+                                  <span className="whitespace-pre-wrap">{r.notes}</span>
+                                </div>
+                              )}
+                              <DocumentsPanel section="visit_logs" recordId={r.id} isAdmin={isAdmin} />
+                            </div>
                           </td>
                         </tr>
                       )}
@@ -164,7 +156,7 @@ export default function VisitLogsPage() {
                   ))}
                   {rows.length === 0 && (
                     <tr>
-                      <td colSpan={isAdmin ? 8 : 7} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                      <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-muted-foreground">
                         No visit log records yet.
                       </td>
                     </tr>

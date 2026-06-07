@@ -98,18 +98,29 @@ export default function InsurancePage() {
               <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
+                <th className="w-8" />
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Insurer</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Policy #</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Group #</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Phone</th>
                 {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
-                <th />
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <React.Fragment key={r.id}>
                   <tr className="border-b border-border last:border-0">
+                    <td className="px-2 py-3 w-8">
+                      <button
+                        onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label={expandedId === r.id ? "Collapse" : "Expand"}
+                      >
+                        {expandedId === r.id
+                          ? <ChevronDown className="size-4" />
+                          : <ChevronRight className="size-4" />}
+                      </button>
+                    </td>
                     <td className="px-4 py-3 font-medium text-foreground">{r.insurer_name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{r.policy_number ?? ""}</td>
                     <td className="px-4 py-3 text-muted-foreground">{r.group_number ?? ""}</td>
@@ -120,25 +131,18 @@ export default function InsurancePage() {
                         <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
                       </td>
                     )}
-                    {r.notes && (
-                      <td className="px-2 py-3">
-                        <button
-                          onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                          className="text-muted-foreground hover:text-foreground transition-colors"
-                          aria-label={expandedId === r.id ? "Collapse notes" : "Expand notes"}
-                        >
-                          {expandedId === r.id
-                            ? <ChevronDown className="size-4" />
-                            : <ChevronRight className="size-4" />}
-                        </button>
-                      </td>
-                    )}
-                    {!r.notes && <td />}
                   </tr>
-                  {expandedId === r.id && r.notes && (
+                  {expandedId === r.id && (
                     <tr className="bg-muted/20">
-                      <td colSpan={isAdmin ? 6 : 5} className="px-4 py-3 text-sm text-muted-foreground whitespace-pre-wrap">
-                        <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
+                      <td colSpan={isAdmin ? 6 : 5} className="px-4 py-3 text-sm text-muted-foreground">
+                        <div className="flex flex-col gap-3">
+                          {r.notes && (
+                            <div className="whitespace-pre-wrap">
+                              <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
+                            </div>
+                          )}
+                          <DocumentsPanel section="insurances" recordId={r.id} isAdmin={isAdmin} />
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -226,11 +230,6 @@ export default function InsurancePage() {
           </Card>
         )}
 
-        {rows.map((r) => (
-          <div key={r.id} className="mt-4">
-            <DocumentsPanel section="insurances" recordId={r.id} isAdmin={isAdmin} />
-          </div>
-        ))}
       </PageLayout>
       {editingRow && (
         <div role="dialog" aria-modal="true" aria-labelledby="edit-ins-heading"

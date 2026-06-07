@@ -95,17 +95,28 @@ export default function PharmaciesPage() {
               <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
+                <th className="w-8" />
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Name</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Phone</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Address</th>
                 {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
-                <th />
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <React.Fragment key={r.id}>
                   <tr className="border-b border-border last:border-0">
+                    <td className="px-2 py-3 w-8">
+                      <button
+                        onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label={expandedId === r.id ? "Collapse" : "Expand"}
+                      >
+                        {expandedId === r.id
+                          ? <ChevronDown className="size-4" />
+                          : <ChevronRight className="size-4" />}
+                      </button>
+                    </td>
                     <td className="px-4 py-3 font-medium text-foreground">{r.name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{r.phone ?? ""}</td>
                     <td className="px-4 py-3 text-muted-foreground">{r.address ?? ""}</td>
@@ -115,20 +126,6 @@ export default function PharmaciesPage() {
                         <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
                       </td>
                     )}
-                    {r.notes && (
-                      <td className="px-2 py-3">
-                        <button
-                          onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                          className="text-muted-foreground hover:text-foreground transition-colors"
-                          aria-label={expandedId === r.id ? "Collapse notes" : "Expand notes"}
-                        >
-                          {expandedId === r.id
-                            ? <ChevronDown className="size-4" />
-                            : <ChevronRight className="size-4" />}
-                        </button>
-                      </td>
-                    )}
-                    {!r.notes && <td />}
                   </tr>
                   {expandedId === r.id && r.notes && (
                     <tr className="bg-muted/20">
