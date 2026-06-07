@@ -33,6 +33,8 @@ function groupByDate(events: CalendarEvent[]): Record<string, CalendarEvent[]> {
   return map;
 }
 
+// Multi-day events (hospitalizations, medications) are grouped by start date only;
+// they won't appear in the month that contains their end date.
 function groupByMonth(events: CalendarEvent[]): { label: string; events: CalendarEvent[] }[] {
   const map = new Map<string, CalendarEvent[]>();
   for (const e of events) {
@@ -99,7 +101,7 @@ function DayCell({ dateStr, events, isToday, isCurrentMonth }: DayCellProps) {
       <div className="flex flex-col gap-0.5">
         {visible.map((e) => (
           <div
-            key={e.id}
+            key={`${e.type}-${e.id}`}
             className="truncate rounded px-1 py-0.5 text-[10px] font-medium text-white"
             style={{ backgroundColor: e.color }}
             title={e.title}
@@ -125,7 +127,7 @@ function DayCell({ dateStr, events, isToday, isCurrentMonth }: DayCellProps) {
             )}
           </p>
           {events.map((e) => (
-            <div key={e.id} className="flex items-center gap-1.5 py-0.5">
+            <div key={`${e.type}-${e.id}`} className="flex items-center gap-1.5 py-0.5">
               <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: e.color }} />
               <span className="truncate text-[11px] text-foreground">{e.title}</span>
             </div>
@@ -204,7 +206,7 @@ function AgendaList({ events }: AgendaListProps) {
     );
 
   const renderRow = (e: CalendarEvent) => (
-    <div key={e.id} className="flex items-center gap-3 py-2">
+    <div key={`${e.type}-${e.id}`} className="flex items-center gap-3 py-2">
       <div className="w-1 self-stretch rounded-full shrink-0" style={{ backgroundColor: e.color }} />
       <span className="w-14 shrink-0 text-xs text-muted-foreground">{formatAgendaDate(e.date)}</span>
       <span className="flex-1 truncate text-sm text-foreground">{e.title}</span>
