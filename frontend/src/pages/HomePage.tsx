@@ -23,9 +23,11 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { fetchHealth, type HealthStatus } from "../api/health";
+import { calendarApi, type CalendarEvent, EVENT_TYPE_LABELS } from "../api/calendar";
 import { useAuth } from "../auth/useAuth";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 const NON_ADMIN_SECTIONS = [
   {
@@ -89,9 +91,21 @@ const ADMIN_SECTION = {
 export default function HomePage() {
   const { user } = useAuth();
   const [health, setHealth] = useState<HealthStatus | null>(null);
+  const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
     fetchHealth().then(setHealth).catch(() => setHealth(null));
+    const today = new Date().toISOString().slice(0, 10);
+    calendarApi
+      .list()
+      .then((events) => {
+        const upcoming = events
+          .filter((e) => e.date >= today)
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .slice(0, 5);
+        setUpcomingEvents(upcoming);
+      })
+      .catch(() => {});
   }, []);
 
   const sections =
@@ -116,6 +130,34 @@ export default function HomePage() {
             </p>
           )}
         </div>
+
+        {/* Upcoming Events */}
+        {upcomingEvents.length > 0 && (
+          <div className="mb-2">
+            <div className="mb-3">
+              <h2 className="font-heading text-sm font-semibold text-foreground">Upcoming Events</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Your next scheduled health events.</p>
+            </div>
+            <Card>
+              <CardContent className="py-2 px-4 divide-y divide-border">
+                {upcomingEvents.map((e) => (
+                  <div key={`${e.type}-${e.id}`} className="flex items-center gap-3 py-2">
+                    <div className="w-1 self-stretch rounded-full shrink-0" style={{ backgroundColor: e.color }} />
+                    <span className="w-20 shrink-0 text-xs text-muted-foreground">
+                      {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(
+                        new Date(e.date + "T00:00:00Z")
+                      )}
+                    </span>
+                    <span className="flex-1 truncate text-sm text-foreground">{e.title}</span>
+                    <Badge variant="outline" className="shrink-0 text-[10px]">
+                      {EVENT_TYPE_LABELS[e.type]}
+                    </Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Section grid */}
         <div className="flex flex-col gap-6">
