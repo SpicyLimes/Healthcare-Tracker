@@ -21,6 +21,7 @@ import DentalHistoryPage from "./pages/DentalHistoryPage";
 import VaccinationsPage from "./pages/VaccinationsPage";
 import VisitLogsPage from "./pages/VisitLogsPage";
 import AppointmentsPage from "./pages/AppointmentsPage";
+import CalendarPage from "./pages/CalendarPage";
 import DocumentsPage from "./pages/DocumentsPage";
 import ShareLinksPage from "./pages/ShareLinksPage";
 import AuditLogPage from "./pages/AuditLogPage";
@@ -52,6 +53,7 @@ export default function App() {
             <Route path="/vaccinations" element={<ProtectedRoute><VaccinationsPage /></ProtectedRoute>} />
             <Route path="/visit-logs" element={<ProtectedRoute><VisitLogsPage /></ProtectedRoute>} />
             <Route path="/appointments" element={<ProtectedRoute><AppointmentsPage /></ProtectedRoute>} />
+            <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
             <Route path="/documents" element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
             <Route path="/share-links" element={<RequireAdmin><ShareLinksPage /></RequireAdmin>} />
             <Route path="/audit-log" element={<RequireAdmin><AuditLogPage /></RequireAdmin>} />

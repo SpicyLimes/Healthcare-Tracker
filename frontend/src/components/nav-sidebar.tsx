@@ -3,12 +3,19 @@ import {
   User, Pill, Stethoscope, HeartPulse, Shield, Building2, Users,
   Scissors, Hospital, Eye, Smile, Syringe, ClipboardList, CalendarDays,
   FolderOpen, KeyRound, Share2, ScrollText, UserCog, LogOut,
-  LayoutDashboard,
+  LayoutDashboard, Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/auth/useAuth";
+
+const calendarGroup = {
+  label: "Calendar",
+  items: [
+    { to: "/calendar", label: "Calendar", icon: Calendar },
+  ],
+};
 
 const navGroups = [
   {
@@ -124,6 +131,20 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
           <ul className={cn("flex flex-col gap-0.5", collapsed && "items-center")}>
             <li>{navLink("/", "Dashboard", LayoutDashboard, pathname === "/")}</li>
           </ul>
+
+          <div key={calendarGroup.label} className={cn(collapsed && "flex flex-col items-center")}>
+            {!collapsed && (
+              <p className="mb-1 px-2 text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                {calendarGroup.label}
+              </p>
+            )}
+            {collapsed && <Separator className="mb-2 w-6" />}
+            <ul className={cn("flex flex-col gap-0.5", collapsed && "items-center")}>
+              {calendarGroup.items.map((item) => (
+                <li key={item.to}>{navLink(item.to, item.label, item.icon, pathname === item.to)}</li>
+              ))}
+            </ul>
+          </div>
 
           {navGroups.map((group) => (
             <div key={group.label} className={cn(collapsed && "flex flex-col items-center")}>
