@@ -55,7 +55,7 @@ export default function ChangePasswordPage() {
   return (
     <AppShell>
       <PageLayout
-        title="Account"
+        title="Settings"
         description="Manage your display name and password."
       >
         <div className="flex flex-col gap-6">

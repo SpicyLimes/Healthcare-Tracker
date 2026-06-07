@@ -56,7 +56,7 @@ const navGroups = [
   {
     label: "Account",
     items: [
-      { to: "/change-password", label: "Change Password", icon: KeyRound },
+      { to: "/change-password", label: "Settings", icon: KeyRound },
       { to: "/share-links", label: "Share Links", icon: Share2 },
     ],
   },
@@ -119,7 +119,7 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
             collapsed ? "justify-center px-0" : "gap-2.5 px-4"
           )}
         >
-          <img src="/logo.png" alt="Healthcare Tracker" className="size-8 shrink-0 rounded-lg" />
+          <img src="/logo.png" alt="Healthcare Tracker" className="size-10 shrink-0 rounded-lg" />
           {!collapsed && (
             <span className="text-sm font-semibold text-foreground">
               Healthcare Tracker

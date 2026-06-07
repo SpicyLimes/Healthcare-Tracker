@@ -73,7 +73,7 @@ const NON_ADMIN_SECTIONS = [
     group: "Account",
     description: "Security settings and sharing preferences.",
     items: [
-      { to: "/change-password", label: "Change Password", icon: KeyRound, desc: "Update your password" },
+      { to: "/change-password", label: "Settings", icon: KeyRound, desc: "Display name & password" },
       { to: "/share-links", label: "Share Links", icon: Share2, desc: "Share records with providers" },
     ],
   },
@@ -133,7 +133,7 @@ export default function HomePage() {
 
         {/* Upcoming Events */}
         {upcomingEvents.length > 0 && (
-          <div className="mb-2">
+          <div className="mb-8">
             <div className="mb-3">
               <h2 className="font-heading text-sm font-semibold text-foreground">Upcoming Events</h2>
               <p className="text-xs text-muted-foreground mt-0.5">Your next scheduled health events.</p>

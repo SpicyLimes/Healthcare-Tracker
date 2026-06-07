@@ -152,6 +152,13 @@ export default function AilmentsPage() {
                   )}
                 </React.Fragment>
               ))}
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    No ailment records yet.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
             </div>

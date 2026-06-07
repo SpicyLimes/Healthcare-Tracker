@@ -69,9 +69,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {/* Status badges */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="hidden sm:inline">{user?.full_name || user?.email}</span>
-            <Badge variant="secondary" className="hidden sm:inline-flex">
-              {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : ""}
-            </Badge>
+            {user?.role === "admin" && (
+              <Badge variant="secondary" className="hidden sm:inline-flex">Admin</Badge>
+            )}
             <div className="hidden items-center gap-1 sm:flex">
               <CheckCircle2 className="size-3 text-primary" />
               <span>Backend: ok</span>

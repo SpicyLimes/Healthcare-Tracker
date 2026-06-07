@@ -1,6 +1,7 @@
 // frontend/src/components/DoctorPicker.tsx
 import { useEffect, useState } from "react";
 import { doctorsApi, type Doctor } from "../api/doctors";
+import { Select, Input } from "@/components/ui/form-field";
 
 interface DoctorPickerProps {
   doctorId: string | null;
@@ -39,16 +40,16 @@ export default function DoctorPicker({ doctorId, doctorOther, onChange, disabled
   }
 
   return (
-    <span style={{ display: "inline-flex", flexDirection: "column", gap: "0.25rem" }}>
-      <select value={selectValue} onChange={handleSelect} disabled={disabled}>
-        <option value="">— none —</option>
+    <div className="flex flex-col gap-2">
+      <Select value={selectValue} onChange={handleSelect} disabled={disabled}>
+        <option value="">Select a Doctor…</option>
         {doctors.map((d) => (
           <option key={d.id} value={d.id}>{d.name}</option>
         ))}
         <option value="__other__">Other</option>
-      </select>
+      </Select>
       {showOther && (
-        <input
+        <Input
           type="text"
           value={doctorOther ?? ""}
           disabled={disabled}
@@ -56,6 +57,6 @@ export default function DoctorPicker({ doctorId, doctorOther, onChange, disabled
           placeholder="Doctor name"
         />
       )}
-    </span>
+    </div>
   );
 }
