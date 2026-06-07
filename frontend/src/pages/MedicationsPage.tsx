@@ -31,6 +31,9 @@ export default function MedicationsPage() {
   const [form, setForm] = useState<MedicationInput>(EMPTY);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingRow, setEditingRow] = useState<Medication | null>(null);
+  const [editForm, setEditForm] = useState<MedicationInput>(EMPTY);
+  const [editError, setEditError] = useState("");
 
   async function reload() {
     setRows(await medicationsApi.list());
@@ -59,6 +62,23 @@ export default function MedicationsPage() {
     } catch {
       setError("Could not delete record");
     }
+  }
+
+  function openEdit(r: Medication) {
+    setEditingRow(r);
+    setEditForm({ name: r.name, kind: r.kind, dose: r.dose, frequency: r.frequency, route: r.route, prescribing_doctor: r.prescribing_doctor, prescribing_doctor_id: r.prescribing_doctor_id, is_active: r.is_active, notes: r.notes });
+    setEditError("");
+  }
+  function closeEdit() { setEditingRow(null); }
+  async function onSaveEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editingRow) return;
+    setEditError("");
+    try {
+      await medicationsApi.update(editingRow.id, editForm);
+      closeEdit();
+      await reload();
+    } catch { setEditError("Could not update record"); }
   }
 
   function resolveDoctorName(id: string | null, other: string | null): string {
@@ -104,10 +124,9 @@ export default function MedicationsPage() {
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{r.is_active ? "Yes" : "No"}</td>
                     {isAdmin && (
-                      <td className="px-4 py-3">
-                        <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
-                          Delete
-                        </Button>
+                      <td className="px-4 py-3 space-x-2">
+                        <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
+                        <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
                       </td>
                     )}
                     <td className="px-4 py-3">
@@ -221,6 +240,75 @@ export default function MedicationsPage() {
           </Card>
         )}
       </PageLayout>
+      {editingRow && (
+        <div role="dialog" aria-modal="true" aria-labelledby="edit-med-heading"
+             onKeyDown={(e) => e.key === "Escape" && closeEdit()}
+             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+             onClick={closeEdit}>
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+               onClick={(e) => e.stopPropagation()}>
+            <h2 id="edit-med-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Medication</h2>
+            {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
+            <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField label="Medication Name" htmlFor="edit-med-name">
+                  <Input id="edit-med-name" required value={editForm.name ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, name: e.target.value }))} />
+                </FormField>
+                <FormField label="Kind" htmlFor="edit-med-kind">
+                  <Select id="edit-med-kind" value={editForm.kind ?? "medication"}
+                    onChange={(e) => setEditForm((s) => ({ ...s, kind: e.target.value as MedicationKind }))}>
+                    <option value="medication">Medication</option>
+                    <option value="vitamin">Vitamin</option>
+                    <option value="supplement">Supplement</option>
+                  </Select>
+                </FormField>
+                <FormField label="Dose" htmlFor="edit-med-dose">
+                  <Input id="edit-med-dose" value={editForm.dose ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, dose: e.target.value || null }))} />
+                </FormField>
+                <FormField label="Frequency" htmlFor="edit-med-frequency">
+                  <Input id="edit-med-frequency" value={editForm.frequency ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, frequency: e.target.value || null }))} />
+                </FormField>
+                <FormField label="Route" htmlFor="edit-med-route">
+                  <Select id="edit-med-route" value={editForm.route ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, route: e.target.value || null }))}>
+                    <option value="">Select…</option>
+                    <option value="oral">Oral</option>
+                    <option value="topical">Topical</option>
+                    <option value="injection">Injection</option>
+                    <option value="inhaled">Inhaled</option>
+                    <option value="other">Other</option>
+                  </Select>
+                </FormField>
+                <FormField label="Status" htmlFor="edit-med-active">
+                  <Select id="edit-med-active" value={editForm.is_active === false ? "false" : "true"}
+                    onChange={(e) => setEditForm((s) => ({ ...s, is_active: e.target.value === "true" }))}>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                  </Select>
+                </FormField>
+              </div>
+              <FormField label="Prescribing Doctor" htmlFor="edit-med-prescriber">
+                <DoctorPicker
+                  doctorId={editForm.prescribing_doctor_id ?? null}
+                  doctorOther={editForm.prescribing_doctor ?? null}
+                  onChange={(id, other) => setEditForm((s) => ({ ...s, prescribing_doctor_id: id, prescribing_doctor: other }))}
+                />
+              </FormField>
+              <FormField label="Notes" htmlFor="edit-med-notes">
+                <Textarea id="edit-med-notes" value={editForm.notes ?? ""}
+                  onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value || null }))} />
+              </FormField>
+              <div className="mt-2 flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={closeEdit}>Cancel</Button>
+                <Button type="submit">Save</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

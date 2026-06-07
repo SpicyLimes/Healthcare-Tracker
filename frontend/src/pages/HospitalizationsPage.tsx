@@ -19,6 +19,9 @@ export default function HospitalizationsPage() {
   const [form, setForm] = useState<HospitalizationInput>({ facility: "" });
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingRow, setEditingRow] = useState<Hospitalization | null>(null);
+  const [editForm, setEditForm] = useState<HospitalizationInput>({ facility: "" });
+  const [editError, setEditError] = useState("");
 
   async function reload() { setRows(await hospitalizationsApi.list()); }
   useEffect(() => {
@@ -36,6 +39,23 @@ export default function HospitalizationsPage() {
   async function onDelete(id: string) {
     try { await hospitalizationsApi.remove(id); await reload(); }
     catch { setError("Could not delete record"); }
+  }
+
+  function openEdit(r: Hospitalization) {
+    setEditingRow(r);
+    setEditForm({ facility: r.facility, admission_date: r.admission_date, discharge_date: r.discharge_date, reason: r.reason, attending_physician_id: r.attending_physician_id, attending_physician_other: r.attending_physician_other, outcome: r.outcome, notes: r.notes });
+    setEditError("");
+  }
+  function closeEdit() { setEditingRow(null); }
+  async function onSaveEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editingRow) return;
+    setEditError("");
+    try {
+      await hospitalizationsApi.update(editingRow.id, editForm);
+      closeEdit();
+      await reload();
+    } catch { setEditError("Could not update record"); }
   }
 
   function resolveDoctorName(id: string | null, other: string | null): string {
@@ -76,10 +96,9 @@ export default function HospitalizationsPage() {
                         </td>
                         <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{r.outcome ?? ""}</td>
                         {isAdmin && (
-                          <td className="px-4 py-3">
-                            <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
-                              Delete
-                            </Button>
+                          <td className="px-4 py-3 space-x-2">
+                            <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
+                            <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
                           </td>
                         )}
                         <td className="px-4 py-3">
@@ -222,6 +241,67 @@ export default function HospitalizationsPage() {
           </Card>
         )}
       </PageLayout>
+      {editingRow && (
+        <div role="dialog" aria-modal="true" aria-labelledby="edit-hosp-heading"
+             onKeyDown={(e) => e.key === "Escape" && closeEdit()}
+             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+             onClick={closeEdit}>
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+               onClick={(e) => e.stopPropagation()}>
+            <h2 id="edit-hosp-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Hospitalization</h2>
+            {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
+            <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <FormField label="Facility" htmlFor="edit-hosp-facility">
+                    <Input id="edit-hosp-facility" required value={editForm.facility ?? ""}
+                      onChange={(e) => setEditForm((s) => ({ ...s, facility: e.target.value }))} />
+                  </FormField>
+                </div>
+                <FormField label="Admission Date" htmlFor="edit-hosp-admission">
+                  <Input id="edit-hosp-admission" type="date" value={editForm.admission_date ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, admission_date: e.target.value || null }))} />
+                </FormField>
+                <FormField label="Discharge Date" htmlFor="edit-hosp-discharge">
+                  <Input id="edit-hosp-discharge" type="date" value={editForm.discharge_date ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, discharge_date: e.target.value || null }))} />
+                </FormField>
+                <div className="sm:col-span-2">
+                  <FormField label="Reason" htmlFor="edit-hosp-reason">
+                    <Input id="edit-hosp-reason" value={editForm.reason ?? ""}
+                      onChange={(e) => setEditForm((s) => ({ ...s, reason: e.target.value || null }))} />
+                  </FormField>
+                </div>
+                <div className="sm:col-span-2">
+                  <FormField label="Doctor" htmlFor="edit-hosp-doctor">
+                    <DoctorPicker
+                      doctorId={editForm.attending_physician_id ?? null}
+                      doctorOther={editForm.attending_physician_other ?? null}
+                      onChange={(id, other) => setEditForm((s) => ({ ...s, attending_physician_id: id, attending_physician_other: other }))}
+                    />
+                  </FormField>
+                </div>
+                <div className="sm:col-span-2">
+                  <FormField label="Outcome" htmlFor="edit-hosp-outcome">
+                    <Textarea id="edit-hosp-outcome" value={editForm.outcome ?? ""}
+                      onChange={(e) => setEditForm((s) => ({ ...s, outcome: e.target.value || null }))} />
+                  </FormField>
+                </div>
+                <div className="sm:col-span-2">
+                  <FormField label="Notes" htmlFor="edit-hosp-notes">
+                    <Textarea id="edit-hosp-notes" value={editForm.notes ?? ""}
+                      onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value || null }))} />
+                  </FormField>
+                </div>
+              </div>
+              <div className="mt-2 flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={closeEdit}>Cancel</Button>
+                <Button type="submit">Save</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

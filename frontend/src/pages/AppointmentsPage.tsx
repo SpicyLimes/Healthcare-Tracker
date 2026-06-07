@@ -58,6 +58,9 @@ export default function AppointmentsPage() {
   const [form, setForm] = useState<AppointmentInput>(EMPTY);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingRow, setEditingRow] = useState<Appointment | null>(null);
+  const [editForm, setEditForm] = useState<AppointmentInput>(EMPTY);
+  const [editError, setEditError] = useState("");
 
   async function reload() { setRows(await appointmentsApi.list()); }
   useEffect(() => {
@@ -80,6 +83,23 @@ export default function AppointmentsPage() {
   async function onDelete(id: string) {
     try { await appointmentsApi.remove(id); await reload(); }
     catch { setError("Could not delete record"); }
+  }
+
+  function openEdit(r: Appointment) {
+    setEditingRow(r);
+    setEditForm({ appointment_datetime: r.appointment_datetime, appointment_type: r.appointment_type, doctor_id: r.doctor_id, doctor_other: r.doctor_other, location: r.location, reason: r.reason, status: r.status, notes: r.notes });
+    setEditError("");
+  }
+  function closeEdit() { setEditingRow(null); }
+  async function onSaveEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editingRow) return;
+    setEditError("");
+    try {
+      await appointmentsApi.update(editingRow.id, editForm);
+      closeEdit();
+      await reload();
+    } catch { setEditError("Could not update record"); }
   }
 
   return (
@@ -124,10 +144,9 @@ export default function AppointmentsPage() {
                             </Badge>
                           </td>
                           {isAdmin && (
-                            <td className="px-4 py-3">
-                              <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
-                                Delete
-                              </Button>
+                            <td className="px-4 py-3 space-x-2">
+                              <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
+                              <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
                             </td>
                           )}
                           <td className="px-4 py-3">
@@ -272,6 +291,68 @@ export default function AppointmentsPage() {
           </Card>
         )}
       </PageLayout>
+      {editingRow && (
+        <div role="dialog" aria-modal="true" aria-labelledby="edit-appt-heading"
+             onKeyDown={(e) => e.key === "Escape" && closeEdit()}
+             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+             onClick={closeEdit}>
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+               onClick={(e) => e.stopPropagation()}>
+            <h2 id="edit-appt-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Appointment</h2>
+            {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
+            <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField label="Date / Time" htmlFor="edit-appt-datetime">
+                  <Input id="edit-appt-datetime" required type="datetime-local" value={editForm.appointment_datetime}
+                    onChange={(e) => setEditForm((s) => ({ ...s, appointment_datetime: e.target.value }))} />
+                </FormField>
+                <FormField label="Appointment Type" htmlFor="edit-appt-type">
+                  <Select id="edit-appt-type" value={editForm.appointment_type ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, appointment_type: (e.target.value as AppointmentType) || null }))}>
+                    <option value="">Select…</option>
+                    {APPOINTMENT_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </Select>
+                </FormField>
+                <div className="sm:col-span-2">
+                  <FormField label="Doctor" htmlFor="edit-appt-doctor">
+                    <DoctorPicker
+                      doctorId={editForm.doctor_id ?? null}
+                      doctorOther={editForm.doctor_other ?? null}
+                      onChange={(id, other) => setEditForm((s) => ({ ...s, doctor_id: id, doctor_other: other }))}
+                    />
+                  </FormField>
+                </div>
+                <FormField label="Location" htmlFor="edit-appt-location">
+                  <Input id="edit-appt-location" value={editForm.location ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, location: e.target.value || null }))} />
+                </FormField>
+                <FormField label="Reason" htmlFor="edit-appt-reason">
+                  <Input id="edit-appt-reason" value={editForm.reason ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, reason: e.target.value || null }))} />
+                </FormField>
+                <FormField label="Status" htmlFor="edit-appt-status">
+                  <Select id="edit-appt-status" value={editForm.status ?? "upcoming"}
+                    onChange={(e) => setEditForm((s) => ({ ...s, status: e.target.value as AppointmentStatus }))}>
+                    {STATUSES.map((s) => (
+                      <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                    ))}
+                  </Select>
+                </FormField>
+              </div>
+              <FormField label="Notes" htmlFor="edit-appt-notes">
+                <Textarea id="edit-appt-notes" value={editForm.notes ?? ""}
+                  onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value || null }))} />
+              </FormField>
+              <div className="mt-2 flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={closeEdit}>Cancel</Button>
+                <Button type="submit">Save</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

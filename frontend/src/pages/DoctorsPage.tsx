@@ -26,6 +26,9 @@ export default function DoctorsPage() {
   const [form, setForm] = useState<DoctorInput>(EMPTY);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingRow, setEditingRow] = useState<Doctor | null>(null);
+  const [editForm, setEditForm] = useState<DoctorInput>(EMPTY);
+  const [editError, setEditError] = useState("");
 
   async function reload() {
     setRows(await doctorsApi.list());
@@ -53,6 +56,23 @@ export default function DoctorsPage() {
     } catch {
       setError("Could not delete record");
     }
+  }
+
+  function openEdit(r: Doctor) {
+    setEditingRow(r);
+    setEditForm({ name: r.name, specialty: r.specialty, practice: r.practice, phone: r.phone, address: r.address, patient_portal_url: r.patient_portal_url, notes: r.notes });
+    setEditError("");
+  }
+  function closeEdit() { setEditingRow(null); }
+  async function onSaveEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editingRow) return;
+    setEditError("");
+    try {
+      await doctorsApi.update(editingRow.id, editForm);
+      closeEdit();
+      await reload();
+    } catch { setEditError("Could not update record"); }
   }
 
   return (
@@ -100,10 +120,9 @@ export default function DoctorsPage() {
                       ) : ""}
                     </td>
                     {isAdmin && (
-                      <td className="px-4 py-3">
-                        <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
-                          Delete
-                        </Button>
+                      <td className="px-4 py-3 space-x-2">
+                        <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
+                        <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
                       </td>
                     )}
                     <td className="px-4 py-3">
@@ -205,6 +224,54 @@ export default function DoctorsPage() {
           </Card>
         )}
       </PageLayout>
+      {editingRow && (
+        <div role="dialog" aria-modal="true" aria-labelledby="edit-doc-heading"
+             onKeyDown={(e) => e.key === "Escape" && closeEdit()}
+             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+             onClick={closeEdit}>
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+               onClick={(e) => e.stopPropagation()}>
+            <h2 id="edit-doc-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Doctor</h2>
+            {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
+            <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField label="Name" htmlFor="edit-doc-name">
+                  <Input id="edit-doc-name" required value={editForm.name ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, name: e.target.value }))} />
+                </FormField>
+                <FormField label="Specialty" htmlFor="edit-doc-specialty">
+                  <Input id="edit-doc-specialty" value={editForm.specialty ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, specialty: e.target.value || null }))} />
+                </FormField>
+                <FormField label="Practice / Clinic" htmlFor="edit-doc-practice">
+                  <Input id="edit-doc-practice" value={editForm.practice ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, practice: e.target.value || null }))} />
+                </FormField>
+                <FormField label="Phone" htmlFor="edit-doc-phone">
+                  <Input id="edit-doc-phone" type="tel" value={editForm.phone ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, phone: e.target.value || null }))} />
+                </FormField>
+                <FormField label="Patient Portal URL" htmlFor="edit-doc-portal">
+                  <Input id="edit-doc-portal" type="url" value={editForm.patient_portal_url ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, patient_portal_url: e.target.value || null }))} />
+                </FormField>
+              </div>
+              <FormField label="Address" htmlFor="edit-doc-address">
+                <Textarea id="edit-doc-address" value={editForm.address ?? ""}
+                  onChange={(e) => setEditForm((s) => ({ ...s, address: e.target.value || null }))} />
+              </FormField>
+              <FormField label="Notes" htmlFor="edit-doc-notes">
+                <Textarea id="edit-doc-notes" value={editForm.notes ?? ""}
+                  onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value || null }))} />
+              </FormField>
+              <div className="mt-2 flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={closeEdit}>Cancel</Button>
+                <Button type="submit">Save</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
