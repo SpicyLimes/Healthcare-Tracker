@@ -60,8 +60,10 @@ export default function ChangePasswordPage() {
       >
         <Card>
           <CardContent className="pt-6 flex flex-col gap-0">
-            {/* Display Name */}
             <form onSubmit={onSaveName}>
+              <h2 className="font-heading text-sm font-medium text-foreground mb-4">
+                Display Name
+              </h2>
               {nameError && (
                 <p role="alert" className="mb-4 text-sm text-destructive">{nameError}</p>
               )}
