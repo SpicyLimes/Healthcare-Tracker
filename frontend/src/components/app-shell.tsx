@@ -96,7 +96,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <footer className="shrink-0 border-t border-border bg-card px-6 py-3">
           <div className="mx-auto flex max-w-5xl flex-col items-center gap-1 text-center sm:flex-row sm:justify-between sm:text-left">
             <p className="text-[0.7rem] text-muted-foreground">
-              © {new Date().getFullYear()} SpicyLimes.io · All rights reserved ·{" "}
+              © {new Date().getFullYear()}{" "}
+              <a href="https://spicylimes.io" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">SpicyLimes.io</a>
+              {" "}· All rights reserved ·{" "}
               <span className="italic">
                 For personal health record keeping only. Not a substitute for professional medical advice.
               </span>

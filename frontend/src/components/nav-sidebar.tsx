@@ -128,7 +128,7 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
         >
           <img src="/logo.png" alt="Healthcare Tracker" className="size-10 shrink-0 rounded-lg" />
           {!collapsed && (
-            <span className="text-sm font-semibold text-foreground">
+            <span className="text-[0.9rem] font-semibold text-foreground">
               Healthcare Tracker
             </span>
           )}
@@ -222,11 +222,11 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
               <div className="mt-3 border-t border-border pt-3 px-2 flex flex-col gap-1">
                 <div className="flex items-center gap-1.5 text-[0.7rem] text-muted-foreground">
                   <CheckCircle2 className="size-3 shrink-0 text-primary" />
-                  <span>Backend: {health.status}</span>
+                  <span>Backend: {health.status.toUpperCase()}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-[0.7rem] text-muted-foreground">
                   <Database className="size-3 shrink-0 text-primary" />
-                  <span>DB: {health.database}</span>
+                  <span>DB: {health.database.charAt(0).toUpperCase() + health.database.slice(1)}</span>
                 </div>
               </div>
             )}

@@ -58,97 +58,85 @@ export default function ChangePasswordPage() {
         title="Settings"
         description="Manage your display name and password."
       >
-        <div className="flex flex-col gap-6">
-          {/* Display Name */}
-          <form onSubmit={onSaveName}>
-            <Card>
-              <CardContent className="pt-6">
-                <h2 className="font-heading text-sm font-medium text-foreground mb-4">
-                  Display Name
-                </h2>
-                {nameError && (
-                  <p role="alert" className="mb-4 text-sm text-destructive">
-                    {nameError}
-                  </p>
-                )}
-                {nameMessage && (
-                  <p role="status" className="mb-4 text-sm text-primary">
-                    {nameMessage}
-                  </p>
-                )}
-                <div className="flex flex-col gap-4 max-w-sm">
-                  <FormField label="Display name" htmlFor="display_name">
-                    <Input
-                      id="display_name"
-                      type="text"
-                      placeholder="Your name (optional)"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                    />
-                  </FormField>
-                </div>
-                <div className="mt-4 flex justify-end max-w-sm">
-                  <Button type="submit">Save name</Button>
-                </div>
-              </CardContent>
-            </Card>
-          </form>
+        <Card>
+          <CardContent className="pt-6 flex flex-col gap-0">
+            {/* Display Name */}
+            <form onSubmit={onSaveName}>
+              <h2 className="font-heading text-sm font-medium text-foreground mb-4">
+                Display Name
+              </h2>
+              {nameError && (
+                <p role="alert" className="mb-4 text-sm text-destructive">{nameError}</p>
+              )}
+              {nameMessage && (
+                <p role="status" className="mb-4 text-sm text-primary">{nameMessage}</p>
+              )}
+              <div className="flex flex-col gap-4 max-w-sm">
+                <FormField label="Display name" htmlFor="display_name">
+                  <Input
+                    id="display_name"
+                    type="text"
+                    placeholder="Your name (optional)"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                  />
+                </FormField>
+              </div>
+              <div className="mt-4 flex justify-end max-w-sm">
+                <Button type="submit">Save name</Button>
+              </div>
+            </form>
 
-          {/* Change Password */}
-          <form onSubmit={onSubmit}>
-            <Card>
-              <CardContent className="pt-6">
-                <h2 className="font-heading text-sm font-medium text-foreground mb-4">
-                  Change Password
-                </h2>
-                {error && (
-                  <p role="alert" className="mb-4 text-sm text-destructive">
-                    {error}
-                  </p>
-                )}
-                {message && (
-                  <p role="status" className="mb-4 text-sm text-primary">
-                    {message}
-                  </p>
-                )}
-                <div className="flex flex-col gap-4 max-w-sm">
-                  <FormField label="Current password" htmlFor="current_password">
-                    <Input
-                      id="current_password"
-                      type="password"
-                      value={current}
-                      onChange={(e) => setCurrent(e.target.value)}
-                      required
-                    />
-                  </FormField>
-                  <FormField label="New password (min 12 chars)" htmlFor="new_password">
-                    <Input
-                      id="new_password"
-                      type="password"
-                      value={next}
-                      onChange={(e) => setNext(e.target.value)}
-                      required
-                      minLength={12}
-                    />
-                  </FormField>
-                  <FormField label="Confirm new password" htmlFor="confirm_password">
-                    <Input
-                      id="confirm_password"
-                      type="password"
-                      value={confirm}
-                      onChange={(e) => setConfirm(e.target.value)}
-                      required
-                      minLength={12}
-                    />
-                  </FormField>
-                </div>
-                <div className="mt-4 flex justify-end max-w-sm">
-                  <Button type="submit">Update password</Button>
-                </div>
-              </CardContent>
-            </Card>
-          </form>
-        </div>
+            <hr className="my-6 border-border" />
+
+            {/* Change Password */}
+            <form onSubmit={onSubmit}>
+              <h2 className="font-heading text-sm font-medium text-foreground mb-4">
+                Change Password
+              </h2>
+              {error && (
+                <p role="alert" className="mb-4 text-sm text-destructive">{error}</p>
+              )}
+              {message && (
+                <p role="status" className="mb-4 text-sm text-primary">{message}</p>
+              )}
+              <div className="flex flex-col gap-4 max-w-sm">
+                <FormField label="Current password" htmlFor="current_password">
+                  <Input
+                    id="current_password"
+                    type="password"
+                    value={current}
+                    onChange={(e) => setCurrent(e.target.value)}
+                    required
+                  />
+                </FormField>
+                <FormField label="New password (min 12 chars)" htmlFor="new_password">
+                  <Input
+                    id="new_password"
+                    type="password"
+                    value={next}
+                    onChange={(e) => setNext(e.target.value)}
+                    required
+                    minLength={12}
+                  />
+                </FormField>
+                <FormField label="Confirm new password" htmlFor="confirm_password">
+                  <Input
+                    id="confirm_password"
+                    type="password"
+                    value={confirm}
+                    onChange={(e) => setConfirm(e.target.value)}
+                    required
+                    minLength={12}
+                  />
+                </FormField>
+              </div>
+              <div className="mt-4 flex justify-end max-w-sm">
+                <Button type="submit">Update password</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </PageLayout>
     </AppShell>
   );
