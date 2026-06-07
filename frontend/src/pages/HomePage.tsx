@@ -105,7 +105,7 @@ export default function HomePage() {
         {/* Welcome header */}
         <div className="mb-8">
           <h1 className="font-heading text-2xl font-semibold text-foreground text-balance">
-            Welcome back, {user?.email}
+            Welcome back, {user?.full_name || user?.email}
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
             Your personal health records are organized and ready to access. Use the sections below or the sidebar to navigate.

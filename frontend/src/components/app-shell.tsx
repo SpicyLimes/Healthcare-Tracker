@@ -7,9 +7,12 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { NavSidebar } from "@/components/nav-sidebar"
 import { useTheme } from "@/components/theme-provider"
 import { AccentPicker } from "@/components/accent-picker"
+import { AuthContext } from "@/auth/AuthContext"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { theme, toggleTheme } = useTheme()
+  const auth = React.useContext(AuthContext)
+  const user = auth?.user
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const [collapsed, setCollapsed] = React.useState(false)
   const inRouter = useInRouterContext()
@@ -65,9 +68,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           {/* Status badges */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="hidden sm:inline">devinrauch@icloud.com</span>
+            <span className="hidden sm:inline">{user?.full_name || user?.email}</span>
             <Badge variant="secondary" className="hidden sm:inline-flex">
-              admin
+              {user?.role}
             </Badge>
             <div className="hidden items-center gap-1 sm:flex">
               <CheckCircle2 className="size-3 text-primary" />
