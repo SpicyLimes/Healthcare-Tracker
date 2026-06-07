@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import React, { useEffect, useState, type FormEvent } from "react";
 import { medicationsApi, type Medication, type MedicationInput, type MedicationKind } from "../api/medications";
 import { doctorsApi, type Doctor } from "../api/doctors";
 import DoctorPicker from "../components/DoctorPicker";
@@ -9,6 +9,7 @@ import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Select, Textarea } from "@/components/ui/form-field";
+import { ChevronRight, ChevronDown } from "lucide-react";
 
 const EMPTY: MedicationInput = {
   name: "",
@@ -29,6 +30,7 @@ export default function MedicationsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<MedicationInput>(EMPTY);
   const [error, setError] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   async function reload() {
     setRows(await medicationsApi.list());
@@ -85,35 +87,59 @@ export default function MedicationsPage() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Active</th>
                 {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
                 <th />
+                <th />
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                  <td className="px-4 py-3 font-medium text-foreground">{r.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground capitalize">{r.kind}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.dose ?? ""}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.frequency ?? ""}</td>
-                  <td className="px-4 py-3 text-muted-foreground capitalize">{r.route ?? ""}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {resolveDoctorName(r.prescribing_doctor_id, r.prescribing_doctor)}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.is_active ? "Yes" : "No"}</td>
-                  {isAdmin && (
-                    <td className="px-4 py-3">
-                      <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
-                        Delete
-                      </Button>
+                <React.Fragment key={r.id}>
+                  <tr className="border-b border-border last:border-0 hover:bg-muted/20">
+                    <td className="px-4 py-3 font-medium text-foreground">{r.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground capitalize">{r.kind}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{r.dose ?? ""}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{r.frequency ?? ""}</td>
+                    <td className="px-4 py-3 text-muted-foreground capitalize">{r.route ?? ""}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {resolveDoctorName(r.prescribing_doctor_id, r.prescribing_doctor)}
                     </td>
+                    <td className="px-4 py-3 text-muted-foreground">{r.is_active ? "Yes" : "No"}</td>
+                    {isAdmin && (
+                      <td className="px-4 py-3">
+                        <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
+                          Delete
+                        </Button>
+                      </td>
+                    )}
+                    <td className="px-4 py-3">
+                      <DocumentsPanel section="medications" recordId={r.id} isAdmin={isAdmin} />
+                    </td>
+                    {r.notes && (
+                      <td className="px-2 py-3">
+                        <button
+                          onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                          aria-label={expandedId === r.id ? "Collapse notes" : "Expand notes"}
+                        >
+                          {expandedId === r.id
+                            ? <ChevronDown className="size-4" />
+                            : <ChevronRight className="size-4" />}
+                        </button>
+                      </td>
+                    )}
+                    {!r.notes && <td />}
+                  </tr>
+                  {expandedId === r.id && r.notes && (
+                    <tr className="bg-muted/20">
+                      <td colSpan={isAdmin ? 10 : 9} className="px-4 py-3 text-sm text-muted-foreground whitespace-pre-wrap">
+                        <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
+                      </td>
+                    </tr>
                   )}
-                  <td className="px-4 py-3">
-                    <DocumentsPanel section="medications" recordId={r.id} isAdmin={isAdmin} />
-                  </td>
-                </tr>
+                </React.Fragment>
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={isAdmin ? 9 : 8} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  <td colSpan={isAdmin ? 10 : 9} className="px-4 py-8 text-center text-sm text-muted-foreground">
                     No medication records yet.
                   </td>
                 </tr>

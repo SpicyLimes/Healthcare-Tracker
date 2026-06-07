@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import React, { useEffect, useState, type FormEvent } from "react";
 import { doctorsApi, type Doctor, type DoctorInput } from "../api/doctors";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -7,6 +7,7 @@ import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
+import { ChevronRight, ChevronDown } from "lucide-react";
 
 const EMPTY: DoctorInput = {
   name: "",
@@ -24,6 +25,7 @@ export default function DoctorsPage() {
   const [rows, setRows] = useState<Doctor[]>([]);
   const [form, setForm] = useState<DoctorInput>(EMPTY);
   const [error, setError] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   async function reload() {
     setRows(await doctorsApi.list());
@@ -73,39 +75,63 @@ export default function DoctorsPage() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Portal URL</th>
                 {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
                 <th />
+                <th />
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                  <td className="px-4 py-3 font-medium text-foreground">{r.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.specialty ?? ""}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.practice ?? ""}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.phone ?? ""}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.address ?? ""}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {r.patient_portal_url ? (
-                      <a
-                        href={r.patient_portal_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary underline-offset-2 hover:underline"
-                      >
-                        Portal
-                      </a>
-                    ) : ""}
-                  </td>
-                  {isAdmin && (
-                    <td className="px-4 py-3">
-                      <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
-                        Delete
-                      </Button>
+                <React.Fragment key={r.id}>
+                  <tr className="border-b border-border last:border-0 hover:bg-muted/20">
+                    <td className="px-4 py-3 font-medium text-foreground">{r.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{r.specialty ?? ""}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{r.practice ?? ""}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{r.phone ?? ""}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{r.address ?? ""}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {r.patient_portal_url ? (
+                        <a
+                          href={r.patient_portal_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary underline-offset-2 hover:underline"
+                        >
+                          Portal
+                        </a>
+                      ) : ""}
                     </td>
+                    {isAdmin && (
+                      <td className="px-4 py-3">
+                        <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
+                          Delete
+                        </Button>
+                      </td>
+                    )}
+                    <td className="px-4 py-3">
+                      <DocumentsPanel section="doctors" recordId={r.id} isAdmin={isAdmin} />
+                    </td>
+                    {r.notes && (
+                      <td className="px-2 py-3">
+                        <button
+                          onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                          aria-label={expandedId === r.id ? "Collapse notes" : "Expand notes"}
+                        >
+                          {expandedId === r.id
+                            ? <ChevronDown className="size-4" />
+                            : <ChevronRight className="size-4" />}
+                        </button>
+                      </td>
+                    )}
+                    {!r.notes && <td />}
+                  </tr>
+                  {expandedId === r.id && r.notes && (
+                    <tr className="bg-muted/20">
+                      <td colSpan={isAdmin ? 9 : 8} className="px-4 py-3 text-sm text-muted-foreground whitespace-pre-wrap">
+                        <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
+                      </td>
+                    </tr>
                   )}
-                  <td className="px-4 py-3">
-                    <DocumentsPanel section="doctors" recordId={r.id} isAdmin={isAdmin} />
-                  </td>
-                </tr>
+                </React.Fragment>
               ))}
             </tbody>
           </table>

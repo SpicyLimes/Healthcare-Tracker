@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import React, { useEffect, useState, type FormEvent } from "react";
 import { familyHistoryApi, type FamilyHistory } from "../api/familyHistory";
 import { useAuth } from "../auth/useAuth";
 import { AppShell } from "@/components/app-shell";
@@ -6,12 +6,14 @@ import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
+import { ChevronRight, ChevronDown } from "lucide-react";
 
 export default function FamilyHistoryPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<FamilyHistory[]>([]);
   const [error, setError] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState({
     relative: "",
     condition: "",
@@ -69,26 +71,50 @@ export default function FamilyHistoryPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Condition</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Age of Onset</th>
                 {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
+                <th />
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3 font-medium text-foreground">{r.relative}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.condition}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.age_of_onset ?? ""}</td>
-                  {isAdmin && (
-                    <td className="px-4 py-3">
-                      <Button variant="ghost" size="sm" onClick={() => onDelete(r.id)}>
-                        Delete
-                      </Button>
-                    </td>
+                <React.Fragment key={r.id}>
+                  <tr className="border-b border-border last:border-0">
+                    <td className="px-4 py-3 font-medium text-foreground">{r.relative}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{r.condition}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{r.age_of_onset ?? ""}</td>
+                    {isAdmin && (
+                      <td className="px-4 py-3">
+                        <Button variant="ghost" size="sm" onClick={() => onDelete(r.id)}>
+                          Delete
+                        </Button>
+                      </td>
+                    )}
+                    {r.notes && (
+                      <td className="px-2 py-3">
+                        <button
+                          onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                          aria-label={expandedId === r.id ? "Collapse notes" : "Expand notes"}
+                        >
+                          {expandedId === r.id
+                            ? <ChevronDown className="size-4" />
+                            : <ChevronRight className="size-4" />}
+                        </button>
+                      </td>
+                    )}
+                    {!r.notes && <td />}
+                  </tr>
+                  {expandedId === r.id && r.notes && (
+                    <tr className="bg-muted/20">
+                      <td colSpan={isAdmin ? 5 : 4} className="px-4 py-3 text-sm text-muted-foreground whitespace-pre-wrap">
+                        <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
+                      </td>
+                    </tr>
                   )}
-                </tr>
+                </React.Fragment>
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={isAdmin ? 4 : 3} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  <td colSpan={isAdmin ? 5 : 4} className="px-4 py-8 text-center text-sm text-muted-foreground">
                     No family history records yet.
                   </td>
                 </tr>

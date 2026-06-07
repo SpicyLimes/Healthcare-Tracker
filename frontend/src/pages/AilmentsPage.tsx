@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import React, { useEffect, useState, type FormEvent } from "react";
 import { ailmentsApi, type Ailment, type AilmentInput, type AilmentStatus } from "../api/ailments";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FormField, Input, Select, Textarea } from "@/components/ui/form-field";
+import { ChevronRight, ChevronDown } from "lucide-react";
 
 const EMPTY: AilmentInput = {
   condition: "",
@@ -27,6 +28,7 @@ export default function AilmentsPage() {
   const [form, setForm] = useState<AilmentInput>(EMPTY);
   const [error, setError] = useState("");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   async function reload() {
     setRows(await ailmentsApi.list());
@@ -80,32 +82,56 @@ export default function AilmentsPage() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Treating Doctor</th>
                 {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
                 <th />
+                <th />
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                  <td className="px-4 py-3 font-medium text-foreground">{r.condition}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={r.status === "active" ? "default" : "secondary"}>
-                      {r.status}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.onset_date ?? ""}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {resolveDoctorName(r.treating_doctor_id, r.treating_doctor)}
-                  </td>
-                  {isAdmin && (
+                <React.Fragment key={r.id}>
+                  <tr className="border-b border-border last:border-0 hover:bg-muted/20">
+                    <td className="px-4 py-3 font-medium text-foreground">{r.condition}</td>
                     <td className="px-4 py-3">
-                      <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
-                        Delete
-                      </Button>
+                      <Badge variant={r.status === "active" ? "default" : "secondary"}>
+                        {r.status}
+                      </Badge>
                     </td>
+                    <td className="px-4 py-3 text-muted-foreground">{r.onset_date ?? ""}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {resolveDoctorName(r.treating_doctor_id, r.treating_doctor)}
+                    </td>
+                    {isAdmin && (
+                      <td className="px-4 py-3">
+                        <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
+                          Delete
+                        </Button>
+                      </td>
+                    )}
+                    <td className="px-4 py-3">
+                      <DocumentsPanel section="ailments" recordId={r.id} isAdmin={isAdmin} />
+                    </td>
+                    {r.notes && (
+                      <td className="px-2 py-3">
+                        <button
+                          onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                          aria-label={expandedId === r.id ? "Collapse notes" : "Expand notes"}
+                        >
+                          {expandedId === r.id
+                            ? <ChevronDown className="size-4" />
+                            : <ChevronRight className="size-4" />}
+                        </button>
+                      </td>
+                    )}
+                    {!r.notes && <td />}
+                  </tr>
+                  {expandedId === r.id && r.notes && (
+                    <tr className="bg-muted/20">
+                      <td colSpan={isAdmin ? 7 : 6} className="px-4 py-3 text-sm text-muted-foreground whitespace-pre-wrap">
+                        <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
+                      </td>
+                    </tr>
                   )}
-                  <td className="px-4 py-3">
-                    <DocumentsPanel section="ailments" recordId={r.id} isAdmin={isAdmin} />
-                  </td>
-                </tr>
+                </React.Fragment>
               ))}
             </tbody>
           </table>
