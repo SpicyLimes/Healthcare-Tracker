@@ -22,7 +22,6 @@ import {
   UserCog,
   ChevronRight,
 } from "lucide-react";
-import { fetchHealth, type HealthStatus } from "../api/health";
 import { calendarApi, type CalendarEvent, EVENT_TYPE_LABELS } from "../api/calendar";
 import { useAuth } from "../auth/useAuth";
 import { AppShell } from "@/components/app-shell";
@@ -90,11 +89,9 @@ const ADMIN_SECTION = {
 
 export default function HomePage() {
   const { user } = useAuth();
-  const [health, setHealth] = useState<HealthStatus | null>(null);
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
-    fetchHealth().then(setHealth).catch(() => setHealth(null));
     const today = new Date().toISOString().slice(0, 10);
     calendarApi
       .list()
@@ -124,11 +121,6 @@ export default function HomePage() {
           <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
             Your personal health records are organized and ready to access. Use the sections below or the sidebar to navigate.
           </p>
-          {health && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Backend: {health.status} — Database: {health.database}
-            </p>
-          )}
         </div>
 
         {/* Upcoming Events */}

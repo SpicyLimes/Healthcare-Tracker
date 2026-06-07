@@ -1,14 +1,16 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   User, Pill, Stethoscope, HeartPulse, Shield, Building2, Users,
   Scissors, Hospital, Eye, Smile, Syringe, ClipboardList, CalendarDays,
   FolderOpen, KeyRound, Share2, ScrollText, UserCog, LogOut,
-  LayoutDashboard, Calendar,
+  LayoutDashboard, Calendar, CheckCircle2, Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/auth/useAuth";
+import { fetchHealth, type HealthStatus } from "@/api/health";
 
 const calendarGroup = {
   label: "Calendar",
@@ -76,6 +78,11 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
   const { pathname } = useLocation();
   const { user, logout } = useAuth();
   const isAdmin = user?.role === "admin";
+  const [health, setHealth] = useState<HealthStatus | null>(null);
+
+  useEffect(() => {
+    fetchHealth().then(setHealth).catch(() => setHealth(null));
+  }, []);
 
   const navLink = (
     to: string,
@@ -208,6 +215,20 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
                 <LogOut className="size-4 shrink-0" />
                 Log out
               </button>
+            )}
+
+            {/* Backend / DB status */}
+            {!collapsed && health && (
+              <div className="mt-3 border-t border-border pt-3 px-2 flex flex-col gap-1">
+                <div className="flex items-center gap-1.5 text-[0.7rem] text-muted-foreground">
+                  <CheckCircle2 className="size-3 shrink-0 text-primary" />
+                  <span>Backend: {health.status}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[0.7rem] text-muted-foreground">
+                  <Database className="size-3 shrink-0 text-primary" />
+                  <span>DB: {health.database}</span>
+                </div>
+              </div>
             )}
           </div>
         </div>

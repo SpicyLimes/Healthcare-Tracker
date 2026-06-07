@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Menu, Sun, Moon, CheckCircle2, Database, PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { Menu, Sun, Moon, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { useInRouterContext } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -66,20 +66,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="sr-only">{collapsed ? "Expand sidebar" : "Collapse sidebar"}</span>
           </Button>
 
-          {/* Status badges */}
+          {/* User info */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="hidden sm:inline">{user?.full_name || user?.email}</span>
             {user?.role === "admin" && (
               <Badge variant="secondary" className="hidden sm:inline-flex">Admin</Badge>
             )}
-            <div className="hidden items-center gap-1 sm:flex">
-              <CheckCircle2 className="size-3 text-primary" />
-              <span>Backend: ok</span>
-            </div>
-            <div className="hidden items-center gap-1 sm:flex">
-              <Database className="size-3 text-primary" />
-              <span>DB: connected</span>
-            </div>
           </div>
 
           {/* Spacer */}
@@ -99,6 +91,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>
+
+        {/* Footer */}
+        <footer className="shrink-0 border-t border-border bg-card px-6 py-3">
+          <div className="mx-auto flex max-w-5xl flex-col items-center gap-1 text-center sm:flex-row sm:justify-between sm:text-left">
+            <p className="text-[0.7rem] text-muted-foreground">
+              © {new Date().getFullYear()} SpicyLimes.io · All rights reserved ·{" "}
+              <span className="italic">
+                For personal health record keeping only. Not a substitute for professional medical advice.
+              </span>
+            </p>
+            <a
+              href="https://github.com/SpicyLimes/Healthcare-Tracker"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[0.7rem] text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            >
+              GitHub ↗
+            </a>
+          </div>
+        </footer>
       </div>
     </div>
   )
