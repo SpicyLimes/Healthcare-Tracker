@@ -23,6 +23,19 @@ export async function createUser(email: string, password: string, role: "admin" 
   return (await res.json()) as ManagedUser;
 }
 
+export async function updateUser(
+  id: string,
+  payload: { role?: "admin" | "viewer"; is_active?: boolean; full_name?: string | null },
+): Promise<ManagedUser> {
+  const res = await apiFetch(`/api/users/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...csrfHeader() },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Failed to update user");
+  return (await res.json()) as ManagedUser;
+}
+
 export async function deleteUser(id: string): Promise<void> {
   const res = await apiFetch(`/api/users/${id}`, { method: "DELETE", headers: { ...csrfHeader() } });
   if (!res.ok) throw new Error("Failed to delete user");

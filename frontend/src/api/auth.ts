@@ -5,6 +5,7 @@ export interface CurrentUser {
   id: string;
   email: string;
   role: "admin" | "viewer";
+  full_name: string | null;
 }
 
 export async function login(email: string, password: string): Promise<CurrentUser> {
@@ -40,4 +41,14 @@ export async function changePassword(currentPassword: string, newPassword: strin
     body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
   });
   if (!res.ok) throw new Error("Password change failed");
+}
+
+export async function updateName(fullName: string | null): Promise<CurrentUser> {
+  const res = await apiFetch("/api/auth/name", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...csrfHeader() },
+    body: JSON.stringify({ full_name: fullName }),
+  });
+  if (!res.ok) throw new Error("Name update failed");
+  return (await res.json()) as CurrentUser;
 }
