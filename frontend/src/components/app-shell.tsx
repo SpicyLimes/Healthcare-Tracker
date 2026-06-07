@@ -18,7 +18,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const inRouter = useInRouterContext()
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background honeycomb-bg">
       {/* Desktop sidebar */}
       {inRouter && (
         <aside
