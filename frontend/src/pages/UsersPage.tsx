@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { createUser, deleteUser, listUsers, type ManagedUser } from "../api/users";
+import { createUser, deleteUser, listUsers, updateUser, type ManagedUser } from "../api/users";
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +13,13 @@ export default function UsersPage() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"admin" | "viewer">("viewer");
   const [error, setError] = useState("");
+
+  // Edit modal state
+  const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editRole, setEditRole] = useState<"admin" | "viewer">("viewer");
+  const [editActive, setEditActive] = useState(true);
+  const [editError, setEditError] = useState("");
 
   async function reload() {
     setUsers(await listUsers());
@@ -45,6 +52,35 @@ export default function UsersPage() {
     }
   }
 
+  function openEdit(u: ManagedUser) {
+    setEditingUser(u);
+    setEditName(u.full_name ?? "");
+    setEditRole(u.role);
+    setEditActive(u.is_active);
+    setEditError("");
+  }
+
+  function closeEdit() {
+    setEditingUser(null);
+  }
+
+  async function onSaveEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editingUser) return;
+    setEditError("");
+    try {
+      await updateUser(editingUser.id, {
+        full_name: editName.trim() || null,
+        role: editRole,
+        is_active: editActive,
+      });
+      closeEdit();
+      await reload();
+    } catch {
+      setEditError("Could not update user");
+    }
+  }
+
   return (
     <AppShell>
       <PageLayout
@@ -58,6 +94,65 @@ export default function UsersPage() {
         )}
 
         <div className="flex flex-col gap-6">
+          {/* Users table */}
+          <Card>
+            <CardContent className="pt-6">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-muted-foreground">
+                    <th className="pb-2 font-medium">Name</th>
+                    <th className="pb-2 font-medium">Email</th>
+                    <th className="pb-2 font-medium">Role</th>
+                    <th className="pb-2 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u) => (
+                    <tr key={u.id} className="border-b border-border last:border-0">
+                      <td className="py-3 text-foreground">
+                        {u.full_name ?? "—"}
+                      </td>
+                      <td className="py-3 text-foreground">
+                        {u.email}
+                        {!u.is_active && (
+                          <span className="ml-2 text-xs text-muted-foreground">(inactive)</span>
+                        )}
+                      </td>
+                      <td className="py-3">
+                        <Badge variant={u.role === "admin" ? "default" : "secondary"}>
+                          {u.role}
+                        </Badge>
+                      </td>
+                      <td className="py-3 text-right space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEdit(u)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => onDelete(u.id)}
+                        >
+                          Delete
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                  {users.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-6 text-center text-muted-foreground">
+                        No users found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+
           {/* Create user form (admin only) */}
           <Card>
             <CardContent className="pt-6">
@@ -107,55 +202,64 @@ export default function UsersPage() {
               </form>
             </CardContent>
           </Card>
-
-          {/* Users table */}
-          <Card>
-            <CardContent className="pt-6">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-muted-foreground">
-                    <th className="pb-2 font-medium">Email</th>
-                    <th className="pb-2 font-medium">Role</th>
-                    <th className="pb-2 font-medium text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) => (
-                    <tr key={u.id} className="border-b border-border last:border-0">
-                      <td className="py-3 text-foreground">
-                        {u.email}
-                        {!u.is_active && (
-                          <span className="ml-2 text-xs text-muted-foreground">(inactive)</span>
-                        )}
-                      </td>
-                      <td className="py-3">
-                        <Badge variant={u.role === "admin" ? "default" : "secondary"}>
-                          {u.role}
-                        </Badge>
-                      </td>
-                      <td className="py-3 text-right">
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => onDelete(u.id)}
-                        >
-                          Delete
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                  {users.length === 0 && (
-                    <tr>
-                      <td colSpan={3} className="py-6 text-center text-muted-foreground">
-                        No users found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
         </div>
+
+        {/* Edit modal */}
+        {editingUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg">
+              <h2 className="font-heading text-base font-semibold text-foreground mb-4">
+                Edit user
+              </h2>
+              {editError && (
+                <p role="alert" className="mb-4 text-sm text-destructive">
+                  {editError}
+                </p>
+              )}
+              <form onSubmit={onSaveEdit}>
+                <div className="flex flex-col gap-4">
+                  <FormField label="Display name" htmlFor="edit_full_name">
+                    <Input
+                      id="edit_full_name"
+                      type="text"
+                      placeholder="Name (optional)"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                    />
+                  </FormField>
+
+                  <FormField label="Role" htmlFor="edit_role">
+                    <Select
+                      id="edit_role"
+                      value={editRole}
+                      onChange={(e) => setEditRole(e.target.value as "admin" | "viewer")}
+                    >
+                      <option value="viewer">viewer</option>
+                      <option value="admin">admin</option>
+                    </Select>
+                  </FormField>
+
+                  <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editActive}
+                      onChange={(e) => setEditActive(e.target.checked)}
+                      className="rounded border-border"
+                    />
+                    Active
+                  </label>
+                </div>
+
+                <div className="mt-6 flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={closeEdit}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">Save</Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </PageLayout>
     </AppShell>
   );
