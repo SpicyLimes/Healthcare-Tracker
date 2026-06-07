@@ -71,18 +71,18 @@ export default function ChangePasswordPage() {
               {nameMessage && (
                 <p role="status" className="mb-4 text-sm text-primary">{nameMessage}</p>
               )}
-              <div className="flex flex-col gap-4 max-w-sm">
-                <FormField label="Display name" htmlFor="display_name">
+              <div className="flex flex-col gap-4 ">
+                <FormField label="Display Name" htmlFor="display_name">
                   <Input
                     id="display_name"
                     type="text"
-                    placeholder="Your name (optional)"
+                    placeholder="Your Name (Optional)"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                   />
                 </FormField>
               </div>
-              <div className="mt-4 flex justify-end max-w-sm">
+              <div className="mt-4 flex justify-end ">
                 <Button type="submit">Save name</Button>
               </div>
             </form>
@@ -100,8 +100,8 @@ export default function ChangePasswordPage() {
               {message && (
                 <p role="status" className="mb-4 text-sm text-primary">{message}</p>
               )}
-              <div className="flex flex-col gap-4 max-w-sm">
-                <FormField label="Current password" htmlFor="current_password">
+              <div className="flex flex-col gap-4 ">
+                <FormField label="Current Password" htmlFor="current_password">
                   <Input
                     id="current_password"
                     type="password"
@@ -110,7 +110,7 @@ export default function ChangePasswordPage() {
                     required
                   />
                 </FormField>
-                <FormField label="New password (min 12 chars)" htmlFor="new_password">
+                <FormField label="New Password (Min 12 Characters)" htmlFor="new_password">
                   <Input
                     id="new_password"
                     type="password"
@@ -120,7 +120,7 @@ export default function ChangePasswordPage() {
                     minLength={12}
                   />
                 </FormField>
-                <FormField label="Confirm new password" htmlFor="confirm_password">
+                <FormField label="Confirm New Password" htmlFor="confirm_password">
                   <Input
                     id="confirm_password"
                     type="password"
@@ -131,7 +131,7 @@ export default function ChangePasswordPage() {
                   />
                 </FormField>
               </div>
-              <div className="mt-4 flex justify-end max-w-sm">
+              <div className="mt-4 flex justify-end ">
                 <Button type="submit">Update password</Button>
               </div>
             </form>
