@@ -67,4 +67,15 @@ describe("UsersPage", () => {
       expect(mockUpdate).toHaveBeenCalledWith("u1", expect.objectContaining({ full_name: "New Name" }))
     );
   });
+
+  it("closes the modal when Cancel is clicked", async () => {
+    mockAuth();
+    vi.spyOn(usersApi, "listUsers").mockResolvedValue(MOCK_USERS);
+    render(<UsersPage />);
+    const editButtons = await screen.findAllByRole("button", { name: /edit/i });
+    fireEvent.click(editButtons[0]);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
 });

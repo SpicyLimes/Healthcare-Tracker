@@ -206,9 +206,19 @@ export default function UsersPage() {
 
         {/* Edit modal */}
         {editingUser && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg">
-              <h2 className="font-heading text-base font-semibold text-foreground mb-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-user-heading"
+            onKeyDown={(e) => e.key === "Escape" && closeEdit()}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={closeEdit}
+          >
+            <div
+              className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 id="edit-user-heading" className="font-heading text-base font-semibold text-foreground mb-4">
                 Edit user
               </h2>
               {editError && (
@@ -225,6 +235,7 @@ export default function UsersPage() {
                       placeholder="Name (optional)"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
+                      autoFocus
                     />
                   </FormField>
 
