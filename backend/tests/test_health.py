@@ -17,4 +17,4 @@ def test_health_reports_database_status(client):
 def test_health_includes_version(client):
     response = client.get("/api/health")
     body = response.json()
-    assert body["version"] == "0.7.0"
+    assert body["version"] == "0.8.0"
