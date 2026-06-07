@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.security.dependencies import get_current_user
 from app.models.extended_records import (
     Appointment, Hospitalization, Surgery, Vaccination, VisitLog,
 )

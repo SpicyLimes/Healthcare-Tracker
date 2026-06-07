@@ -8,8 +8,8 @@ from app import __version__
 from app.config import settings
 from app.database import SessionLocal
 from app.routers import (
-    ailments, appointments, audit_log, auth, dental_history, documents, doctors,
-    family_history, guest, health, hospitalizations, insurances, medications,
+    ailments, appointments, audit_log, auth, calendar, dental_history, documents,
+    doctors, family_history, guest, health, hospitalizations, insurances, medications,
     pharmacies, profile, share_links, surgeries, users, vaccinations, vision_history,
     visit_logs,
 )
@@ -59,4 +59,5 @@ app.include_router(appointments.router)
 app.include_router(documents.router)
 app.include_router(share_links.router)
 app.include_router(audit_log.router)
+app.include_router(calendar.router)
 app.include_router(guest.router)
