@@ -17,6 +17,9 @@ export default function DentalHistoryPage() {
   const [form, setForm] = useState<DentalHistoryInput>({});
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingRow, setEditingRow] = useState<DentalHistory | null>(null);
+  const [editForm, setEditForm] = useState<DentalHistoryInput>({});
+  const [editError, setEditError] = useState("");
 
   async function reload() { setRows(await dentalHistoryApi.list()); }
   useEffect(() => { reload().catch(() => setError("Failed to load dental history")); }, []);
@@ -31,6 +34,23 @@ export default function DentalHistoryPage() {
   async function onDelete(id: string) {
     try { await dentalHistoryApi.remove(id); await reload(); }
     catch { setError("Could not delete record"); }
+  }
+
+  function openEdit(r: DentalHistory) {
+    setEditingRow(r);
+    setEditForm({ visit_date: r.visit_date, provider_id: r.provider_id, provider_other: r.provider_other, procedure: r.procedure, notes: r.notes });
+    setEditError("");
+  }
+  function closeEdit() { setEditingRow(null); }
+  async function onSaveEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editingRow) return;
+    setEditError("");
+    try {
+      await dentalHistoryApi.update(editingRow.id, editForm);
+      closeEdit();
+      await reload();
+    } catch { setEditError("Could not update record"); }
   }
 
   return (
@@ -58,10 +78,9 @@ export default function DentalHistoryPage() {
                         <td className="px-4 py-3 text-muted-foreground">{r.provider_other ?? ""}</td>
                         <td className="px-4 py-3 text-muted-foreground">{r.procedure ?? ""}</td>
                         {isAdmin && (
-                          <td className="px-4 py-3">
-                            <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
-                              Delete
-                            </Button>
+                          <td className="px-4 py-3 space-x-2">
+                            <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
+                            <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
                           </td>
                         )}
                         <td className="px-4 py-3">
@@ -168,6 +187,49 @@ export default function DentalHistoryPage() {
           </Card>
         )}
       </PageLayout>
+      {editingRow && (
+        <div role="dialog" aria-modal="true" aria-labelledby="edit-dent-heading"
+             onKeyDown={(e) => e.key === "Escape" && closeEdit()}
+             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+             onClick={closeEdit}>
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+               onClick={(e) => e.stopPropagation()}>
+            <h2 id="edit-dent-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Dental Record</h2>
+            {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
+            <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField label="Visit Date" htmlFor="edit-dent-date">
+                  <Input id="edit-dent-date" type="date" value={editForm.visit_date ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, visit_date: e.target.value || null }))} />
+                </FormField>
+                <FormField label="Procedure" htmlFor="edit-dent-procedure">
+                  <Input id="edit-dent-procedure" value={editForm.procedure ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, procedure: e.target.value || null }))} />
+                </FormField>
+                <div className="sm:col-span-2">
+                  <FormField label="Provider" htmlFor="edit-dent-provider">
+                    <DoctorPicker
+                      doctorId={editForm.provider_id ?? null}
+                      doctorOther={editForm.provider_other ?? null}
+                      onChange={(id, other) => setEditForm((s) => ({ ...s, provider_id: id, provider_other: other }))}
+                    />
+                  </FormField>
+                </div>
+                <div className="sm:col-span-2">
+                  <FormField label="Notes" htmlFor="edit-dent-notes">
+                    <Textarea id="edit-dent-notes" value={editForm.notes ?? ""}
+                      onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value || null }))} />
+                  </FormField>
+                </div>
+              </div>
+              <div className="mt-2 flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={closeEdit}>Cancel</Button>
+                <Button type="submit">Save</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

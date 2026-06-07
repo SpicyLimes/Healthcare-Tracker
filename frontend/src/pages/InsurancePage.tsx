@@ -1,5 +1,5 @@
 import React, { useEffect, useState, type FormEvent } from "react";
-import { insurancesApi, type Insurance } from "../api/insurances";
+import { insurancesApi, type Insurance, type InsuranceInput } from "../api/insurances";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
 import { AppShell } from "@/components/app-shell";
@@ -22,6 +22,9 @@ export default function InsurancePage() {
     contact_phone: "",
     notes: "",
   });
+  const [editingRow, setEditingRow] = useState<Insurance | null>(null);
+  const [editForm, setEditForm] = useState({ insurer_name: "", policy_number: "", group_number: "", contact_phone: "", notes: "" });
+  const [editError, setEditError] = useState("");
 
   async function reload() {
     setRows(await insurancesApi.list());
@@ -60,6 +63,32 @@ export default function InsurancePage() {
     }
   }
 
+  function openEdit(r: Insurance) {
+    setEditingRow(r);
+    setEditForm({
+      insurer_name: r.insurer_name,
+      policy_number: r.policy_number ?? "",
+      group_number: r.group_number ?? "",
+      contact_phone: r.contact_phone ?? "",
+      notes: r.notes ?? "",
+    });
+    setEditError("");
+  }
+  function closeEdit() { setEditingRow(null); }
+  async function onSaveEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editingRow) return;
+    setEditError("");
+    try {
+      const payload = Object.fromEntries(
+        Object.entries(editForm).map(([k, v]) => [k, v === "" ? null : v])
+      ) as InsuranceInput;
+      await insurancesApi.update(editingRow.id, payload);
+      closeEdit();
+      await reload();
+    } catch { setEditError("Could not update record"); }
+  }
+
   return (
     <AppShell>
       <PageLayout title="Insurance" description="Health insurance policies and contact information.">
@@ -86,10 +115,9 @@ export default function InsurancePage() {
                     <td className="px-4 py-3 text-muted-foreground">{r.group_number ?? ""}</td>
                     <td className="px-4 py-3 text-muted-foreground">{r.contact_phone ?? ""}</td>
                     {isAdmin && (
-                      <td className="px-4 py-3">
-                        <Button variant="ghost" size="sm" onClick={() => onDelete(r.id)}>
-                          Delete
-                        </Button>
+                      <td className="px-4 py-3 space-x-2">
+                        <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
+                        <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
                       </td>
                     )}
                     {r.notes && (
@@ -204,6 +232,50 @@ export default function InsurancePage() {
           </div>
         ))}
       </PageLayout>
+      {editingRow && (
+        <div role="dialog" aria-modal="true" aria-labelledby="edit-ins-heading"
+             onKeyDown={(e) => e.key === "Escape" && closeEdit()}
+             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+             onClick={closeEdit}>
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+               onClick={(e) => e.stopPropagation()}>
+            <h2 id="edit-ins-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Insurance</h2>
+            {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
+            <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <FormField label="Insurer Name" htmlFor="edit-ins-insurer">
+                    <Input id="edit-ins-insurer" required value={editForm.insurer_name}
+                      onChange={(e) => setEditForm((s) => ({ ...s, insurer_name: e.target.value }))} />
+                  </FormField>
+                </div>
+                <FormField label="Policy #" htmlFor="edit-ins-policy">
+                  <Input id="edit-ins-policy" value={editForm.policy_number}
+                    onChange={(e) => setEditForm((s) => ({ ...s, policy_number: e.target.value }))} />
+                </FormField>
+                <FormField label="Group #" htmlFor="edit-ins-group">
+                  <Input id="edit-ins-group" value={editForm.group_number}
+                    onChange={(e) => setEditForm((s) => ({ ...s, group_number: e.target.value }))} />
+                </FormField>
+                <FormField label="Contact Phone" htmlFor="edit-ins-phone">
+                  <Input id="edit-ins-phone" type="tel" value={editForm.contact_phone}
+                    onChange={(e) => setEditForm((s) => ({ ...s, contact_phone: e.target.value }))} />
+                </FormField>
+                <div className="sm:col-span-2">
+                  <FormField label="Notes" htmlFor="edit-ins-notes">
+                    <Textarea id="edit-ins-notes" value={editForm.notes}
+                      onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value }))} />
+                  </FormField>
+                </div>
+              </div>
+              <div className="mt-2 flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={closeEdit}>Cancel</Button>
+                <Button type="submit">Save</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

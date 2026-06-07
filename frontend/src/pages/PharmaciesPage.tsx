@@ -1,5 +1,5 @@
 import React, { useEffect, useState, type FormEvent } from "react";
-import { pharmaciesApi, type Pharmacy } from "../api/pharmacies";
+import { pharmaciesApi, type Pharmacy, type PharmacyInput } from "../api/pharmacies";
 import { useAuth } from "../auth/useAuth";
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
@@ -20,6 +20,9 @@ export default function PharmaciesPage() {
     phone: "",
     notes: "",
   });
+  const [editingRow, setEditingRow] = useState<Pharmacy | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", address: "", phone: "", notes: "" });
+  const [editError, setEditError] = useState("");
 
   async function reload() {
     setRows(await pharmaciesApi.list());
@@ -58,6 +61,31 @@ export default function PharmaciesPage() {
     }
   }
 
+  function openEdit(r: Pharmacy) {
+    setEditingRow(r);
+    setEditForm({
+      name: r.name,
+      address: r.address ?? "",
+      phone: r.phone ?? "",
+      notes: r.notes ?? "",
+    });
+    setEditError("");
+  }
+  function closeEdit() { setEditingRow(null); }
+  async function onSaveEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editingRow) return;
+    setEditError("");
+    try {
+      const payload = Object.fromEntries(
+        Object.entries(editForm).map(([k, v]) => [k, v === "" ? null : v])
+      ) as PharmacyInput;
+      await pharmaciesApi.update(editingRow.id, payload);
+      closeEdit();
+      await reload();
+    } catch { setEditError("Could not update record"); }
+  }
+
   return (
     <AppShell>
       <PageLayout title="Pharmacies" description="Preferred pharmacies and contact information.">
@@ -82,10 +110,9 @@ export default function PharmaciesPage() {
                     <td className="px-4 py-3 text-muted-foreground">{r.phone ?? ""}</td>
                     <td className="px-4 py-3 text-muted-foreground">{r.address ?? ""}</td>
                     {isAdmin && (
-                      <td className="px-4 py-3">
-                        <Button variant="ghost" size="sm" onClick={() => onDelete(r.id)}>
-                          Delete
-                        </Button>
+                      <td className="px-4 py-3 space-x-2">
+                        <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
+                        <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
                       </td>
                     )}
                     {r.notes && (
@@ -186,6 +213,48 @@ export default function PharmaciesPage() {
         )}
 
       </PageLayout>
+      {editingRow && (
+        <div role="dialog" aria-modal="true" aria-labelledby="edit-pharm-heading"
+             onKeyDown={(e) => e.key === "Escape" && closeEdit()}
+             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+             onClick={closeEdit}>
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+               onClick={(e) => e.stopPropagation()}>
+            <h2 id="edit-pharm-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Pharmacy</h2>
+            {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
+            <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <FormField label="Name" htmlFor="edit-pharm-name">
+                    <Input id="edit-pharm-name" required value={editForm.name}
+                      onChange={(e) => setEditForm((s) => ({ ...s, name: e.target.value }))} />
+                  </FormField>
+                </div>
+                <FormField label="Phone" htmlFor="edit-pharm-phone">
+                  <Input id="edit-pharm-phone" type="tel" value={editForm.phone}
+                    onChange={(e) => setEditForm((s) => ({ ...s, phone: e.target.value }))} />
+                </FormField>
+                <div className="sm:col-span-2">
+                  <FormField label="Address" htmlFor="edit-pharm-address">
+                    <Textarea id="edit-pharm-address" value={editForm.address}
+                      onChange={(e) => setEditForm((s) => ({ ...s, address: e.target.value }))} />
+                  </FormField>
+                </div>
+                <div className="sm:col-span-2">
+                  <FormField label="Notes" htmlFor="edit-pharm-notes">
+                    <Textarea id="edit-pharm-notes" value={editForm.notes}
+                      onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value }))} />
+                  </FormField>
+                </div>
+              </div>
+              <div className="mt-2 flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={closeEdit}>Cancel</Button>
+                <Button type="submit">Save</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

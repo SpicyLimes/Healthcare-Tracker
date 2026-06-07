@@ -17,6 +17,9 @@ export default function VisionHistoryPage() {
   const [form, setForm] = useState<VisionHistoryInput>({});
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingRow, setEditingRow] = useState<VisionHistory | null>(null);
+  const [editForm, setEditForm] = useState<VisionHistoryInput>({});
+  const [editError, setEditError] = useState("");
 
   async function reload() { setRows(await visionHistoryApi.list()); }
   useEffect(() => { reload().catch(() => setError("Failed to load vision history")); }, []);
@@ -31,6 +34,23 @@ export default function VisionHistoryPage() {
   async function onDelete(id: string) {
     try { await visionHistoryApi.remove(id); await reload(); }
     catch { setError("Could not delete record"); }
+  }
+
+  function openEdit(r: VisionHistory) {
+    setEditingRow(r);
+    setEditForm({ visit_date: r.visit_date, provider_id: r.provider_id, provider_other: r.provider_other, rx_od: r.rx_od, rx_os: r.rx_os, notes: r.notes });
+    setEditError("");
+  }
+  function closeEdit() { setEditingRow(null); }
+  async function onSaveEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editingRow) return;
+    setEditError("");
+    try {
+      await visionHistoryApi.update(editingRow.id, editForm);
+      closeEdit();
+      await reload();
+    } catch { setEditError("Could not update record"); }
   }
 
   return (
@@ -60,10 +80,9 @@ export default function VisionHistoryPage() {
                         <td className="px-4 py-3 text-muted-foreground">{r.rx_od ?? ""}</td>
                         <td className="px-4 py-3 text-muted-foreground">{r.rx_os ?? ""}</td>
                         {isAdmin && (
-                          <td className="px-4 py-3">
-                            <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
-                              Delete
-                            </Button>
+                          <td className="px-4 py-3 space-x-2">
+                            <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
+                            <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
                           </td>
                         )}
                         <td className="px-4 py-3">
@@ -179,6 +198,53 @@ export default function VisionHistoryPage() {
           </Card>
         )}
       </PageLayout>
+      {editingRow && (
+        <div role="dialog" aria-modal="true" aria-labelledby="edit-vis-heading"
+             onKeyDown={(e) => e.key === "Escape" && closeEdit()}
+             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+             onClick={closeEdit}>
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+               onClick={(e) => e.stopPropagation()}>
+            <h2 id="edit-vis-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Vision Record</h2>
+            {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
+            <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField label="Visit Date" htmlFor="edit-vis-date">
+                  <Input id="edit-vis-date" type="date" value={editForm.visit_date ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, visit_date: e.target.value || null }))} />
+                </FormField>
+                <div className="sm:col-span-2">
+                  <FormField label="Provider" htmlFor="edit-vis-provider">
+                    <DoctorPicker
+                      doctorId={editForm.provider_id ?? null}
+                      doctorOther={editForm.provider_other ?? null}
+                      onChange={(id, other) => setEditForm((s) => ({ ...s, provider_id: id, provider_other: other }))}
+                    />
+                  </FormField>
+                </div>
+                <FormField label="Rx OD (right eye)" htmlFor="edit-vis-od">
+                  <Input id="edit-vis-od" value={editForm.rx_od ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, rx_od: e.target.value || null }))} />
+                </FormField>
+                <FormField label="Rx OS (left eye)" htmlFor="edit-vis-os">
+                  <Input id="edit-vis-os" value={editForm.rx_os ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, rx_os: e.target.value || null }))} />
+                </FormField>
+                <div className="sm:col-span-2">
+                  <FormField label="Notes" htmlFor="edit-vis-notes">
+                    <Textarea id="edit-vis-notes" value={editForm.notes ?? ""}
+                      onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value || null }))} />
+                  </FormField>
+                </div>
+              </div>
+              <div className="mt-2 flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={closeEdit}>Cancel</Button>
+                <Button type="submit">Save</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

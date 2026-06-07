@@ -1,5 +1,5 @@
 import React, { useEffect, useState, type FormEvent } from "react";
-import { familyHistoryApi, type FamilyHistory } from "../api/familyHistory";
+import { familyHistoryApi, type FamilyHistory, type FamilyHistoryInput } from "../api/familyHistory";
 import { useAuth } from "../auth/useAuth";
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
@@ -20,6 +20,9 @@ export default function FamilyHistoryPage() {
     age_of_onset: "",
     notes: "",
   });
+  const [editingRow, setEditingRow] = useState<FamilyHistory | null>(null);
+  const [editForm, setEditForm] = useState({ relative: "", condition: "", age_of_onset: "", notes: "" });
+  const [editError, setEditError] = useState("");
 
   async function reload() {
     setRows(await familyHistoryApi.list());
@@ -58,6 +61,31 @@ export default function FamilyHistoryPage() {
     }
   }
 
+  function openEdit(r: FamilyHistory) {
+    setEditingRow(r);
+    setEditForm({
+      relative: r.relative,
+      condition: r.condition,
+      age_of_onset: r.age_of_onset ?? "",
+      notes: r.notes ?? "",
+    });
+    setEditError("");
+  }
+  function closeEdit() { setEditingRow(null); }
+  async function onSaveEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editingRow) return;
+    setEditError("");
+    try {
+      const payload = Object.fromEntries(
+        Object.entries(editForm).map(([k, v]) => [k, v === "" ? null : v])
+      ) as FamilyHistoryInput;
+      await familyHistoryApi.update(editingRow.id, payload);
+      closeEdit();
+      await reload();
+    } catch { setEditError("Could not update record"); }
+  }
+
   return (
     <AppShell>
       <PageLayout title="Family Health History" description="Hereditary conditions and family medical history.">
@@ -82,10 +110,9 @@ export default function FamilyHistoryPage() {
                     <td className="px-4 py-3 text-muted-foreground">{r.condition}</td>
                     <td className="px-4 py-3 text-muted-foreground">{r.age_of_onset ?? ""}</td>
                     {isAdmin && (
-                      <td className="px-4 py-3">
-                        <Button variant="ghost" size="sm" onClick={() => onDelete(r.id)}>
-                          Delete
-                        </Button>
+                      <td className="px-4 py-3 space-x-2">
+                        <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
+                        <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
                       </td>
                     )}
                     {r.notes && (
@@ -184,6 +211,44 @@ export default function FamilyHistoryPage() {
         )}
 
       </PageLayout>
+      {editingRow && (
+        <div role="dialog" aria-modal="true" aria-labelledby="edit-fh-heading"
+             onKeyDown={(e) => e.key === "Escape" && closeEdit()}
+             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+             onClick={closeEdit}>
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+               onClick={(e) => e.stopPropagation()}>
+            <h2 id="edit-fh-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Family History</h2>
+            {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
+            <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField label="Relative" htmlFor="edit-fh-relative">
+                  <Input id="edit-fh-relative" required value={editForm.relative}
+                    onChange={(e) => setEditForm((s) => ({ ...s, relative: e.target.value }))} />
+                </FormField>
+                <FormField label="Condition" htmlFor="edit-fh-condition">
+                  <Input id="edit-fh-condition" required value={editForm.condition}
+                    onChange={(e) => setEditForm((s) => ({ ...s, condition: e.target.value }))} />
+                </FormField>
+                <FormField label="Age of Onset" htmlFor="edit-fh-onset">
+                  <Input id="edit-fh-onset" value={editForm.age_of_onset}
+                    onChange={(e) => setEditForm((s) => ({ ...s, age_of_onset: e.target.value }))} />
+                </FormField>
+                <div className="sm:col-span-2">
+                  <FormField label="Notes" htmlFor="edit-fh-notes">
+                    <Textarea id="edit-fh-notes" value={editForm.notes}
+                      onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value }))} />
+                  </FormField>
+                </div>
+              </div>
+              <div className="mt-2 flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={closeEdit}>Cancel</Button>
+                <Button type="submit">Save</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

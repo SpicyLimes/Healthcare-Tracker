@@ -31,6 +31,9 @@ export default function VisitLogsPage() {
   const [form, setForm] = useState<VisitLogInput>(EMPTY);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingRow, setEditingRow] = useState<VisitLog | null>(null);
+  const [editForm, setEditForm] = useState<VisitLogInput>(EMPTY);
+  const [editError, setEditError] = useState("");
 
   function hasExpandContent(r: VisitLog): boolean {
     return !!(r.summary || r.follow_up || r.notes);
@@ -52,6 +55,23 @@ export default function VisitLogsPage() {
   async function onDelete(id: string) {
     try { await visitLogsApi.remove(id); await reload(); }
     catch { setError("Could not delete record"); }
+  }
+
+  function openEdit(r: VisitLog) {
+    setEditingRow(r);
+    setEditForm({ visit_date: r.visit_date, doctor_id: r.doctor_id, doctor_other: r.doctor_other, reason: r.reason, summary: r.summary, follow_up: r.follow_up, follow_up_date: r.follow_up_date, notes: r.notes });
+    setEditError("");
+  }
+  function closeEdit() { setEditingRow(null); }
+  async function onSaveEdit(e: FormEvent) {
+    e.preventDefault();
+    if (!editingRow) return;
+    setEditError("");
+    try {
+      await visitLogsApi.update(editingRow.id, editForm);
+      closeEdit();
+      await reload();
+    } catch { setEditError("Could not update record"); }
   }
 
   function resolveDoctorName(id: string | null, other: string | null): string {
@@ -93,10 +113,9 @@ export default function VisitLogsPage() {
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">{r.follow_up_date ?? ""}</td>
                         {isAdmin && (
-                          <td className="px-4 py-3">
-                            <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>
-                              Delete
-                            </Button>
+                          <td className="px-4 py-3 space-x-2">
+                            <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
+                            <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
                           </td>
                         )}
                         <td className="px-4 py-3">
@@ -253,6 +272,65 @@ export default function VisitLogsPage() {
           </Card>
         )}
       </PageLayout>
+      {editingRow && (
+        <div role="dialog" aria-modal="true" aria-labelledby="edit-vl-heading"
+             onKeyDown={(e) => e.key === "Escape" && closeEdit()}
+             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+             onClick={closeEdit}>
+          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+               onClick={(e) => e.stopPropagation()}>
+            <h2 id="edit-vl-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Visit Log</h2>
+            {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
+            <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField label="Visit Date" htmlFor="edit-vl-date">
+                  <Input id="edit-vl-date" type="date" value={editForm.visit_date ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, visit_date: e.target.value || null }))} />
+                </FormField>
+                <FormField label="Reason" htmlFor="edit-vl-reason">
+                  <Input id="edit-vl-reason" value={editForm.reason ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, reason: e.target.value || null }))} />
+                </FormField>
+                <div className="sm:col-span-2">
+                  <FormField label="Doctor" htmlFor="edit-vl-doctor">
+                    <DoctorPicker
+                      doctorId={editForm.doctor_id ?? null}
+                      doctorOther={editForm.doctor_other ?? null}
+                      onChange={(id, other) => setEditForm((s) => ({ ...s, doctor_id: id, doctor_other: other }))}
+                    />
+                  </FormField>
+                </div>
+                <div className="sm:col-span-2">
+                  <FormField label="Summary" htmlFor="edit-vl-summary">
+                    <Textarea id="edit-vl-summary" value={editForm.summary ?? ""}
+                      onChange={(e) => setEditForm((s) => ({ ...s, summary: e.target.value || null }))} />
+                  </FormField>
+                </div>
+                <div className="sm:col-span-2">
+                  <FormField label="Follow-up Notes" htmlFor="edit-vl-followup">
+                    <Textarea id="edit-vl-followup" value={editForm.follow_up ?? ""}
+                      onChange={(e) => setEditForm((s) => ({ ...s, follow_up: e.target.value || null }))} />
+                  </FormField>
+                </div>
+                <FormField label="Follow-up Date" htmlFor="edit-vl-followup-date">
+                  <Input id="edit-vl-followup-date" type="date" value={editForm.follow_up_date ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, follow_up_date: e.target.value || null }))} />
+                </FormField>
+                <div className="sm:col-span-2">
+                  <FormField label="Notes" htmlFor="edit-vl-notes">
+                    <Textarea id="edit-vl-notes" value={editForm.notes ?? ""}
+                      onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value || null }))} />
+                  </FormField>
+                </div>
+              </div>
+              <div className="mt-2 flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={closeEdit}>Cancel</Button>
+                <Button type="submit">Save</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
