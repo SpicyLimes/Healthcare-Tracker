@@ -61,9 +61,9 @@ export default function ChangePasswordPage() {
         <Card>
           <CardContent className="pt-6 flex flex-col gap-0">
             <form onSubmit={onSaveName}>
-              <h2 className="font-heading text-sm font-medium text-foreground mb-4">
+              <h1 className="font-heading text-sm font-medium text-foreground mb-4">
                 Display Name
-              </h2>
+              </h1>
               {nameError && (
                 <p role="alert" className="mb-4 text-sm text-destructive">{nameError}</p>
               )}
@@ -71,7 +71,7 @@ export default function ChangePasswordPage() {
                 <p role="status" className="mb-4 text-sm text-primary">{nameMessage}</p>
               )}
               <div className="flex flex-col gap-4 ">
-                <FormField label="Display Name" htmlFor="display_name">
+                <FormField label="Update Your Display Name" htmlFor="display_name">
                   <Input
                     id="display_name"
                     type="text"
@@ -90,9 +90,9 @@ export default function ChangePasswordPage() {
 
             {/* Change Password */}
             <form onSubmit={onSubmit}>
-              <h2 className="font-heading text-sm font-medium text-foreground mb-4">
+              <h1 className="font-heading text-sm font-medium text-foreground mb-4">
                 Change Password
-              </h2>
+              </h1>
               {error && (
                 <p role="alert" className="mb-4 text-sm text-destructive">{error}</p>
               )}
