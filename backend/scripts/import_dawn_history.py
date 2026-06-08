@@ -63,6 +63,27 @@ def summarize(data: dict) -> None:
     print(f"[DRY RUN] Total clinical records across all types: {total_records}")
 
 
+def api_post(session: requests.Session, base_url: str, csrf: str, path: str, json: dict) -> dict:
+    resp = session.post(f"{base_url}{path}", json=json, headers={"X-CSRF-Token": csrf})
+    resp.raise_for_status()
+    return resp.json()
+
+
+def create_doctors(session, base_url, csrf, doctors: list[dict], dry_run: bool) -> dict[str, str]:
+    """Create each doctor; return a map of YAML `key` -> created doctor UUID string."""
+    key_to_id: dict[str, str] = {}
+    for doc in doctors:
+        payload = {k: v for k, v in doc.items() if k != "key"}
+        if dry_run:
+            print(f"[DRY RUN] POST /api/doctors {payload}")
+            key_to_id[doc["key"]] = f"dry-run-{doc['key']}"
+            continue
+        created = api_post(session, base_url, csrf, "/api/doctors", payload)
+        key_to_id[doc["key"]] = created["id"]
+        print(f"Created doctor '{created['name']}' -> {created['id']}")
+    return key_to_id
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-url", required=True)
@@ -83,11 +104,14 @@ def main() -> int:
     csrf = login(session, args.base_url, email, password)
     print(f"Logged in as {email}; csrf token acquired")
 
+    doctor_ids = create_doctors(session, args.base_url, csrf, data.get("doctors", []), args.dry_run)
+    print(f"Doctor key->id map ({len(doctor_ids)} entries): {doctor_ids}")
+
     if args.dry_run:
-        summarize(data)
+        print(f"[DRY RUN] Would import {len(data.get('records', []))} records")
         return 0
 
-    print("Live run not yet implemented")
+    print("Record import not yet implemented")
     return 1
 
 
