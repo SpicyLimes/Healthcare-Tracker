@@ -70,10 +70,20 @@ def api_post(session: requests.Session, base_url: str, csrf: str, path: str, jso
 
 
 def create_doctors(session, base_url, csrf, doctors: list[dict], dry_run: bool) -> dict[str, str]:
-    """Create each doctor; return a map of YAML `key` -> created doctor UUID string."""
+    """Create each doctor; return a map of YAML `key` -> created doctor UUID string.
+
+    Doctors with `existing_doctor_id` set already exist in the live app
+    (Dawn entered them manually with richer data) — reuse that ID instead
+    of creating a duplicate.
+    """
     key_to_id: dict[str, str] = {}
     for doc in doctors:
-        payload = {k: v for k, v in doc.items() if k != "key"}
+        existing_id = doc.get("existing_doctor_id")
+        if existing_id:
+            key_to_id[doc["key"]] = existing_id
+            print(f"Reusing existing doctor '{doc['name']}' -> {existing_id}")
+            continue
+        payload = {k: v for k, v in doc.items() if k not in ("key", "existing_doctor_id")}
         if dry_run:
             print(f"[DRY RUN] POST /api/doctors {payload}")
             key_to_id[doc["key"]] = f"dry-run-{doc['key']}"
