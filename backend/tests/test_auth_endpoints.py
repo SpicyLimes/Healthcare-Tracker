@@ -131,3 +131,29 @@ def test_set_name_empty_string_clears_name(client, db_session):
     resp = client.put("/api/auth/name", headers={"X-CSRF-Token": csrf}, json={"full_name": ""})
     assert resp.status_code == 200
     assert resp.json()["full_name"] is None
+
+
+def test_user_can_set_own_timezone(client, db_session):
+    _login(client, db_session)
+    csrf = client.cookies.get("csrf_token")
+    resp = client.put(
+        "/api/auth/timezone",
+        headers={"X-CSRF-Token": csrf},
+        json={"timezone": "America/Los_Angeles"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["timezone"] == "America/Los_Angeles"
+    me = client.get("/api/auth/me")
+    assert me.json()["timezone"] == "America/Los_Angeles"
+
+
+def test_timezone_requires_authentication(client, db_session):
+    resp = client.put("/api/auth/timezone", json={"timezone": "America/Los_Angeles"})
+    assert resp.status_code == 401
+
+
+def test_me_returns_timezone(client, db_session):
+    _login(client, db_session)
+    me = client.get("/api/auth/me")
+    assert "timezone" in me.json()
+    assert me.json()["timezone"] == "America/Chicago"
