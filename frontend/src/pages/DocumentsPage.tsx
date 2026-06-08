@@ -3,6 +3,7 @@ import { listAllDocuments, getDownloadUrl, type DocumentRecord } from "../api/do
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { FormField, Select } from "@/components/ui/form-field";
 import { formatDate } from "@/lib/format";
 
@@ -52,38 +53,42 @@ export default function DocumentsPage() {
         {docs.length === 0 && !error ? (
           <p className="text-sm text-muted-foreground">No documents found.</p>
         ) : docs.length > 0 ? (
-          <div className="overflow-x-auto rounded-xl border border-border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Filename</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Section</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Size</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Uploaded</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {docs.map((doc) => (
-                  <tr key={doc.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                    <td className="px-4 py-3 font-medium text-foreground">{doc.filename}</td>
-                    <td className="px-4 py-3 text-muted-foreground capitalize">
-                      {doc.section.replace(/_/g, " ")}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatBytes(doc.file_size)}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatDate(doc.uploaded_at)}</td>
-                    <td className="px-4 py-3">
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={getDownloadUrl(doc.id)} target="_blank" rel="noopener noreferrer">
-                          Open
-                        </a>
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/40">
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Filename</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Section</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Size</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Uploaded</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {docs.map((doc) => (
+                      <tr key={doc.id} className="border-b border-border last:border-0 hover:bg-muted/20">
+                        <td className="px-4 py-3 font-medium text-foreground">{doc.filename}</td>
+                        <td className="px-4 py-3 text-muted-foreground capitalize">
+                          {doc.section.replace(/_/g, " ")}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{formatBytes(doc.file_size)}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{formatDate(doc.uploaded_at)}</td>
+                        <td className="px-4 py-3">
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={getDownloadUrl(doc.id)} target="_blank" rel="noopener noreferrer">
+                              Open
+                            </a>
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         ) : null}
       </PageLayout>
     </AppShell>

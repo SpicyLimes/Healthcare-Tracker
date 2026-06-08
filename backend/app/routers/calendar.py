@@ -56,7 +56,6 @@ def get_calendar_events(
     # Appointments
     appts = db.execute(
         select(Appointment).where(
-            Appointment.created_by == current_user.id,
             Appointment.appointment_datetime.is_not(None),
         )
     ).scalars().all()
@@ -76,7 +75,6 @@ def get_calendar_events(
     # Visit Logs
     visits = db.execute(
         select(VisitLog).where(
-            VisitLog.created_by == current_user.id,
             VisitLog.visit_date.is_not(None),
         )
     ).scalars().all()
@@ -93,7 +91,6 @@ def get_calendar_events(
     # Vaccinations
     vacs = db.execute(
         select(Vaccination).where(
-            Vaccination.created_by == current_user.id,
             Vaccination.administered_date.is_not(None),
         )
     ).scalars().all()
@@ -110,7 +107,6 @@ def get_calendar_events(
     # Surgeries
     surgs = db.execute(
         select(Surgery).where(
-            Surgery.created_by == current_user.id,
             Surgery.surgery_date.is_not(None),
         )
     ).scalars().all()
@@ -127,7 +123,6 @@ def get_calendar_events(
     # Hospitalizations
     hosps = db.execute(
         select(Hospitalization).where(
-            Hospitalization.created_by == current_user.id,
             Hospitalization.admission_date.is_not(None),
         )
     ).scalars().all()
@@ -150,7 +145,6 @@ def get_calendar_events(
     # Medications
     meds = db.execute(
         select(Medication).where(
-            Medication.created_by == current_user.id,
             Medication.start_date.is_not(None),
         )
     ).scalars().all()
