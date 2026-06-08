@@ -37,6 +37,10 @@ class UpdateNameRequest(BaseModel):
     full_name: str | None
 
 
+class UpdateTimezoneRequest(BaseModel):
+    timezone: str
+
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -55,3 +59,4 @@ class MeResponse(BaseModel):
     email: str
     role: Role
     full_name: str | None = None
+    timezone: str = "America/Chicago"

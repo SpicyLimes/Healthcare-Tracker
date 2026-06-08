@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.limiter import limiter
 from app.models.user import User
-from app.schemas.auth import ChangePasswordRequest, LoginRequest, MeResponse, UpdateNameRequest
+from app.schemas.auth import ChangePasswordRequest, LoginRequest, MeResponse, UpdateNameRequest, UpdateTimezoneRequest
 from app.security.cookies import REFRESH_COOKIE, clear_auth_cookies, set_auth_cookies
 from app.security.dependencies import get_current_user, verify_csrf
 from app.security.tokens import create_access_token
@@ -87,5 +87,16 @@ def update_name(
 ):
     stripped = payload.full_name.strip() if isinstance(payload.full_name, str) else None
     current.full_name = stripped if stripped else None
+    db.flush()
+    return current
+
+
+@router.put("/timezone", response_model=MeResponse, dependencies=[Depends(get_current_user), Depends(verify_csrf)])
+def update_timezone(
+    payload: UpdateTimezoneRequest,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    current.timezone = payload.timezone.strip() or "America/Chicago"
     db.flush()
     return current
