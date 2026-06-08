@@ -229,7 +229,21 @@ def create_record_section(
     for record in items:
         existing_id = record.get("existing_id")
         if existing_id:
-            print(f"Skipping {type_label} (existing_id={existing_id[:8]}...) — already live")
+            attachments = record.get("attachments") or []
+            if attachments and not skip_attachments:
+                if dry_run:
+                    for att in attachments:
+                        file_key = att["file"]
+                        filename = files_map.get(file_key, file_key)
+                        pages = att.get("pages")
+                        print(f"[DRY RUN]   attach {filename} {pages or 'whole file'} to existing {type_label} {existing_id[:8]}...")
+                else:
+                    print(f"Attaching docs to existing {type_label} {existing_id[:8]}...")
+                    attached_count += process_attachments(
+                        session, base_url, csrf, prefix, type_label, existing_id, attachments, files_map, source_dir
+                    )
+            else:
+                print(f"Skipping {type_label} (existing_id={existing_id[:8]}...) — already live")
             created_count += 1
             continue
 
@@ -299,6 +313,11 @@ def main() -> int:
         action="store_true",
         help="Skip all document attachment uploads (useful when proxy upload limit is not yet raised)",
     )
+    parser.add_argument(
+        "--skip-profile-update",
+        action="store_true",
+        help="Skip the profile allergies update (use when allergies have already been set)",
+    )
     args = parser.parse_args()
 
     email = os.environ.get("HT_EMAIL")
@@ -367,7 +386,7 @@ def main() -> int:
             )
 
     profile_update = data.get("profile_update") or {}
-    allergies_append = profile_update.get("allergies_append")
+    allergies_append = None if args.skip_profile_update else profile_update.get("allergies_append")
     profile_updated = False
     if allergies_append:
         new_allergies = update_profile_allergies(profile, allergies_append)
