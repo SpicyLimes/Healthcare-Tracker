@@ -21,6 +21,7 @@ import {
   ScrollText,
   UserCog,
   ChevronRight,
+  StickyNote,
 } from "lucide-react";
 import { calendarApi, type CalendarEvent, EVENT_TYPE_LABELS } from "../api/calendar";
 import { useAuth } from "../auth/useAuth";
@@ -74,6 +75,13 @@ const NON_ADMIN_SECTIONS = [
     items: [
       { to: "/change-password", label: "Settings", icon: KeyRound, desc: "Display name & password" },
       { to: "/share-links", label: "Share Links", icon: Share2, desc: "Share records with providers" },
+    ],
+  },
+  {
+    group: "Tools",
+    description: "Personal notes and to-do items.",
+    items: [
+      { to: "/notes", label: "Notes / To-Do's", icon: StickyNote, desc: "Personal notes and to-do items" },
     ],
   },
 ];

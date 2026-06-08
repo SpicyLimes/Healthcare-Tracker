@@ -4,7 +4,7 @@ import {
   User, Pill, Stethoscope, HeartPulse, Shield, Building2, Users,
   Scissors, Hospital, Eye, Smile, Syringe, ClipboardList, CalendarDays,
   FolderOpen, KeyRound, Share2, ScrollText, UserCog, LogOut,
-  LayoutDashboard, Calendar, CheckCircle2, Database,
+  LayoutDashboard, Calendar, CheckCircle2, Database, StickyNote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -60,6 +60,12 @@ const navGroups = [
     items: [
       { to: "/change-password", label: "Settings", icon: KeyRound },
       { to: "/share-links", label: "Share Links", icon: Share2 },
+    ],
+  },
+  {
+    label: "Tools",
+    items: [
+      { to: "/notes", label: "Notes / To-Do's", icon: StickyNote },
     ],
   },
 ];

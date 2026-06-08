@@ -25,6 +25,7 @@ import CalendarPage from "./pages/CalendarPage";
 import DocumentsPage from "./pages/DocumentsPage";
 import ShareLinksPage from "./pages/ShareLinksPage";
 import AuditLogPage from "./pages/AuditLogPage";
+import NotesPage from "./pages/NotesPage";
 import GuestEntryPage from "./pages/GuestEntryPage";
 import GuestSectionPage from "./pages/GuestSectionPage";
 import GuestRecordPage from "./pages/GuestRecordPage";
@@ -54,6 +55,7 @@ export default function App() {
             <Route path="/visit-logs" element={<ProtectedRoute><VisitLogsPage /></ProtectedRoute>} />
             <Route path="/appointments" element={<ProtectedRoute><AppointmentsPage /></ProtectedRoute>} />
             <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
+            <Route path="/notes" element={<ProtectedRoute><NotesPage /></ProtectedRoute>} />
             <Route path="/documents" element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
             <Route path="/share-links" element={<RequireAdmin><ShareLinksPage /></RequireAdmin>} />
             <Route path="/audit-log" element={<RequireAdmin><AuditLogPage /></RequireAdmin>} />
