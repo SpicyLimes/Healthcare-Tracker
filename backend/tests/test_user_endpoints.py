@@ -107,3 +107,50 @@ def test_create_user_with_full_name(client, db_session):
     )
     assert resp.status_code == 201
     assert resp.json()["full_name"] == "Named User"
+
+
+def test_create_user_is_audit_logged(client, db_session):
+    from app.models.audit_log import AuditLog
+    csrf = _admin_login(client, db_session)
+    client.post("/api/users", headers={"X-CSRF-Token": csrf},
+                json={"email": "logged@example.com", "password": "a-strong-passphrase-123", "role": "viewer"})
+    entries = db_session.query(AuditLog).filter(
+        AuditLog.detail.contains("logged@example.com")
+    ).all()
+    assert len(entries) >= 1
+    assert any("created" in (e.detail or "").lower() or "user" in (e.detail or "").lower() for e in entries)
+
+
+def test_update_user_is_audit_logged(client, db_session):
+    from app.models.audit_log import AuditLog
+    from app.models.user import Role
+    from app.services import user_service
+    csrf = _admin_login(client, db_session)
+    carol = user_service.create_user(db_session, "carol2@example.com", "a-strong-passphrase-123", Role.viewer)
+    initial_count = db_session.query(AuditLog).count()
+    client.put(f"/api/users/{carol.id}", headers={"X-CSRF-Token": csrf},
+               json={"role": "admin"})
+    assert db_session.query(AuditLog).count() > initial_count
+
+
+def test_set_user_password_is_audit_logged(client, db_session):
+    from app.models.audit_log import AuditLog
+    from app.models.user import Role
+    from app.services import user_service
+    csrf = _admin_login(client, db_session)
+    carol = user_service.create_user(db_session, "carol3@example.com", "a-strong-passphrase-123", Role.viewer)
+    initial_count = db_session.query(AuditLog).count()
+    client.put(f"/api/users/{carol.id}/password", headers={"X-CSRF-Token": csrf},
+               json={"new_password": "new-strong-passphrase-789"})
+    assert db_session.query(AuditLog).count() > initial_count
+
+
+def test_delete_user_is_audit_logged(client, db_session):
+    from app.models.audit_log import AuditLog
+    from app.models.user import Role
+    from app.services import user_service
+    csrf = _admin_login(client, db_session)
+    carol = user_service.create_user(db_session, "carol4@example.com", "a-strong-passphrase-123", Role.viewer)
+    initial_count = db_session.query(AuditLog).count()
+    client.delete(f"/api/users/{carol.id}", headers={"X-CSRF-Token": csrf})
+    assert db_session.query(AuditLog).count() > initial_count
