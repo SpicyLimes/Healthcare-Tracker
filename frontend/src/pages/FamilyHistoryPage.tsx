@@ -1,4 +1,4 @@
-import React, { useEffect, useState, type FormEvent } from "react";
+import React, { useEffect, useRef, useState, type FormEvent } from "react";
 import { familyHistoryApi, type FamilyHistory, type FamilyHistoryInput } from "../api/familyHistory";
 import { useAuth } from "../auth/useAuth";
 import { AppShell } from "@/components/app-shell";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { useSort } from "@/hooks/useSort";
+import { useColumnResize } from "@/hooks/useColumnResize";
 import { SortableTh } from "@/components/SortableTh";
 
 export default function FamilyHistoryPage() {
@@ -16,6 +17,8 @@ export default function FamilyHistoryPage() {
   const [rows, setRows] = useState<FamilyHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "condition", "asc");
+  const tableRef = useRef<HTMLTableElement>(null);
+  const { colWidths, autoFitColumn } = useColumnResize(tableRef);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -97,13 +100,13 @@ export default function FamilyHistoryPage() {
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table ref={tableRef} className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="w-8" />
-                <SortableTh label="Relative" sortKey="relative" sort={sort} onSort={toggleSort} />
-                <SortableTh label="Condition" sortKey="condition" sort={sort} onSort={toggleSort} />
-                <SortableTh label="Age of Onset" sortKey="age_of_onset" sort={sort} onSort={toggleSort} />
+                <SortableTh label="Relative" sortKey="relative" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["relative"]} onAutoFit={autoFitColumn} />
+                <SortableTh label="Condition" sortKey="condition" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["condition"]} onAutoFit={autoFitColumn} />
+                <SortableTh label="Age of Onset" sortKey="age_of_onset" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["age_of_onset"]} onAutoFit={autoFitColumn} />
                 {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
               </tr>
             </thead>

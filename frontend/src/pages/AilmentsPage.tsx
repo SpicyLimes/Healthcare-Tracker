@@ -1,4 +1,4 @@
-import React, { useEffect, useState, type FormEvent } from "react";
+import React, { useEffect, useRef, useState, type FormEvent } from "react";
 import { ailmentsApi, type Ailment, type AilmentInput, type AilmentStatus } from "../api/ailments";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { FormField, Input, Select, Textarea } from "@/components/ui/form-field";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { useSort } from "@/hooks/useSort";
+import { useColumnResize } from "@/hooks/useColumnResize";
 import { SortableTh } from "@/components/SortableTh";
 
 const EMPTY: AilmentInput = {
@@ -29,6 +30,8 @@ export default function AilmentsPage() {
   const [rows, setRows] = useState<Ailment[]>([]);
   const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "condition", "asc");
+  const tableRef = useRef<HTMLTableElement>(null);
+  const { colWidths, autoFitColumn } = useColumnResize(tableRef);
   const [form, setForm] = useState<AilmentInput>(EMPTY);
   const [error, setError] = useState("");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -98,14 +101,14 @@ export default function AilmentsPage() {
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table ref={tableRef} className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="w-8" />
-                <SortableTh label="Condition" sortKey="condition" sort={sort} onSort={toggleSort} />
-                <SortableTh label="Status" sortKey="status" sort={sort} onSort={toggleSort} />
-                <SortableTh label="Onset Date" sortKey="onset_date" sort={sort} onSort={toggleSort} />
-                <SortableTh label="Treating Doctor" sortKey="treating_doctor" sort={sort} onSort={toggleSort} />
+                <SortableTh label="Condition" sortKey="condition" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["condition"]} onAutoFit={autoFitColumn} />
+                <SortableTh label="Status" sortKey="status" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["status"]} onAutoFit={autoFitColumn} />
+                <SortableTh label="Onset Date" sortKey="onset_date" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["onset_date"]} onAutoFit={autoFitColumn} />
+                <SortableTh label="Treating Doctor" sortKey="treating_doctor" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["treating_doctor"]} onAutoFit={autoFitColumn} />
                 {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
               </tr>
             </thead>
