@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useGuest } from "../auth/GuestContext";
+import { Button } from "@/components/ui/button";
 
 const SECTION_LABELS: Record<string, string> = {
   surgeries: "Surgeries",
@@ -37,7 +38,7 @@ export default function GuestLayout({ children, expired }: Props) {
   }
 
   return (
-    <main className="min-h-screen p-8 max-w-5xl mx-auto">
+    <main className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
       <header className="border-b border-border pb-4 mb-6">
         <h2 className="text-xl font-semibold text-foreground">Healthcare Records — Read Only Access</h2>
         {expiresAt && (
@@ -46,15 +47,13 @@ export default function GuestLayout({ children, expired }: Props) {
           </p>
         )}
       </header>
-      <nav className="flex flex-wrap gap-3 mb-6">
+      <nav className="flex flex-wrap gap-2 mb-6">
         {allowedSections.map((s) => (
-          <Link
-            key={s}
-            to={`/guest/sections/${s}`}
-            className="text-sm font-medium text-primary hover:underline underline-offset-4"
-          >
-            {SECTION_LABELS[s] ?? s}
-          </Link>
+          <Button key={s} variant="outline" size="sm" asChild>
+            <Link to={`/guest/sections/${s}`}>
+              {SECTION_LABELS[s] ?? s}
+            </Link>
+          </Button>
         ))}
       </nav>
       {children}
