@@ -157,3 +157,13 @@ def test_me_returns_timezone(client, db_session):
     me = client.get("/api/auth/me")
     assert "timezone" in me.json()
     assert me.json()["timezone"] == "America/Chicago"
+
+
+def test_failed_login_is_audit_logged(client, db_session):
+    from app.models.audit_log import AuditLog
+    client.post("/api/auth/login", json={"email": "notauser@example.com", "password": "wrong"})
+    entries = db_session.query(AuditLog).filter(
+        AuditLog.detail.contains("notauser@example.com")
+    ).all()
+    assert len(entries) == 1
+    assert "Failed login" in entries[0].detail

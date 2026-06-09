@@ -29,6 +29,8 @@ def _issue_session(db: Session, response: Response, user: User) -> None:
 def login(request: Request, payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = auth_service.authenticate(db, payload.email, payload.password)
     if user is None:
+        log_event(db, action=AuditAction.create, actor_type=ActorType.user,
+                  detail=f"Failed login attempt: {payload.email}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     _issue_session(db, response, user)
     log_event(db, action=AuditAction.create, actor_type=ActorType.user,
