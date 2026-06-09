@@ -26,5 +26,8 @@ COPY app ./app
 
 EXPOSE 8000
 
+RUN adduser --disabled-password --gecos "" appuser
+USER appuser
+
 # Apply migrations, then run the API. Host 0.0.0.0 for inter-container reach.
 CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
