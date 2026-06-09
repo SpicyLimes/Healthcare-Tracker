@@ -41,7 +41,7 @@ def test_migration_0010_round_trip(fresh_db_url, monkeypatch):
     insp = inspect(eng)
     assert "notes" in insp.get_table_names()
     cols = {c["name"] for c in insp.get_columns("notes")}
-    assert cols == {"id", "author_user_id", "title", "body", "pinned", "done", "created_at"}
+    assert cols == {"id", "author_user_id", "title", "body", "pinned", "done", "created_at", "updated_at"}
 
     fks = insp.get_foreign_keys("notes")
     assert any(fk["referred_table"] == "users" for fk in fks)

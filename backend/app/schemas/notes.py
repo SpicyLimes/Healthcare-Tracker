@@ -1,6 +1,7 @@
 # backend/app/schemas/notes.py
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -30,9 +31,10 @@ class NoteResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    author_user_id: uuid.UUID
+    author_user_id: Optional[uuid.UUID]
     title: str
     body: str | None
     pinned: bool
     done: bool
     created_at: datetime
+    updated_at: datetime
