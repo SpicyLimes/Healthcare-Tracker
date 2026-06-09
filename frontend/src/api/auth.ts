@@ -6,6 +6,7 @@ export interface CurrentUser {
   email: string;
   role: "admin" | "viewer";
   full_name: string | null;
+  timezone: string;
 }
 
 export async function login(email: string, password: string): Promise<CurrentUser> {
@@ -50,5 +51,15 @@ export async function updateName(fullName: string | null): Promise<CurrentUser> 
     body: JSON.stringify({ full_name: fullName }),
   });
   if (!res.ok) throw new Error("Name update failed");
+  return (await res.json()) as CurrentUser;
+}
+
+export async function updateTimezone(timezone: string): Promise<CurrentUser> {
+  const res = await apiFetch("/api/auth/timezone", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...csrfHeader() },
+    body: JSON.stringify({ timezone }),
+  });
+  if (!res.ok) throw new Error("Timezone update failed");
   return (await res.json()) as CurrentUser;
 }
