@@ -42,13 +42,17 @@ def test_create_share_link_returns_token_url(client, db_session):
     assert data["revoked"] is False
 
 
-def test_token_not_in_list_response(client, db_session):
+def test_list_includes_token_url(client, db_session):
+    """GET /api/share-links must include token_url on each link."""
     csrf = _admin(client, db_session)
-    _create_link(client, csrf)
+    _create_link(client, csrf, label="List Token Test")
     r = client.get("/api/share-links")
     assert r.status_code == 200
-    for link in r.json():
-        assert "token_url" not in link
+    links = r.json()
+    assert len(links) >= 1
+    for link in links:
+        assert "token_url" in link
+        assert link["token_url"].startswith("/guest?token=")
         assert "token_hash" not in link
 
 

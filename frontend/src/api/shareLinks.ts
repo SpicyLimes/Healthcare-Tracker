@@ -8,10 +8,11 @@ export interface ShareLink {
   expires_at: string;
   revoked: boolean;
   created_at: string;
+  token_url: string;
 }
 
 export interface ShareLinkCreated extends ShareLink {
-  token_url: string;
+  // token_url inherited from ShareLink
 }
 
 export interface ShareLinkInput {

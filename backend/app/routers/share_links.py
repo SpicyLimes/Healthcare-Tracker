@@ -20,7 +20,20 @@ router = APIRouter(prefix="/api/share-links", tags=["share-links"])
 
 @router.get("", response_model=list[ShareLinkRead], dependencies=[Depends(require_admin)])
 def list_share_links(db: Session = Depends(get_db)):
-    return db.query(ShareLink).order_by(ShareLink.created_at.desc()).all()
+    links = db.query(ShareLink).order_by(ShareLink.created_at.desc()).all()
+    result = []
+    for link in links:
+        raw_token = create_share_token(link.id, link.expires_at)
+        result.append(ShareLinkRead(
+            id=link.id,
+            label=link.label,
+            allowed_sections=link.allowed_sections,
+            expires_at=link.expires_at,
+            revoked=link.revoked,
+            created_at=link.created_at,
+            token_url=f"/guest?token={raw_token}",
+        ))
+    return result
 
 
 @router.post(

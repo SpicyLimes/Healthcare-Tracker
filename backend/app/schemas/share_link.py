@@ -31,8 +31,9 @@ class ShareLinkRead(BaseModel):
     expires_at: datetime
     revoked: bool
     created_at: datetime
+    token_url: str
 
 
 class ShareLinkCreated(ShareLinkRead):
-    """Returned only at creation — includes the one-time raw token."""
-    token_url: str
+    """Returned at creation — token_url inherited from ShareLinkRead."""
+    pass
