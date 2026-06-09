@@ -78,9 +78,9 @@ export default function ChangePasswordPage() {
         <Card>
           <CardContent className="pt-6 flex flex-col gap-0">
             <form onSubmit={onSaveName}>
-              <h1 className="font-heading text-sm font-medium text-foreground mb-4">
+              <h2 className="font-heading text-sm font-medium text-foreground mb-4">
                 Display Name
-              </h1>
+              </h2>
               {nameError && (
                 <p role="alert" className="mb-4 text-sm text-destructive">{nameError}</p>
               )}
@@ -107,9 +107,9 @@ export default function ChangePasswordPage() {
 
             {/* Timezone */}
             <form onSubmit={onSaveTimezone}>
-              <h1 className="font-heading text-sm font-medium text-foreground mb-4">
+              <h2 className="font-heading text-sm font-medium text-foreground mb-4">
                 Timezone
-              </h1>
+              </h2>
               {tzError && (
                 <p role="alert" className="mb-4 text-sm text-destructive">{tzError}</p>
               )}
@@ -151,9 +151,9 @@ export default function ChangePasswordPage() {
 
             {/* Change Password */}
             <form onSubmit={onSubmit}>
-              <h1 className="font-heading text-sm font-medium text-foreground mb-4">
+              <h2 className="font-heading text-sm font-medium text-foreground mb-4">
                 Change Password
-              </h1>
+              </h2>
               {error && (
                 <p role="alert" className="mb-4 text-sm text-destructive">{error}</p>
               )}

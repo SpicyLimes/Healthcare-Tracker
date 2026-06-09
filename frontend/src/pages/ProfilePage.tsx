@@ -85,7 +85,7 @@ export default function ProfilePage() {
           </p>
         )}
         {saved && (
-          <p className="mb-4 text-sm text-primary">Saved successfully.</p>
+          <p role="status" className="mb-4 text-sm text-primary">Saved successfully.</p>
         )}
 
         <form onSubmit={onSave} className="flex flex-col gap-6">

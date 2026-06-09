@@ -41,7 +41,7 @@ export default function DoctorPicker({ doctorId, doctorOther, onChange, disabled
 
   return (
     <div className="flex flex-col gap-2">
-      <Select value={selectValue} onChange={handleSelect} disabled={disabled}>
+      <Select value={selectValue} onChange={handleSelect} disabled={disabled} aria-label="Select doctor">
         <option value="">Select a Doctor…</option>
         {doctors.map((d) => (
           <option key={d.id} value={d.id}>{d.name}</option>

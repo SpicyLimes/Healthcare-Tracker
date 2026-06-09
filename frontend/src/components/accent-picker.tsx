@@ -107,7 +107,7 @@ export function AccentPicker({ isDark }: AccentPickerProps) {
   }
 
   return (
-    <div className="flex items-center gap-1" aria-label="Accent color">
+    <div className="flex items-center gap-1" role="group" aria-label="Accent color">
       {ACCENTS.map((a) => (
         <button
           key={a.label}
