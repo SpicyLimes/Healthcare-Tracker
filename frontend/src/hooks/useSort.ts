@@ -7,7 +7,7 @@ export interface SortState {
   direction: SortDirection;
 }
 
-export function useSort<T extends Record<string, unknown>>(
+export function useSort<T extends object>(
   rows: T[],
   defaultKey: string,
   defaultDirection: SortDirection = "asc"
@@ -24,8 +24,10 @@ export function useSort<T extends Record<string, unknown>>(
 
   const sorted = useMemo(() => {
     return [...rows].sort((a, b) => {
-      const av = a[sort.key] ?? "";
-      const bv = b[sort.key] ?? "";
+      const ra = a as Record<string, unknown>;
+      const rb = b as Record<string, unknown>;
+      const av = ra[sort.key] ?? "";
+      const bv = rb[sort.key] ?? "";
       const cmp = String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: "base" });
       return sort.direction === "asc" ? cmp : -cmp;
     });

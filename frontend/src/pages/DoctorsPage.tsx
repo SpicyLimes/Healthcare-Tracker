@@ -25,7 +25,7 @@ export default function DoctorsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Doctor[]>([]);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows as Record<string, unknown>[], "name", "asc");
+  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "name", "asc");
   const [form, setForm] = useState<DoctorInput>(EMPTY);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);

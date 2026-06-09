@@ -76,7 +76,7 @@ export default function AppointmentsPage() {
   const tz = user?.timezone ?? "America/Chicago";
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Appointment[]>([]);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows as Record<string, unknown>[], "appointment_datetime", "asc");
+  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "appointment_datetime", "asc");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<AppointmentInput>(EMPTY);
   const [error, setError] = useState("");

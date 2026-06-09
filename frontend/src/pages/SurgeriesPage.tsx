@@ -17,7 +17,7 @@ export default function SurgeriesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Surgery[]>([]);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows as Record<string, unknown>[], "surgery_date", "asc");
+  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "surgery_date", "asc");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<SurgeryInput>({ procedure: "" });
   const [error, setError] = useState("");

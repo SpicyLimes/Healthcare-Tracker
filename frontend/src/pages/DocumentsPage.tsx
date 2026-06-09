@@ -30,7 +30,7 @@ function formatBytes(bytes: number): string {
 
 export default function DocumentsPage() {
   const [docs, setDocs] = useState<DocumentRecord[]>([]);
-  const { sorted: sortedDocs, sort, toggleSort } = useSort(docs as Record<string, unknown>[], "filename", "asc");
+  const { sorted: sortedDocs, sort, toggleSort } = useSort(docs, "filename", "asc");
   const [section, setSection] = useState("");
   const [error, setError] = useState("");
 
@@ -77,7 +77,7 @@ export default function DocumentsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(sortedDocs as unknown as DocumentRecord[]).map((doc) => (
+                    {sortedDocs.map((doc) => (
                       <tr key={doc.id} className="border-b border-border last:border-0 hover:bg-muted/20">
                         <td className="px-4 py-3 font-medium text-foreground">{doc.filename}</td>
                         <td className="px-4 py-3 text-muted-foreground capitalize">

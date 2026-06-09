@@ -15,7 +15,7 @@ export default function InsurancePage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Insurance[]>([]);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows as Record<string, unknown>[], "insurer_name", "asc");
+  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "insurer_name", "asc");
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState({

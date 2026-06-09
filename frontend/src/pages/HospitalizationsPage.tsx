@@ -17,7 +17,7 @@ export default function HospitalizationsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Hospitalization[]>([]);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows as Record<string, unknown>[], "admission_date", "asc");
+  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "admission_date", "asc");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<HospitalizationInput>({ facility: "" });
   const [error, setError] = useState("");

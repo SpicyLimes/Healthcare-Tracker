@@ -27,7 +27,7 @@ export default function AilmentsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Ailment[]>([]);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows as Record<string, unknown>[], "condition", "asc");
+  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "condition", "asc");
   const [form, setForm] = useState<AilmentInput>(EMPTY);
   const [error, setError] = useState("");
   const [doctors, setDoctors] = useState<Doctor[]>([]);

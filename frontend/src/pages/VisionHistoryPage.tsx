@@ -16,7 +16,7 @@ export default function VisionHistoryPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<VisionHistory[]>([]);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows as Record<string, unknown>[], "visit_date", "asc");
+  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "visit_date", "asc");
   const [form, setForm] = useState<VisionHistoryInput>({});
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);

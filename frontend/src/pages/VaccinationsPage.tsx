@@ -25,7 +25,7 @@ export default function VaccinationsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Vaccination[]>([]);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows as Record<string, unknown>[], "administered_date", "asc");
+  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "administered_date", "asc");
   const [form, setForm] = useState<VaccinationInput>(EMPTY);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);

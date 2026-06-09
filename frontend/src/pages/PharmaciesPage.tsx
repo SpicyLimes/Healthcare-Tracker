@@ -14,7 +14,7 @@ export default function PharmaciesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Pharmacy[]>([]);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows as Record<string, unknown>[], "name", "asc");
+  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "name", "asc");
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState({
