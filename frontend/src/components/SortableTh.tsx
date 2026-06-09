@@ -5,9 +5,12 @@ interface SortableThProps {
   sortKey: string;
   sort: SortState;
   onSort: (key: string) => void;
+  width?: number;
+  colIndex?: number;
+  onAutoFit?: (sortKey: string, colIndex: number) => void;
 }
 
-export function SortableTh({ label, sortKey, sort, onSort }: SortableThProps) {
+export function SortableTh({ label, sortKey, sort, onSort, width, colIndex, onAutoFit }: SortableThProps) {
   const isActive = sort.key === sortKey;
   const ariaSort = isActive
     ? sort.direction === "asc"
@@ -16,8 +19,9 @@ export function SortableTh({ label, sortKey, sort, onSort }: SortableThProps) {
     : "none";
   return (
     <th
-      className="px-4 py-3 text-left font-medium text-muted-foreground"
+      className="relative px-4 py-3 text-left font-medium text-muted-foreground"
       aria-sort={ariaSort}
+      style={width !== undefined ? { width: `${width}px` } : undefined}
     >
       <button
         type="button"
@@ -30,6 +34,16 @@ export function SortableTh({ label, sortKey, sort, onSort }: SortableThProps) {
           {isActive ? (sort.direction === "asc" ? "↑" : "↓") : "↕"}
         </span>
       </button>
+      {onAutoFit !== undefined && colIndex !== undefined && (
+        <div
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            onAutoFit(sortKey, colIndex);
+          }}
+          className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-border/60 active:bg-border"
+          title="Double-click to auto-fit column"
+        />
+      )}
     </th>
   );
 }
