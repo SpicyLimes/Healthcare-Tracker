@@ -203,6 +203,11 @@ export default function ShareLinksPage() {
               </tr>
             </thead>
             <tbody>
+              {links.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="text-center py-6 text-muted-foreground">No share links yet.</td>
+                </tr>
+              )}
               {links.map((link) => {
                 const status = linkStatus(link);
                 return (
