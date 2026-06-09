@@ -18,6 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { FormField, Input, Select, Textarea } from "@/components/ui/form-field";
 import { localToUtcIso, formatInTimezone } from "@/lib/datetime";
 import { ChevronRight, ChevronDown } from "lucide-react";
+import { useSort } from "@/hooks/useSort";
+import { SortableTh } from "@/components/SortableTh";
 
 const STATUSES: AppointmentStatus[] = ["upcoming", "completed", "cancelled", "rescheduled"];
 
@@ -74,6 +76,7 @@ export default function AppointmentsPage() {
   const tz = user?.timezone ?? "America/Chicago";
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Appointment[]>([]);
+  const { sorted: sortedRows, sort, toggleSort } = useSort(rows as Record<string, unknown>[], "appointment_datetime", "asc");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<AppointmentInput>(EMPTY);
   const [error, setError] = useState("");
@@ -144,19 +147,19 @@ export default function AppointmentsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border bg-muted/50">
+                  <tr className="border-b border-border bg-muted/40">
                     <th className="w-8" />
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date / Time</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Doctor</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Location</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reason</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                    <SortableTh label="Date / Time" sortKey="appointment_datetime" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Type" sortKey="appointment_type" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Doctor" sortKey="doctor_id" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Location" sortKey="location" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Reason" sortKey="reason" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Status" sortKey="status" sort={sort} onSort={toggleSort} />
                     {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => {
+                  {sortedRows.map((r) => {
                     const typeLabel = APPOINTMENT_TYPES.find((t) => t.value === r.appointment_type)?.label ?? "—";
                     return (
                       <React.Fragment key={r.id}>
