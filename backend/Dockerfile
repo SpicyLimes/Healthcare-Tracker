@@ -17,7 +17,8 @@ RUN pip install --no-cache-dir \
     "alembic==1.18.4" \
     "email-validator==2.2.0" \
     "python-multipart==0.0.32" \
-    "slowapi==0.1.9"
+    "slowapi==0.1.9" \
+    "filetype==1.2.0"
 
 # Copy Alembic config and application code (migrations live under app/migrations)
 COPY alembic.ini ./

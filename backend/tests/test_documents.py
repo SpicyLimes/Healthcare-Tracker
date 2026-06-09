@@ -244,3 +244,16 @@ def test_list_documents_for_record(client, db_session, tmp_uploads_dir):
     docs = r.json()
     assert len(docs) == 1
     assert docs[0]["filename"] == "rec_doc.pdf"
+
+
+def test_upload_mime_mismatch_rejected(client, db_session, tmp_uploads_dir):
+    """A file whose bytes are JPEG but declared as PDF should be rejected."""
+    csrf = _admin(client, db_session)
+    rid = _create_vaccination(client, csrf)
+    jpeg_bytes = bytes([0xFF, 0xD8, 0xFF, 0xE0]) + b"\x00" * 100
+    r = client.post(
+        f"/api/vaccinations/{rid}/documents",
+        headers={"X-CSRF-Token": csrf},
+        files=[("file", ("photo.pdf", io.BytesIO(jpeg_bytes), "application/pdf"))],
+    )
+    assert r.status_code == 422, r.text

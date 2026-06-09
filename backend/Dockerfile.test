@@ -18,7 +18,8 @@ RUN pip install --no-cache-dir \
     "slowapi==0.1.9" \
     "pytest==8.3.4" \
     "httpx==0.28.1" \
-    "freezegun==1.5.1"
+    "freezegun==1.5.1" \
+    "filetype==1.2.0"
 
 # Source code is mounted at runtime via docker compose volume (./backend:/app).
 # This image only provides the pre-installed environment.

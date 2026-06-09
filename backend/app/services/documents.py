@@ -1,9 +1,11 @@
 # backend/app/services/documents.py
+import io
 import logging
 import os
 import uuid
 from typing import Optional
 
+import filetype
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
@@ -37,19 +39,46 @@ def save_document(
     record_id: str,
     uploaded_by_id: uuid.UUID,
 ) -> Document:
-    content_type = file.content_type or ""
-    if content_type not in ALLOWED_MIME_TYPES:
+    declared_mime = file.content_type or ""
+    if declared_mime not in ALLOWED_MIME_TYPES:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"File type '{content_type}' is not allowed.",
+            detail=f"File type '{declared_mime}' is not allowed.",
         )
 
-    data = file.file.read()
-    if len(data) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="File exceeds the 20 MB size limit.",
-        )
+    # Chunked read with early abort on size exceeded
+    buf = io.BytesIO()
+    total = 0
+    _CHUNK_SIZE = 64 * 1024
+    while True:
+        chunk = file.file.read(_CHUNK_SIZE)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="File exceeds the 20 MB size limit.",
+            )
+        buf.write(chunk)
+    data = buf.getvalue()
+
+    # MIME byte validation for magic-detectable types
+    _MAGIC_DETECTABLE = {
+        "application/pdf",
+        "image/png",
+        "image/jpeg",
+        "image/gif",
+        "image/webp",
+        "application/msword",
+    }
+    if declared_mime in _MAGIC_DETECTABLE:
+        detected = filetype.guess(data[:2048])
+        if detected is not None and detected.mime != declared_mime:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"File content does not match declared type '{declared_mime}'.",
+            )
 
     safe_filename = os.path.basename(file.filename or "upload")
     safe_filename = safe_filename.replace("\r", "").replace("\n", "").replace("\x00", "")
@@ -65,7 +94,7 @@ def save_document(
         stored_filename=stored_name,
         section=section,
         record_id=str(record_id),
-        mime_type=content_type,
+        mime_type=declared_mime,
         file_size=len(data),
         uploaded_by=uploaded_by_id,
     )
