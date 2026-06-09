@@ -181,7 +181,7 @@ function DayCell({ dateStr, events, isToday, isCurrentMonth }: DayCellProps) {
           <button
             onClick={() => setOpen((v) => !v)}
             className="text-left text-[10px] text-primary hover:underline"
-            aria-label={`${overflow} more events`}
+            aria-label={`+${overflow} more events`}
           >
             +{overflow} more
           </button>

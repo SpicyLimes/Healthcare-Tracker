@@ -115,7 +115,7 @@ export default function DocumentsPanel({ section, recordId, isAdmin }: Props) {
       {expanded && (
         <div className="mt-2 pl-2">
           {error && (
-            <p className="mb-2 text-sm text-destructive">{error}</p>
+            <p role="alert" className="mb-2 text-sm text-destructive">{error}</p>
           )}
 
           {uploadError && (
