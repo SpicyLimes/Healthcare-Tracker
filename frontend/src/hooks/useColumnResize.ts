@@ -1,7 +1,7 @@
 // frontend/src/hooks/useColumnResize.ts
-import { useCallback, useState } from "react";
+import { useCallback, useState, type RefObject } from "react";
 
-export function useColumnResize(tableRef: React.RefObject<HTMLTableElement | null>) {
+export function useColumnResize(tableRef: RefObject<HTMLTableElement | null>) {
   const [colWidths, setColWidths] = useState<Record<string, number | undefined>>({});
 
   const autoFitColumn = useCallback(
@@ -34,14 +34,11 @@ export function useColumnResize(tableRef: React.RefObject<HTMLTableElement | nul
         th.style.whiteSpace = prev;
       }
 
+      if (maxWidth === 0) return;
       const width = maxWidth + 16; // 16px padding buffer
 
-      setColWidths((prev) => {
-        const next = { ...prev, [sortKey]: width };
-        // Apply table-layout: fixed when any column is overridden
-        table.style.tableLayout = "fixed";
-        return next;
-      });
+      table.style.tableLayout = "fixed";
+      setColWidths((prev) => ({ ...prev, [sortKey]: width }));
     },
     [tableRef]
   );
