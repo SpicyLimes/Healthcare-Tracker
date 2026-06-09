@@ -143,6 +143,25 @@ export default function HomePage() {
           </p>
         </div>
 
+        {/* Viewer notice */}
+        {user?.role !== "admin" && (
+          <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-400 bg-amber-50 px-4 py-3 dark:bg-amber-950/30">
+            <StickyNote className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div>
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                Have a note, correction, or comment?
+              </p>
+              <p className="mt-0.5 text-sm text-amber-800 dark:text-amber-200">
+                Use the{" "}
+                <Link to="/notes" className="font-medium underline underline-offset-2 hover:opacity-80">
+                  Notes / To-Do's
+                </Link>{" "}
+                page to add personal notes, flag corrections, or track follow-up items.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Upcoming Events */}
         {upcomingEvents.length > 0 && (
           <div className="mb-8">
