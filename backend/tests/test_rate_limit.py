@@ -65,3 +65,30 @@ def test_real_ip_falls_back_to_client_host():
     req.client = MagicMock()
     req.client.host = "10.0.0.2"
     assert _get_real_ip(req) == "10.0.0.2"
+
+
+def test_password_change_rate_limited(client, db_session):
+    from app.models.user import Role
+    from app.services import user_service
+    user_service.create_user(db_session, "rl_pw@example.com", "a-strong-passphrase-123", Role.admin)
+    client.post("/api/auth/login", json={"email": "rl_pw@example.com", "password": "a-strong-passphrase-123"})
+    csrf = client.cookies.get("csrf_token")
+    for _ in range(10):
+        client.put("/api/auth/password", headers={"X-CSRF-Token": csrf},
+                   json={"current_password": "wrong", "new_password": "new-strong-passphrase-456"})
+    r = client.put("/api/auth/password", headers={"X-CSRF-Token": csrf},
+                   json={"current_password": "wrong", "new_password": "new-strong-passphrase-456"})
+    assert r.status_code == 429
+
+
+def test_refresh_rate_limited(client, db_session):
+    from app.models.user import Role
+    from app.services import user_service
+    user_service.create_user(db_session, "rl_ref@example.com", "a-strong-passphrase-123", Role.admin)
+    client.post("/api/auth/login", json={"email": "rl_ref@example.com", "password": "a-strong-passphrase-123"})
+    for _ in range(10):
+        csrf = client.cookies.get("csrf_token")
+        client.post("/api/auth/refresh", headers={"X-CSRF-Token": csrf})
+    csrf = client.cookies.get("csrf_token")
+    r = client.post("/api/auth/refresh", headers={"X-CSRF-Token": csrf})
+    assert r.status_code == 429

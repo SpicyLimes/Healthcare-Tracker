@@ -39,6 +39,7 @@ def login(request: Request, payload: LoginRequest, response: Response, db: Sessi
 
 
 @router.post("/refresh", response_model=MeResponse, dependencies=[Depends(verify_csrf)])
+@limiter.limit("10/minute")
 def refresh(request: Request, response: Response, db: Session = Depends(get_db)):
     raw = request.cookies.get(REFRESH_COOKIE)
     result = auth_service.rotate_refresh_token(db, raw) if raw else None
@@ -68,7 +69,10 @@ def me(current: User = Depends(get_current_user)):
 
 
 @router.put("/password", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(verify_csrf)])
+@limiter.limit("10/minute")
 def change_password(
+    request: Request,
+    response: Response,
     payload: ChangePasswordRequest,
     current: User = Depends(get_current_user),
     db: Session = Depends(get_db),
