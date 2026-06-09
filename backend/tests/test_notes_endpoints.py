@@ -108,3 +108,19 @@ def test_patch_null_title_returns_422(client, db_session):
     r = client.patch(f"/api/notes/{nid}", headers={"X-CSRF-Token": csrf},
                      json={"title": None})
     assert r.status_code == 422, r.text
+
+
+def test_viewer_only_sees_own_notes(client, db_session):
+    """A viewer should not see notes authored by other users."""
+    # Log in as admin, create a note
+    admin_csrf = _login_admin(client, db_session)
+    client.post("/api/notes", headers={"X-CSRF-Token": admin_csrf}, json={"title": "Admin Note"})
+    # Log out admin
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": admin_csrf})
+    # Log in as viewer, create own note
+    viewer_csrf = _login_viewer(client, db_session, email="viewer_scoped@notes.example.com")
+    client.post("/api/notes", headers={"X-CSRF-Token": viewer_csrf}, json={"title": "Viewer Note"})
+    # Viewer should only see their own note
+    notes = client.get("/api/notes").json()
+    assert len(notes) == 1
+    assert notes[0]["title"] == "Viewer Note"

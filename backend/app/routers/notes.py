@@ -7,18 +7,22 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.notes import Note
-from app.models.user import User
+from app.models.user import Role, User
 from app.schemas.notes import NoteCreate, NotePatch, NoteResponse
 from app.security.dependencies import get_current_user, require_admin, verify_csrf
 
 router = APIRouter(prefix="/api/notes", tags=["notes"])
 
 
-@router.get("", response_model=list[NoteResponse], dependencies=[Depends(get_current_user)])
-def list_notes(db: Session = Depends(get_db)):
-    return db.execute(
-        select(Note).order_by(Note.pinned.desc(), Note.created_at.desc())
-    ).scalars().all()
+@router.get("", response_model=list[NoteResponse])
+def list_notes(
+    db: Session = Depends(get_db),
+    current: User = Depends(get_current_user),
+):
+    stmt = select(Note).order_by(Note.pinned.desc(), Note.created_at.desc())
+    if current.role != Role.admin:
+        stmt = stmt.where(Note.author_user_id == current.id)
+    return db.execute(stmt).scalars().all()
 
 
 @router.post(
@@ -60,7 +64,7 @@ def patch_note(
     note = db.get(Note, note_id)
     if note is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-    if note.author_user_id != current.id and current.role.value != "admin":
+    if note.author_user_id != current.id and current.role != Role.admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(note, field, value)
