@@ -16,6 +16,8 @@ export interface CalendarEvent {
   date: string;       // YYYY-MM-DD
   end_date?: string;
   color: string;
+  doctor_name?: string | null;  // appointments only
+  time?: string | null;         // HH:MM UTC, appointments only
 }
 
 export const EVENT_COLORS: Record<CalendarEventType, string> = {

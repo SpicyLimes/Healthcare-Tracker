@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { calendarApi, type CalendarEvent, EVENT_TYPE_LABELS } from "../api/calendar";
 import { useAuth } from "../auth/useAuth";
+import { formatInTimezone } from "@/lib/datetime";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -65,7 +66,7 @@ const NON_ADMIN_SECTIONS = [
     description: "Doctor visits, upcoming appointments, and stored documents.",
     items: [
       { to: "/visit-logs", label: "Visit Logs", icon: ClipboardList, desc: "Provider visit notes" },
-      { to: "/appointments", label: "Appointments", icon: CalendarDays, desc: "Scheduled appointments" },
+      { to: "/calendar", label: "Appointments", icon: CalendarDays, desc: "Scheduled appointments" },
       { to: "/documents", label: "Documents", icon: FolderOpen, desc: "Medical documents & files" },
     ],
   },
@@ -95,8 +96,19 @@ const ADMIN_SECTION = {
   ],
 };
 
+function formatEventTime(e: CalendarEvent, tz: string): string {
+  if (e.type === "appointment" && e.time) {
+    // e.time is "HH:MM" in UTC; reconstruct a full ISO string using e.date
+    return formatInTimezone(`${e.date}T${e.time}:00Z`, tz);
+  }
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(
+    new Date(e.date + "T00:00:00Z")
+  );
+}
+
 export default function HomePage() {
   const { user } = useAuth();
+  const tz = user?.timezone ?? "America/Chicago";
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
@@ -143,12 +155,15 @@ export default function HomePage() {
                 {upcomingEvents.map((e) => (
                   <div key={`${e.type}-${e.id}`} className="flex items-center gap-3 py-2">
                     <div className="w-1 self-stretch rounded-full shrink-0" style={{ backgroundColor: e.color }} />
-                    <span className="w-20 shrink-0 text-xs text-muted-foreground">
-                      {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(
-                        new Date(e.date + "T00:00:00Z")
-                      )}
+                    <span className="w-32 shrink-0 text-xs text-muted-foreground">
+                      {formatEventTime(e, tz)}
                     </span>
-                    <span className="flex-1 truncate text-sm text-foreground">{e.title}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="block truncate text-sm text-foreground">{e.title}</span>
+                      {e.type === "appointment" && e.doctor_name && (
+                        <span className="block truncate text-xs text-muted-foreground">{e.doctor_name}</span>
+                      )}
+                    </div>
                     <Badge variant="outline" className="shrink-0 text-[10px]">
                       {EVENT_TYPE_LABELS[e.type]}
                     </Badge>

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.security.dependencies import get_current_user
+from app.models.doctor import Doctor
 from app.models.extended_records import (
     Appointment, Hospitalization, Surgery, Vaccination, VisitLog,
 )
@@ -53,23 +54,28 @@ def get_calendar_events(
 ):
     events: list[dict] = []
 
-    # Appointments
-    appts = db.execute(
-        select(Appointment).where(
-            Appointment.appointment_datetime.is_not(None),
-        )
-    ).scalars().all()
-    for a in appts:
+    # Appointments — join Doctor for doctor_name
+    appt_rows = db.execute(
+        select(Appointment, Doctor.name.label("doctor_name"))
+        .outerjoin(Doctor, Appointment.doctor_id == Doctor.id)
+        .where(Appointment.appointment_datetime.is_not(None))
+    ).all()
+    for a, doc_name in appt_rows:
         title = a.reason or APPOINTMENT_TYPE_LABELS.get(
             a.appointment_type.value if a.appointment_type else "", "Appointment"
         ) or "Appointment"
+        doctor_name = doc_name or a.doctor_other or None
+        appt_dt: datetime = a.appointment_datetime
+        time_str = appt_dt.strftime("%H:%M") if appt_dt else None
         events.append({
             "id": str(a.id),
             "type": "appointment",
             "title": title,
-            "date": _to_iso(a.appointment_datetime),
+            "date": _to_iso(appt_dt),
             "end_date": None,
             "color": COLORS["appointment"],
+            "doctor_name": doctor_name,
+            "time": time_str,
         })
 
     # Visit Logs

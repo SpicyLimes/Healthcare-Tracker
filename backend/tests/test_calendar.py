@@ -2,6 +2,7 @@
 import uuid
 from datetime import date, datetime, timezone
 
+from app.models.doctor import Doctor
 from app.models.extended_records import Appointment, Hospitalization, Surgery, Vaccination, VisitLog
 from app.models.medication import Medication
 from app.models.user import Role
@@ -47,6 +48,50 @@ def test_calendar_appointment(client, db_session):
     assert e["date"] == "2026-07-15"
     assert e["color"] == "#3b82f6"
     assert e["end_date"] is None
+    assert e["doctor_name"] is None
+    assert e["time"] == "10:00"
+
+
+def test_calendar_appointment_with_doctor(client, db_session):
+    u = _make_admin(db_session)
+    doc = Doctor(created_by=u.id, name="Dr. Smith", specialty="General")
+    db_session.add(doc)
+    db_session.flush()
+    appt = Appointment(
+        created_by=u.id,
+        appointment_datetime=datetime(2026, 8, 1, 9, 30, tzinfo=timezone.utc),
+        reason="Follow-up",
+        status="upcoming",
+        doctor_id=doc.id,
+    )
+    db_session.add(appt)
+    db_session.flush()
+    _login(client)
+    r = client.get("/api/calendar/events")
+    assert r.status_code == 200
+    events = r.json()
+    assert len(events) == 1
+    e = events[0]
+    assert e["doctor_name"] == "Dr. Smith"
+    assert e["time"] == "09:30"
+
+
+def test_calendar_appointment_with_doctor_other(client, db_session):
+    u = _make_admin(db_session)
+    appt = Appointment(
+        created_by=u.id,
+        appointment_datetime=datetime(2026, 8, 5, 14, 0, tzinfo=timezone.utc),
+        reason="Checkup",
+        status="upcoming",
+        doctor_other="Dr. Jones",
+    )
+    db_session.add(appt)
+    db_session.flush()
+    _login(client)
+    r = client.get("/api/calendar/events")
+    assert r.status_code == 200
+    e = r.json()[0]
+    assert e["doctor_name"] == "Dr. Jones"
 
 
 def test_calendar_visit_log(client, db_session):

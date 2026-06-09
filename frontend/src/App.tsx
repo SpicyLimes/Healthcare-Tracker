@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import { GuestProvider } from "./auth/GuestContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -20,7 +20,6 @@ import VisionHistoryPage from "./pages/VisionHistoryPage";
 import DentalHistoryPage from "./pages/DentalHistoryPage";
 import VaccinationsPage from "./pages/VaccinationsPage";
 import VisitLogsPage from "./pages/VisitLogsPage";
-import AppointmentsPage from "./pages/AppointmentsPage";
 import CalendarPage from "./pages/CalendarPage";
 import DocumentsPage from "./pages/DocumentsPage";
 import ShareLinksPage from "./pages/ShareLinksPage";
@@ -53,7 +52,7 @@ export default function App() {
             <Route path="/dental-history" element={<ProtectedRoute><DentalHistoryPage /></ProtectedRoute>} />
             <Route path="/vaccinations" element={<ProtectedRoute><VaccinationsPage /></ProtectedRoute>} />
             <Route path="/visit-logs" element={<ProtectedRoute><VisitLogsPage /></ProtectedRoute>} />
-            <Route path="/appointments" element={<ProtectedRoute><AppointmentsPage /></ProtectedRoute>} />
+            <Route path="/appointments" element={<Navigate to="/calendar" replace />} />
             <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
             <Route path="/notes" element={<ProtectedRoute><NotesPage /></ProtectedRoute>} />
             <Route path="/documents" element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />

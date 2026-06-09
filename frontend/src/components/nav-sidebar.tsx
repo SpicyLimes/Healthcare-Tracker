@@ -16,6 +16,7 @@ const calendarGroup = {
   label: "Calendar",
   items: [
     { to: "/calendar", label: "Calendar", icon: Calendar },
+    { to: "/calendar", label: "Appointments", icon: CalendarDays },
   ],
 };
 
@@ -51,7 +52,6 @@ const navGroups = [
     label: "Activity",
     items: [
       { to: "/visit-logs", label: "Visit Logs", icon: ClipboardList },
-      { to: "/appointments", label: "Appointments", icon: CalendarDays },
       { to: "/documents", label: "Documents", icon: FolderOpen },
     ],
   },
@@ -154,7 +154,7 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
             {collapsed && <Separator className="mb-2 w-6" />}
             <ul className={cn("flex flex-col gap-0.5", collapsed && "items-center")}>
               {calendarGroup.items.map((item) => (
-                <li key={item.to}>{navLink(item.to, item.label, item.icon, pathname === item.to)}</li>
+                <li key={item.label}>{navLink(item.to, item.label, item.icon, pathname === item.to)}</li>
               ))}
             </ul>
           </div>
