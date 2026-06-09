@@ -14,7 +14,8 @@ PYTEST_ARGS="${*:-}"
 cleanup() {
   echo ""
   echo "--- Tearing down test environment ---"
-  $COMPOSE down --rmi local --volumes --remove-orphans 2>/dev/null || true
+  $COMPOSE down --rmi all --volumes --remove-orphans 2>/dev/null || true
+  docker buildx prune -f 2>/dev/null || true
   echo "--- Done ---"
 }
 trap cleanup EXIT
