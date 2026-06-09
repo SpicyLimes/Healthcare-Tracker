@@ -12,6 +12,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   backend:
     build: ./backend
@@ -36,6 +37,7 @@ services:
       start_period: 10s
     volumes:
       - uploads_data:/app/uploads
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
@@ -44,6 +46,7 @@ services:
         condition: service_healthy
     ports:
       - "1337:80"
+    restart: unless-stopped
 
   backup:
     build: ./backend/backup
