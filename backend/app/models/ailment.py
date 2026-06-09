@@ -19,8 +19,8 @@ class Ailment(Base):
     __tablename__ = "ailments"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_by: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     condition: Mapped[str] = mapped_column(String, nullable=False)
     onset_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)

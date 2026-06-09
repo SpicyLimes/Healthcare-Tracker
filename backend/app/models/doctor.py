@@ -13,8 +13,8 @@ class Doctor(Base):
     __tablename__ = "doctors"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_by: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     specialty: Mapped[Optional[str]] = mapped_column(String, nullable=True)

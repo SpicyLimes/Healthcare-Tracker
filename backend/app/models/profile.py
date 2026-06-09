@@ -13,8 +13,8 @@ class Profile(Base):
     __tablename__ = "profile"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_by: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     full_name: Mapped[str] = mapped_column(String, nullable=False)
     date_of_birth: Mapped[Optional[date]] = mapped_column(Date, nullable=True)

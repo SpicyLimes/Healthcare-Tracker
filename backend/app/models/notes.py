@@ -14,7 +14,7 @@ class Note(Base):
     __tablename__ = "notes"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    author_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    author_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
     body: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

@@ -114,3 +114,23 @@ def test_get_db_rolls_back_on_exception(real_db_engine):
         verify_engine.dispose()
 
     assert found is None, "get_db must roll back when the handler raises"
+
+
+def test_deleting_user_nulls_created_by(client, db_session):
+    from app.models.user import Role
+    from app.models.ailment import Ailment
+    from app.services import user_service
+
+    viewer = user_service.create_user(db_session, "todelete@example.com", "a-strong-passphrase-123", Role.viewer)
+    ailment = Ailment(condition="Test", created_by=viewer.id)
+    db_session.add(ailment)
+    db_session.flush()
+    ailment_id = ailment.id
+
+    db_session.delete(viewer)
+    db_session.flush()
+
+    db_session.expire_all()
+    found = db_session.get(Ailment, ailment_id)
+    assert found is not None
+    assert found.created_by is None

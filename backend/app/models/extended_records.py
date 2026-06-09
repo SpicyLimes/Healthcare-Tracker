@@ -32,7 +32,7 @@ class AppointmentType(str, enum.Enum):
 class Insurance(Base):
     __tablename__ = "insurances"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     insurer_name: Mapped[str] = mapped_column(String, nullable=False)
     policy_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     group_number: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -46,7 +46,7 @@ class Insurance(Base):
 class Pharmacy(Base):
     __tablename__ = "pharmacies"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -59,7 +59,7 @@ class Pharmacy(Base):
 class FamilyHistory(Base):
     __tablename__ = "family_history"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     relative: Mapped[str] = mapped_column(String, nullable=False)
     condition: Mapped[str] = mapped_column(String, nullable=False)
     age_of_onset: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -71,7 +71,7 @@ class FamilyHistory(Base):
 class Surgery(Base):
     __tablename__ = "surgeries"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     procedure: Mapped[str] = mapped_column(String, nullable=False)
     surgery_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     surgeon_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("doctors.id", ondelete="SET NULL"), nullable=True)
@@ -86,7 +86,7 @@ class Surgery(Base):
 class Hospitalization(Base):
     __tablename__ = "hospitalizations"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     facility: Mapped[str] = mapped_column(String, nullable=False)
     admission_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     discharge_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
@@ -102,7 +102,7 @@ class Hospitalization(Base):
 class VisionHistory(Base):
     __tablename__ = "vision_history"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     visit_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     provider_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("doctors.id", ondelete="SET NULL"), nullable=True)
     provider_other: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -116,7 +116,7 @@ class VisionHistory(Base):
 class DentalHistory(Base):
     __tablename__ = "dental_history"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     visit_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     provider_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("doctors.id", ondelete="SET NULL"), nullable=True)
     provider_other: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -129,7 +129,7 @@ class DentalHistory(Base):
 class Vaccination(Base):
     __tablename__ = "vaccinations"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     vaccine: Mapped[str] = mapped_column(String, nullable=False)
     manufacturer: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     administered_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
@@ -144,7 +144,7 @@ class Vaccination(Base):
 class VisitLog(Base):
     __tablename__ = "visit_logs"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     visit_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     doctor_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("doctors.id", ondelete="SET NULL"), nullable=True)
     doctor_other: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -160,7 +160,7 @@ class VisitLog(Base):
 class Appointment(Base):
     __tablename__ = "appointments"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     appointment_datetime: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     doctor_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("doctors.id", ondelete="SET NULL"), nullable=True)
     doctor_other: Mapped[Optional[str]] = mapped_column(String, nullable=True)
