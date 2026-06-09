@@ -1,5 +1,6 @@
 import React, { useEffect, useState, type FormEvent } from "react";
 import { visionHistoryApi, type VisionHistory, type VisionHistoryInput } from "../api/visionHistory";
+import { doctorsApi, type Doctor } from "../api/doctors";
 import DoctorPicker from "../components/DoctorPicker";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -17,6 +18,7 @@ export default function VisionHistoryPage() {
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<VisionHistory[]>([]);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "visit_date", "asc");
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<VisionHistoryInput>({});
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -25,7 +27,15 @@ export default function VisionHistoryPage() {
   const [editError, setEditError] = useState("");
 
   async function reload() { setRows(await visionHistoryApi.list()); }
-  useEffect(() => { reload().catch(() => setError("Failed to load vision history")); }, []);
+  useEffect(() => {
+    reload().catch(() => setError("Failed to load vision history"));
+    doctorsApi.list().then(setDoctors).catch(() => {});
+  }, []);
+
+  function resolveDoctorName(id: string | null, other: string | null): string {
+    if (id) return doctors.find((d) => d.id === id)?.name ?? other ?? "";
+    return other ?? "";
+  }
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -89,7 +99,7 @@ export default function VisionHistoryPage() {
                           </button>
                         </td>
                         <td className="px-4 py-3 font-medium text-foreground">{r.visit_date ?? ""}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{r.provider_other ?? ""}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{resolveDoctorName(r.provider_id, r.provider_other)}</td>
                         <td className="px-4 py-3 text-muted-foreground">{r.rx_od ?? ""}</td>
                         <td className="px-4 py-3 text-muted-foreground">{r.rx_os ?? ""}</td>
                         {isAdmin && (
@@ -144,6 +154,7 @@ export default function VisionHistoryPage() {
                     <Input
                       id="visit_date"
                       type="date"
+                      required
                       value={form.visit_date ?? ""}
                       onChange={(e) => setForm((s) => ({ ...s, visit_date: e.target.value || null }))}
                     />

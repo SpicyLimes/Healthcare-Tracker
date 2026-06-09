@@ -186,6 +186,7 @@ export default function VisitLogsPage() {
                     <Input
                       id="visit_date"
                       type="date"
+                      required
                       value={form.visit_date ?? ""}
                       onChange={(e) => setForm((s) => ({ ...s, visit_date: e.target.value || null }))}
                     />
