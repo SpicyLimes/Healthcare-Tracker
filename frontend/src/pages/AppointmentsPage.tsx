@@ -16,7 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FormField, Input, Select, Textarea } from "@/components/ui/form-field";
-import { formatDatetime } from "@/lib/format";
+import { localToUtcIso, formatInTimezone } from "@/lib/datetime";
 import { ChevronRight, ChevronDown } from "lucide-react";
 
 const STATUSES: AppointmentStatus[] = ["upcoming", "completed", "cancelled", "rescheduled"];
@@ -50,8 +50,28 @@ const EMPTY: AppointmentInput = {
   notes: null,
 };
 
+function toLocalInputValue(isoUtc: string | null | undefined, timezone: string): string {
+  if (!isoUtc) return "";
+  try {
+    const formatter = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+    return formatter.format(new Date(isoUtc)).replace(" ", "T").slice(0, 16);
+  } catch {
+    return isoUtc.slice(0, 16);
+  }
+}
+
 export default function AppointmentsPage() {
   const { user } = useAuth();
+  const tz = user?.timezone ?? "America/Chicago";
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -76,8 +96,15 @@ export default function AppointmentsPage() {
   async function onAdd(e: FormEvent) {
     e.preventDefault();
     setError("");
-    try { await appointmentsApi.create(form); setForm(EMPTY); await reload(); }
-    catch { setError("Could not add record"); }
+    try {
+      const payload = {
+        ...form,
+        appointment_datetime: localToUtcIso(form.appointment_datetime, tz),
+      };
+      await appointmentsApi.create(payload);
+      setForm(EMPTY);
+      await reload();
+    } catch { setError("Could not add record"); }
   }
 
   async function onDelete(id: string) {
@@ -87,7 +114,7 @@ export default function AppointmentsPage() {
 
   function openEdit(r: Appointment) {
     setEditingRow(r);
-    setEditForm({ appointment_datetime: r.appointment_datetime, appointment_type: r.appointment_type, doctor_id: r.doctor_id, doctor_other: r.doctor_other, location: r.location, reason: r.reason, status: r.status, notes: r.notes });
+    setEditForm({ appointment_datetime: toLocalInputValue(r.appointment_datetime, tz), appointment_type: r.appointment_type, doctor_id: r.doctor_id, doctor_other: r.doctor_other, location: r.location, reason: r.reason, status: r.status, notes: r.notes });
     setEditError("");
   }
   function closeEdit() { setEditingRow(null); }
@@ -96,8 +123,12 @@ export default function AppointmentsPage() {
     if (!editingRow) return;
     setEditError("");
     try {
-      await appointmentsApi.update(editingRow.id, editForm);
-      closeEdit();
+      const payload = {
+        ...editForm,
+        appointment_datetime: localToUtcIso(editForm.appointment_datetime ?? "", tz),
+      };
+      await appointmentsApi.update(editingRow.id, payload);
+      setEditingRow(null);
       await reload();
     } catch { setEditError("Could not update record"); }
   }
@@ -141,7 +172,7 @@ export default function AppointmentsPage() {
                                 : <ChevronRight className="size-4" />}
                             </button>
                           </td>
-                          <td className="px-4 py-3 font-medium text-foreground">{formatDatetime(r.appointment_datetime)}</td>
+                          <td className="px-4 py-3 font-medium text-foreground">{formatInTimezone(r.appointment_datetime, tz)}</td>
                           <td className="px-4 py-3 text-muted-foreground">{typeLabel}</td>
                           <td className="px-4 py-3 text-muted-foreground">
                             {resolveDoctorName(r.doctor_id, r.doctor_other)}
