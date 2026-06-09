@@ -1,3 +1,4 @@
+import hmac
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -54,7 +55,7 @@ def verify_csrf(
 ) -> None:
     """Double-submit CSRF check for state-changing requests."""
     cookie_token = request.cookies.get("csrf_token")
-    if not cookie_token or not x_csrf_token or cookie_token != x_csrf_token:
+    if not cookie_token or not x_csrf_token or not hmac.compare_digest(cookie_token, x_csrf_token):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF check failed")
 
 
