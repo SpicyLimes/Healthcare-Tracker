@@ -1,0 +1,25 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install app + dev (test) dependencies in one layer.
+# Pinned to match pyproject.toml exactly so the image is fully self-contained.
+RUN pip install --no-cache-dir \
+    "fastapi==0.136.3" \
+    "uvicorn[standard]==0.34.0" \
+    "sqlalchemy==2.0.36" \
+    "psycopg[binary]==3.2.3" \
+    "pydantic-settings==2.6.1" \
+    "pyjwt==2.13.0" \
+    "pwdlib[argon2]==0.3.0" \
+    "alembic==1.18.4" \
+    "email-validator==2.2.0" \
+    "python-multipart==0.0.32" \
+    "slowapi==0.1.9" \
+    "pytest==8.3.4" \
+    "httpx==0.28.1" \
+    "freezegun==1.5.1"
+
+# Source code is mounted at runtime via docker compose volume (./backend:/app).
+# This image only provides the pre-installed environment.
+CMD ["pytest", "-v"]
