@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from "react";
-import { changePassword, updateName } from "../api/auth";
+import { changePassword, updateName, updateTimezone } from "../api/auth";
 import { useAuth } from "../auth/useAuth";
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FormField, Input } from "@/components/ui/form-field";
+import { FormField, Input, Select } from "@/components/ui/form-field";
 
 export default function ChangePasswordPage() {
   const { user, setUser } = useAuth();
@@ -13,6 +13,10 @@ export default function ChangePasswordPage() {
   const [displayName, setDisplayName] = useState(user?.full_name ?? "");
   const [nameMessage, setNameMessage] = useState("");
   const [nameError, setNameError] = useState("");
+
+  const [timezone, setTimezone] = useState(user?.timezone ?? "America/Chicago");
+  const [tzMessage, setTzMessage] = useState("");
+  const [tzError, setTzError] = useState("");
 
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -30,6 +34,19 @@ export default function ChangePasswordPage() {
       setNameMessage("Display name saved.");
     } catch {
       setNameError("Could not save display name.");
+    }
+  }
+
+  async function onSaveTimezone(e: FormEvent) {
+    e.preventDefault();
+    setTzMessage("");
+    setTzError("");
+    try {
+      const updated = await updateTimezone(timezone);
+      setUser(updated);
+      setTzMessage("Timezone saved.");
+    } catch {
+      setTzError("Could not save timezone.");
     }
   }
 
@@ -83,6 +100,50 @@ export default function ChangePasswordPage() {
               </div>
               <div className="mt-4 flex justify-end ">
                 <Button type="submit">Save name</Button>
+              </div>
+            </form>
+
+            <hr className="my-6 border-border" />
+
+            {/* Timezone */}
+            <form onSubmit={onSaveTimezone}>
+              <h1 className="font-heading text-sm font-medium text-foreground mb-4">
+                Timezone
+              </h1>
+              {tzError && (
+                <p role="alert" className="mb-4 text-sm text-destructive">{tzError}</p>
+              )}
+              {tzMessage && (
+                <p role="status" className="mb-4 text-sm text-primary">{tzMessage}</p>
+              )}
+              <div className="flex flex-col gap-4">
+                <FormField label="Your Timezone" htmlFor="timezone">
+                  <Select
+                    id="timezone"
+                    value={timezone}
+                    onChange={(e) => setTimezone(e.target.value)}
+                  >
+                    <optgroup label="United States">
+                      <option value="America/New_York">Eastern Time (ET)</option>
+                      <option value="America/Chicago">Central Time (CT)</option>
+                      <option value="America/Denver">Mountain Time (MT)</option>
+                      <option value="America/Phoenix">Mountain Time – Arizona (no DST)</option>
+                      <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                      <option value="America/Anchorage">Alaska Time (AKT)</option>
+                      <option value="Pacific/Honolulu">Hawaii Time (HT)</option>
+                    </optgroup>
+                    <optgroup label="Other">
+                      <option value="UTC">UTC</option>
+                      <option value="Europe/London">London (GMT/BST)</option>
+                      <option value="Europe/Paris">Central European (CET/CEST)</option>
+                      <option value="Asia/Tokyo">Japan (JST)</option>
+                      <option value="Australia/Sydney">Sydney (AEST/AEDT)</option>
+                    </optgroup>
+                  </Select>
+                </FormField>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <Button type="submit">Save timezone</Button>
               </div>
             </form>
 
