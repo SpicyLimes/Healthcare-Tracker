@@ -1,4 +1,4 @@
-import React, { useEffect, useState, type FormEvent } from "react";
+import React, { useEffect, useRef, useState, type FormEvent } from "react";
 import { insurancesApi, type Insurance, type InsuranceInput } from "../api/insurances";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { useSort } from "@/hooks/useSort";
+import { useColumnResize } from "@/hooks/useColumnResize";
 import { SortableTh } from "@/components/SortableTh";
 
 export default function InsurancePage() {
@@ -17,6 +18,8 @@ export default function InsurancePage() {
   const [rows, setRows] = useState<Insurance[]>([]);
   const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "insurer_name", "asc");
+  const tableRef = useRef<HTMLTableElement>(null);
+  const { colWidths, autoFitColumn } = useColumnResize(tableRef);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -100,14 +103,14 @@ export default function InsurancePage() {
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table ref={tableRef} className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="w-8" />
-                <SortableTh label="Insurer" sortKey="insurer_name" sort={sort} onSort={toggleSort} />
-                <SortableTh label="Policy #" sortKey="policy_number" sort={sort} onSort={toggleSort} />
-                <SortableTh label="Group #" sortKey="group_number" sort={sort} onSort={toggleSort} />
-                <SortableTh label="Phone" sortKey="contact_phone" sort={sort} onSort={toggleSort} />
+                <SortableTh label="Insurer" sortKey="insurer_name" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["insurer_name"]} onAutoFit={autoFitColumn} />
+                <SortableTh label="Policy #" sortKey="policy_number" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["policy_number"]} onAutoFit={autoFitColumn} />
+                <SortableTh label="Group #" sortKey="group_number" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["group_number"]} onAutoFit={autoFitColumn} />
+                <SortableTh label="Phone" sortKey="contact_phone" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["contact_phone"]} onAutoFit={autoFitColumn} />
                 {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
               </tr>
             </thead>

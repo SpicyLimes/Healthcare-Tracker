@@ -1,4 +1,4 @@
-import React, { useEffect, useState, type FormEvent } from "react";
+import React, { useEffect, useRef, useState, type FormEvent } from "react";
 import { pharmaciesApi, type Pharmacy, type PharmacyInput } from "../api/pharmacies";
 import { useAuth } from "../auth/useAuth";
 import { AppShell } from "@/components/app-shell";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { useSort } from "@/hooks/useSort";
+import { useColumnResize } from "@/hooks/useColumnResize";
 import { SortableTh } from "@/components/SortableTh";
 
 export default function PharmaciesPage() {
@@ -16,6 +17,8 @@ export default function PharmaciesPage() {
   const [rows, setRows] = useState<Pharmacy[]>([]);
   const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "name", "asc");
+  const tableRef = useRef<HTMLTableElement>(null);
+  const { colWidths, autoFitColumn } = useColumnResize(tableRef);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -97,13 +100,13 @@ export default function PharmaciesPage() {
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table ref={tableRef} className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="w-8" />
-                <SortableTh label="Name" sortKey="name" sort={sort} onSort={toggleSort} />
-                <SortableTh label="Phone" sortKey="phone" sort={sort} onSort={toggleSort} />
-                <SortableTh label="Address" sortKey="address" sort={sort} onSort={toggleSort} />
+                <SortableTh label="Name" sortKey="name" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["name"]} onAutoFit={autoFitColumn} />
+                <SortableTh label="Phone" sortKey="phone" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["phone"]} onAutoFit={autoFitColumn} />
+                <SortableTh label="Address" sortKey="address" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["address"]} onAutoFit={autoFitColumn} />
                 {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
               </tr>
             </thead>

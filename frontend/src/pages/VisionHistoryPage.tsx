@@ -1,4 +1,4 @@
-import React, { useEffect, useState, type FormEvent } from "react";
+import React, { useEffect, useRef, useState, type FormEvent } from "react";
 import { visionHistoryApi, type VisionHistory, type VisionHistoryInput } from "../api/visionHistory";
 import { doctorsApi, type Doctor } from "../api/doctors";
 import DoctorPicker from "../components/DoctorPicker";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { useSort } from "@/hooks/useSort";
+import { useColumnResize } from "@/hooks/useColumnResize";
 import { SortableTh } from "@/components/SortableTh";
 
 export default function VisionHistoryPage() {
@@ -19,6 +20,8 @@ export default function VisionHistoryPage() {
   const [rows, setRows] = useState<VisionHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "visit_date", "asc");
+  const tableRef = useRef<HTMLTableElement>(null);
+  const { colWidths, autoFitColumn } = useColumnResize(tableRef);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<VisionHistoryInput>({});
   const [error, setError] = useState("");
@@ -74,14 +77,14 @@ export default function VisionHistoryPage() {
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table ref={tableRef} className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
                     <th className="w-8" />
-                    <SortableTh label="Date" sortKey="visit_date" sort={sort} onSort={toggleSort} />
-                    <SortableTh label="Provider" sortKey="provider_other" sort={sort} onSort={toggleSort} />
-                    <SortableTh label="Rx OD" sortKey="rx_od" sort={sort} onSort={toggleSort} />
-                    <SortableTh label="Rx OS" sortKey="rx_os" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Date" sortKey="visit_date" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["visit_date"]} onAutoFit={autoFitColumn} />
+                    <SortableTh label="Provider" sortKey="provider_other" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["provider_other"]} onAutoFit={autoFitColumn} />
+                    <SortableTh label="Rx OD" sortKey="rx_od" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["rx_od"]} onAutoFit={autoFitColumn} />
+                    <SortableTh label="Rx OS" sortKey="rx_os" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["rx_os"]} onAutoFit={autoFitColumn} />
                     {isAdmin && <th className="px-4 py-3" />}
                   </tr>
                 </thead>
