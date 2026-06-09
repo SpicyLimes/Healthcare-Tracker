@@ -35,13 +35,16 @@ export function SortableTh({ label, sortKey, sort, onSort, width, colIndex, onAu
         </span>
       </button>
       {onAutoFit !== undefined && colIndex !== undefined && (
-        <div
+        <button
+          type="button"
           onDoubleClick={(e) => {
             e.stopPropagation();
             onAutoFit(sortKey, colIndex);
           }}
-          className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-border/60 active:bg-border"
+          className="absolute right-0 top-0 h-full w-1 cursor-pointer hover:bg-border/60 active:bg-border focus:outline-none"
           title="Double-click to auto-fit column"
+          aria-label={`Auto-fit ${label} column`}
+          tabIndex={-1}
         />
       )}
     </th>
