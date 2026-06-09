@@ -30,14 +30,17 @@ function formatBytes(bytes: number): string {
 
 export default function DocumentsPage() {
   const [docs, setDocs] = useState<DocumentRecord[]>([]);
+  const [loading, setLoading] = useState(true);
   const { sorted: sortedDocs, sort, toggleSort } = useSort(docs, "filename", "asc");
   const [section, setSection] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
+    setLoading(true);
     listAllDocuments(section || undefined)
       .then((data) => { setError(""); setDocs(data); })
-      .catch(() => setError("Failed to load documents"));
+      .catch(() => { setError("Failed to load documents"); setDocs([]); })
+      .finally(() => setLoading(false));
   }, [section]);
 
   return (
@@ -60,46 +63,56 @@ export default function DocumentsPage() {
           </FormField>
         </div>
 
-        {docs.length === 0 && !error ? (
-          <p className="text-sm text-muted-foreground">No documents found.</p>
-        ) : docs.length > 0 ? (
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/40">
-                      <SortableTh label="Filename" sortKey="filename" sort={sort} onSort={toggleSort} />
-                      <SortableTh label="Section" sortKey="section" sort={sort} onSort={toggleSort} />
-                      <SortableTh label="Size" sortKey="file_size" sort={sort} onSort={toggleSort} />
-                      <SortableTh label="Uploaded" sortKey="uploaded_at" sort={sort} onSort={toggleSort} />
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40">
+                    <SortableTh label="Filename" sortKey="filename" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Section" sortKey="section" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Size" sortKey="file_size" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Uploaded" sortKey="uploaded_at" sort={sort} onSort={toggleSort} />
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading && (
+                    <tr>
+                      <td colSpan={5} className="text-center py-6 text-muted-foreground">
+                        Loading…
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {sortedDocs.map((doc) => (
-                      <tr key={doc.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                        <td className="px-4 py-3 font-medium text-foreground">{doc.filename}</td>
-                        <td className="px-4 py-3 text-muted-foreground capitalize">
-                          {doc.section.replace(/_/g, " ")}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">{formatBytes(doc.file_size)}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{formatDate(doc.uploaded_at)}</td>
-                        <td className="px-4 py-3">
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={getDownloadUrl(doc.id)} target="_blank" rel="noopener noreferrer">
-                              Open
-                            </a>
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        ) : null}
+                  )}
+                  {!loading && sortedDocs.map((doc) => (
+                    <tr key={doc.id} className="border-b border-border last:border-0 hover:bg-muted/20">
+                      <td className="px-4 py-3 font-medium text-foreground">{doc.filename}</td>
+                      <td className="px-4 py-3 text-muted-foreground capitalize">
+                        {doc.section.replace(/_/g, " ")}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{formatBytes(doc.file_size)}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{formatDate(doc.uploaded_at)}</td>
+                      <td className="px-4 py-3">
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={getDownloadUrl(doc.id)} target="_blank" rel="noopener noreferrer">
+                            Open
+                          </a>
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                  {!loading && docs.length === 0 && !error && (
+                    <tr>
+                      <td colSpan={5} className="text-center py-6 text-muted-foreground">
+                        No documents found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </PageLayout>
     </AppShell>
   );

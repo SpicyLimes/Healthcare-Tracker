@@ -17,6 +17,7 @@ export default function SurgeriesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Surgery[]>([]);
+  const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "surgery_date", "asc");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<SurgeryInput>({ procedure: "" });
@@ -28,7 +29,8 @@ export default function SurgeriesPage() {
 
   async function reload() { setRows(await surgeriesApi.list()); }
   useEffect(() => {
-    reload().catch(() => setError("Failed to load surgeries"));
+    setLoading(true);
+    reload().catch(() => { setError("Failed to load surgeries"); setRows([]); }).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
 
@@ -88,7 +90,14 @@ export default function SurgeriesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedRows.map((r) => (
+                  {loading && (
+                    <tr>
+                      <td colSpan={isAdmin ? 7 : 6} className="text-center py-6 text-muted-foreground">
+                        Loading…
+                      </td>
+                    </tr>
+                  )}
+                  {!loading && sortedRows.map((r) => (
                     <React.Fragment key={r.id}>
                       <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                         <td className="px-2 py-3 w-8">
@@ -132,7 +141,7 @@ export default function SurgeriesPage() {
                       )}
                     </React.Fragment>
                   ))}
-                  {rows.length === 0 && (
+                  {!loading && rows.length === 0 && (
                     <tr>
                       <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-muted-foreground">
                         No surgery records yet.

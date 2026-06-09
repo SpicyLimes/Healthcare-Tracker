@@ -76,6 +76,7 @@ export default function AppointmentsPage() {
   const tz = user?.timezone ?? "America/Chicago";
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "appointment_datetime", "asc");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<AppointmentInput>(EMPTY);
@@ -87,7 +88,8 @@ export default function AppointmentsPage() {
 
   async function reload() { setRows(await appointmentsApi.list()); }
   useEffect(() => {
-    reload().catch(() => setError("Failed to load appointments"));
+    setLoading(true);
+    reload().catch(() => { setError("Failed to load appointments"); setRows([]); }).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
 
@@ -159,7 +161,14 @@ export default function AppointmentsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedRows.map((r) => {
+                  {loading && (
+                    <tr>
+                      <td colSpan={isAdmin ? 8 : 7} className="text-center py-6 text-muted-foreground">
+                        Loading…
+                      </td>
+                    </tr>
+                  )}
+                  {!loading && sortedRows.map((r) => {
                     const typeLabel = APPOINTMENT_TYPES.find((t) => t.value === r.appointment_type)?.label ?? "—";
                     return (
                       <React.Fragment key={r.id}>
@@ -211,7 +220,7 @@ export default function AppointmentsPage() {
                       </React.Fragment>
                     );
                   })}
-                  {rows.length === 0 && (
+                  {!loading && rows.length === 0 && (
                     <tr>
                       <td colSpan={isAdmin ? 8 : 7} className="px-4 py-8 text-center text-sm text-muted-foreground">
                         No appointment records yet.

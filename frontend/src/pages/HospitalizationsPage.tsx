@@ -17,6 +17,7 @@ export default function HospitalizationsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Hospitalization[]>([]);
+  const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "admission_date", "asc");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<HospitalizationInput>({ facility: "" });
@@ -28,7 +29,8 @@ export default function HospitalizationsPage() {
 
   async function reload() { setRows(await hospitalizationsApi.list()); }
   useEffect(() => {
-    reload().catch(() => setError("Failed to load hospitalizations"));
+    setLoading(true);
+    reload().catch(() => { setError("Failed to load hospitalizations"); setRows([]); }).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
 
@@ -86,7 +88,14 @@ export default function HospitalizationsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedRows.map((r) => (
+                  {loading && (
+                    <tr>
+                      <td colSpan={isAdmin ? 8 : 7} className="text-center py-6 text-muted-foreground">
+                        Loading…
+                      </td>
+                    </tr>
+                  )}
+                  {!loading && sortedRows.map((r) => (
                     <React.Fragment key={r.id}>
                       <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                         <td className="px-2 py-3 w-8">
@@ -131,7 +140,7 @@ export default function HospitalizationsPage() {
                       )}
                     </React.Fragment>
                   ))}
-                  {rows.length === 0 && (
+                  {!loading && rows.length === 0 && (
                     <tr>
                       <td colSpan={isAdmin ? 8 : 7} className="px-4 py-8 text-center text-sm text-muted-foreground">
                         No hospitalization records yet.

@@ -14,6 +14,7 @@ export default function PharmaciesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Pharmacy[]>([]);
+  const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "name", "asc");
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -32,7 +33,8 @@ export default function PharmaciesPage() {
   }
 
   useEffect(() => {
-    reload().catch(() => setError("Failed to load pharmacies"));
+    setLoading(true);
+    reload().catch(() => { setError("Failed to load pharmacies"); setRows([]); }).finally(() => setLoading(false));
   }, []);
 
   function set(key: keyof typeof form, value: string) {
@@ -106,7 +108,14 @@ export default function PharmaciesPage() {
               </tr>
             </thead>
             <tbody>
-              {sortedRows.map((r) => (
+              {loading && (
+                <tr>
+                  <td colSpan={isAdmin ? 5 : 4} className="text-center py-6 text-muted-foreground">
+                    Loading…
+                  </td>
+                </tr>
+              )}
+              {!loading && sortedRows.map((r) => (
                 <React.Fragment key={r.id}>
                   <tr className="border-b border-border last:border-0">
                     <td className="px-2 py-3 w-8">
@@ -139,7 +148,7 @@ export default function PharmaciesPage() {
                   )}
                 </React.Fragment>
               ))}
-              {rows.length === 0 && (
+              {!loading && rows.length === 0 && (
                 <tr>
                   <td colSpan={isAdmin ? 5 : 4} className="px-4 py-8 text-center text-sm text-muted-foreground">
                     No pharmacies yet.

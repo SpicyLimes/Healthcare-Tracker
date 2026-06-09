@@ -17,6 +17,7 @@ export default function DentalHistoryPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<DentalHistory[]>([]);
+  const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "visit_date", "asc");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<DentalHistoryInput>({});
@@ -28,7 +29,8 @@ export default function DentalHistoryPage() {
 
   async function reload() { setRows(await dentalHistoryApi.list()); }
   useEffect(() => {
-    reload().catch(() => setError("Failed to load dental history"));
+    setLoading(true);
+    reload().catch(() => { setError("Failed to load dental history"); setRows([]); }).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
 
@@ -83,7 +85,14 @@ export default function DentalHistoryPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedRows.map((r) => (
+                  {loading && (
+                    <tr>
+                      <td colSpan={isAdmin ? 5 : 4} className="text-center py-6 text-muted-foreground">
+                        Loading…
+                      </td>
+                    </tr>
+                  )}
+                  {!loading && sortedRows.map((r) => (
                     <React.Fragment key={r.id}>
                       <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                         <td className="px-2 py-3 w-8">
@@ -123,7 +132,7 @@ export default function DentalHistoryPage() {
                       )}
                     </React.Fragment>
                   ))}
-                  {rows.length === 0 && (
+                  {!loading && rows.length === 0 && (
                     <tr>
                       <td colSpan={isAdmin ? 5 : 4} className="px-4 py-8 text-center text-sm text-muted-foreground">
                         No dental history records yet.

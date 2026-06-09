@@ -25,6 +25,7 @@ export default function VaccinationsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Vaccination[]>([]);
+  const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "administered_date", "asc");
   const [form, setForm] = useState<VaccinationInput>(EMPTY);
   const [error, setError] = useState("");
@@ -34,7 +35,10 @@ export default function VaccinationsPage() {
   const [editError, setEditError] = useState("");
 
   async function reload() { setRows(await vaccinationsApi.list()); }
-  useEffect(() => { reload().catch(() => setError("Failed to load vaccinations")); }, []);
+  useEffect(() => {
+    setLoading(true);
+    reload().catch(() => { setError("Failed to load vaccinations"); setRows([]); }).finally(() => setLoading(false));
+  }, []);
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -87,7 +91,14 @@ export default function VaccinationsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedRows.map((r) => (
+                  {loading && (
+                    <tr>
+                      <td colSpan={isAdmin ? 7 : 6} className="text-center py-6 text-muted-foreground">
+                        Loading…
+                      </td>
+                    </tr>
+                  )}
+                  {!loading && sortedRows.map((r) => (
                     <React.Fragment key={r.id}>
                       <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                         <td className="px-2 py-3 w-8">
@@ -129,7 +140,7 @@ export default function VaccinationsPage() {
                       )}
                     </React.Fragment>
                   ))}
-                  {rows.length === 0 && (
+                  {!loading && rows.length === 0 && (
                     <tr>
                       <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-muted-foreground">
                         No vaccination records yet.

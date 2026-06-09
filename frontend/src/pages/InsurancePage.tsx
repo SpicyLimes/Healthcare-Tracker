@@ -15,6 +15,7 @@ export default function InsurancePage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Insurance[]>([]);
+  const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "insurer_name", "asc");
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -34,7 +35,8 @@ export default function InsurancePage() {
   }
 
   useEffect(() => {
-    reload().catch(() => setError("Failed to load insurance records"));
+    setLoading(true);
+    reload().catch(() => { setError("Failed to load insurance records"); setRows([]); }).finally(() => setLoading(false));
   }, []);
 
   function set(key: keyof typeof form, value: string) {
@@ -110,7 +112,14 @@ export default function InsurancePage() {
               </tr>
             </thead>
             <tbody>
-              {sortedRows.map((r) => (
+              {loading && (
+                <tr>
+                  <td colSpan={isAdmin ? 6 : 5} className="text-center py-6 text-muted-foreground">
+                    Loading…
+                  </td>
+                </tr>
+              )}
+              {!loading && sortedRows.map((r) => (
                 <React.Fragment key={r.id}>
                   <tr className="border-b border-border last:border-0">
                     <td className="px-2 py-3 w-8">
@@ -151,7 +160,7 @@ export default function InsurancePage() {
                   )}
                 </React.Fragment>
               ))}
-              {rows.length === 0 && (
+              {!loading && rows.length === 0 && (
                 <tr>
                   <td colSpan={isAdmin ? 6 : 5} className="px-4 py-8 text-center text-sm text-muted-foreground">
                     No insurance records yet.

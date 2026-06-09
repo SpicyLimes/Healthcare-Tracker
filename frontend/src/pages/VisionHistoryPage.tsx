@@ -17,6 +17,7 @@ export default function VisionHistoryPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<VisionHistory[]>([]);
+  const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "visit_date", "asc");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<VisionHistoryInput>({});
@@ -28,7 +29,8 @@ export default function VisionHistoryPage() {
 
   async function reload() { setRows(await visionHistoryApi.list()); }
   useEffect(() => {
-    reload().catch(() => setError("Failed to load vision history"));
+    setLoading(true);
+    reload().catch(() => { setError("Failed to load vision history"); setRows([]); }).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
 
@@ -84,7 +86,14 @@ export default function VisionHistoryPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedRows.map((r) => (
+                  {loading && (
+                    <tr>
+                      <td colSpan={isAdmin ? 6 : 5} className="text-center py-6 text-muted-foreground">
+                        Loading…
+                      </td>
+                    </tr>
+                  )}
+                  {!loading && sortedRows.map((r) => (
                     <React.Fragment key={r.id}>
                       <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                         <td className="px-2 py-3 w-8">
@@ -125,7 +134,7 @@ export default function VisionHistoryPage() {
                       )}
                     </React.Fragment>
                   ))}
-                  {rows.length === 0 && (
+                  {!loading && rows.length === 0 && (
                     <tr>
                       <td colSpan={isAdmin ? 6 : 5} className="px-4 py-8 text-center text-sm text-muted-foreground">
                         No vision history records yet.

@@ -25,13 +25,16 @@ function actionVariant(action: string): ActionBadgeVariant {
 
 export default function AuditLogPage() {
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filters, setFilters] = useState<AuditLogFilters>({ page: 1 });
 
   useEffect(() => {
+    setLoading(true);
     listAuditLog(filters)
       .then(setEntries)
-      .catch(() => setError("Failed to load audit log"));
+      .catch(() => { setError("Failed to load audit log"); setEntries([]); })
+      .finally(() => setLoading(false));
   }, [filters]);
 
   function set(key: keyof AuditLogFilters, value: string) {
@@ -77,40 +80,50 @@ export default function AuditLogPage() {
           </CardContent>
         </Card>
 
-        {entries.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No entries found.</p>
-        ) : (
-          <div className="overflow-x-auto rounded-xl border border-border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Timestamp</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actor</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Action</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Section</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Detail</th>
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/40">
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Timestamp</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actor</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Action</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Section</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && (
+                <tr>
+                  <td colSpan={5} className="text-center py-6 text-muted-foreground">
+                    Loading…
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {entries.map((e) => (
-                  <tr key={e.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                      {formatDatetime(e.timestamp)}
-                    </td>
-                    <td className="px-4 py-3 font-medium text-foreground">{e.actor_label}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant={actionVariant(e.action)}>{e.action}</Badge>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground capitalize">
-                      {e.section?.replace(/_/g, " ") ?? ""}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{e.detail ?? ""}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              )}
+              {!loading && entries.map((e) => (
+                <tr key={e.id} className="border-b border-border last:border-0 hover:bg-muted/20">
+                  <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                    {formatDatetime(e.timestamp)}
+                  </td>
+                  <td className="px-4 py-3 font-medium text-foreground">{e.actor_label}</td>
+                  <td className="px-4 py-3">
+                    <Badge variant={actionVariant(e.action)}>{e.action}</Badge>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground capitalize">
+                    {e.section?.replace(/_/g, " ") ?? ""}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">{e.detail ?? ""}</td>
+                </tr>
+              ))}
+              {!loading && entries.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="text-center py-6 text-muted-foreground">
+                    No entries found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
         <div className="mt-4 flex items-center gap-3">
           <Button
