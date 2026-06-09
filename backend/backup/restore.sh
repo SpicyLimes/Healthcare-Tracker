@@ -19,6 +19,12 @@ echo "[restore] $(date -u +%FT%TZ) — restoring from ${DATE}"
 LIBPQ_URL=$(echo "${DATABASE_URL}" | sed 's|postgresql+[^:]*://|postgresql://|')
 
 # Restore DB
+read -rp "This will DROP and recreate the database. Are you sure? [y/N] " confirm
+if [[ "${confirm,,}" != "y" ]]; then
+  echo "Aborted."
+  exit 1
+fi
+
 echo "[restore] restoring database..."
 DB_NAME=$(echo "${LIBPQ_URL}" | sed 's/.*\///')
 BASE_URL=$(echo "${LIBPQ_URL}" | sed "s|/${DB_NAME}$|/postgres|")
