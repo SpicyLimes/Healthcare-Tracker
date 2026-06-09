@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   User, Pill, Stethoscope, HeartPulse, Shield, Building2, Users,
-  Scissors, Hospital, Eye, Smile, Syringe, ClipboardList, CalendarDays,
+  Scissors, Hospital, Eye, Smile, Syringe, ClipboardList,
   FolderOpen, KeyRound, Share2, ScrollText, UserCog, LogOut,
   LayoutDashboard, Calendar, CheckCircle2, Database, StickyNote,
 } from "lucide-react";
@@ -16,7 +16,6 @@ const calendarGroup = {
   label: "Calendar",
   items: [
     { to: "/calendar", label: "Calendar", icon: Calendar },
-    { to: "/calendar", label: "Appointments", icon: CalendarDays },
   ],
 };
 
