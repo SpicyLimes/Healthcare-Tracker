@@ -118,3 +118,15 @@ def test_create_share_link_with_past_expiry_rejected(client, db_session):
         json={"label": "Expired", "expires_at": past, "allowed_sections": []},
     )
     assert r.status_code == 422
+
+
+def test_share_link_expiry_over_90_days_returns_422(client, db_session):
+    from datetime import datetime, timezone, timedelta
+    csrf = _admin(client, db_session)
+    far_future = (datetime.now(timezone.utc) + timedelta(days=200)).isoformat()
+    r = client.post(
+        "/api/share-links",
+        headers={"X-CSRF-Token": csrf},
+        json={"label": "Too long", "expires_at": far_future, "allowed_sections": []},
+    )
+    assert r.status_code == 422, r.text
