@@ -145,8 +145,9 @@ def test_calendar_null_date_excluded(client, db_session):
     assert r.json() == []
 
 
-def test_calendar_other_user_excluded(client, db_session):
-    u = _make_admin(db_session)
+def test_calendar_includes_other_user_records(client, db_session):
+    # All authenticated users see all records — not filtered by creator
+    _make_admin(db_session)
     other = user_service.create_user(db_session, "other@example.com", "a-strong-passphrase-123", Role.viewer)
     db_session.flush()
     v = VisitLog(created_by=other.id, visit_date=date(2026, 1, 1), reason="Other user visit")
@@ -155,7 +156,8 @@ def test_calendar_other_user_excluded(client, db_session):
     _login(client)
     r = client.get("/api/calendar/events")
     assert r.status_code == 200
-    assert r.json() == []
+    assert len(r.json()) == 1
+    assert r.json()[0]["title"] == "Other user visit"
 
 
 def test_calendar_invalid_date_range_excluded(client, db_session):
