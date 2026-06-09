@@ -1,3 +1,4 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,10 +20,29 @@ class Settings(BaseSettings):
     initial_admin_password: str = "change-me-in-real-env"
 
     # Cookies: secure=True in production (HTTPS only); may be False for local HTTP dev
-    cookie_secure: bool = False
+    cookie_secure: bool = True
 
     # File uploads
     uploads_root: str = "/app/uploads"
+
+    @model_validator(mode="after")
+    def validate_secrets(self) -> "Settings":
+        if "insecure" in self.jwt_secret or len(self.jwt_secret) < 32:
+            raise ValueError(
+                "JWT_SECRET must be at least 32 characters and must not contain 'insecure'. "
+                "Set a strong random value in your .env file."
+            )
+        if "change-me" in self.database_url:
+            raise ValueError(
+                "DATABASE_URL still contains the placeholder value 'change-me'. "
+                "Set a real database URL in your .env file."
+            )
+        if "change-me" in self.initial_admin_password:
+            raise ValueError(
+                "INITIAL_ADMIN_PASSWORD still contains the placeholder value 'change-me'. "
+                "Set a strong password in your .env file."
+            )
+        return self
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

@@ -1,4 +1,10 @@
 import os
+os.environ.setdefault("JWT_SECRET", "test-only-secret-that-is-definitely-long-enough-here")
+os.environ.setdefault("INITIAL_ADMIN_PASSWORD", "TestPassword123!")
+os.environ.setdefault("COOKIE_SECURE", "false")
+# DATABASE_URL must not contain the placeholder 'change-me'; use the test DB if set
+_test_db = os.environ.get("TEST_DATABASE_URL", "postgresql+psycopg://testuser:testpass@testdb:5432/testdb")
+os.environ.setdefault("DATABASE_URL", _test_db)
 
 import pytest
 from fastapi.testclient import TestClient
