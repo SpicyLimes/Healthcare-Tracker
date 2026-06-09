@@ -7,11 +7,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
 import { ChevronRight, ChevronDown } from "lucide-react";
+import { useSort } from "@/hooks/useSort";
+import { SortableTh } from "@/components/SortableTh";
 
 export default function FamilyHistoryPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<FamilyHistory[]>([]);
+  const { sorted: sortedRows, sort, toggleSort } = useSort(rows as Record<string, unknown>[], "condition", "asc");
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -96,14 +99,14 @@ export default function FamilyHistoryPage() {
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="w-8" />
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Relative</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Condition</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Age of Onset</th>
+                <SortableTh label="Relative" sortKey="relative" sort={sort} onSort={toggleSort} />
+                <SortableTh label="Condition" sortKey="condition" sort={sort} onSort={toggleSort} />
+                <SortableTh label="Age of Onset" sortKey="age_of_onset" sort={sort} onSort={toggleSort} />
                 {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {sortedRows.map((r) => (
                 <React.Fragment key={r.id}>
                   <tr className="border-b border-border last:border-0">
                     <td className="px-2 py-3 w-8">

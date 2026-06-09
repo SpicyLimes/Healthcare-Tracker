@@ -10,11 +10,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
 import { ChevronRight, ChevronDown } from "lucide-react";
+import { useSort } from "@/hooks/useSort";
+import { SortableTh } from "@/components/SortableTh";
 
 export default function SurgeriesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Surgery[]>([]);
+  const { sorted: sortedRows, sort, toggleSort } = useSort(rows as Record<string, unknown>[], "surgery_date", "asc");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<SurgeryInput>({ procedure: "" });
   const [error, setError] = useState("");
@@ -76,16 +79,16 @@ export default function SurgeriesPage() {
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
                     <th className="w-8" />
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Procedure</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Surgeon</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Hospital</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Outcome</th>
+                    <SortableTh label="Procedure" sortKey="procedure" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Date" sortKey="surgery_date" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Surgeon" sortKey="surgeon_id" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Hospital" sortKey="hospital" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Outcome" sortKey="outcome" sort={sort} onSort={toggleSort} />
                     {isAdmin && <th className="px-4 py-3" />}
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
+                  {sortedRows.map((r) => (
                     <React.Fragment key={r.id}>
                       <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                         <td className="px-2 py-3 w-8">

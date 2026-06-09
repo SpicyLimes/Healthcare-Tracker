@@ -9,11 +9,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
 import { ChevronRight, ChevronDown } from "lucide-react";
+import { useSort } from "@/hooks/useSort";
+import { SortableTh } from "@/components/SortableTh";
 
 export default function VisionHistoryPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<VisionHistory[]>([]);
+  const { sorted: sortedRows, sort, toggleSort } = useSort(rows as Record<string, unknown>[], "visit_date", "asc");
   const [form, setForm] = useState<VisionHistoryInput>({});
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -63,15 +66,15 @@ export default function VisionHistoryPage() {
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
                     <th className="w-8" />
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Provider</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Rx OD</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Rx OS</th>
+                    <SortableTh label="Date" sortKey="visit_date" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Provider" sortKey="provider_other" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Rx OD" sortKey="rx_od" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Rx OS" sortKey="rx_os" sort={sort} onSort={toggleSort} />
                     {isAdmin && <th className="px-4 py-3" />}
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
+                  {sortedRows.map((r) => (
                     <React.Fragment key={r.id}>
                       <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                         <td className="px-2 py-3 w-8">

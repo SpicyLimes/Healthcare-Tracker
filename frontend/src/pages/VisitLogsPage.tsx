@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
 import { formatDate } from "@/lib/format";
 import { ChevronRight, ChevronDown } from "lucide-react";
+import { useSort } from "@/hooks/useSort";
+import { SortableTh } from "@/components/SortableTh";
 
 const EMPTY: VisitLogInput = {
   visit_date: null,
@@ -27,6 +29,7 @@ export default function VisitLogsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<VisitLog[]>([]);
+  const { sorted: sortedRows, sort, toggleSort } = useSort(rows as Record<string, unknown>[], "visit_date", "asc");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<VisitLogInput>(EMPTY);
   const [error, setError] = useState("");
@@ -88,16 +91,16 @@ export default function VisitLogsPage() {
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
                     <th className="w-8" />
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Doctor</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Reason</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Summary</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Follow-up Date</th>
+                    <SortableTh label="Date" sortKey="visit_date" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Doctor" sortKey="doctor_id" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Reason" sortKey="reason" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Summary" sortKey="summary" sort={sort} onSort={toggleSort} />
+                    <SortableTh label="Follow-up Date" sortKey="follow_up_date" sort={sort} onSort={toggleSort} />
                     {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
+                  {sortedRows.map((r) => (
                     <React.Fragment key={r.id}>
                       <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                         <td className="px-2 py-3 w-8">
