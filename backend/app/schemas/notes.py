@@ -2,7 +2,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class NoteCreate(BaseModel):
@@ -17,6 +17,13 @@ class NotePatch(BaseModel):
     body: str | None = None
     pinned: bool | None = None
     done: bool | None = None
+
+    @field_validator("title")
+    @classmethod
+    def title_not_null(cls, v: str | None) -> str | None:
+        if v is None:
+            raise ValueError("title cannot be null")
+        return v
 
 
 class NoteResponse(BaseModel):

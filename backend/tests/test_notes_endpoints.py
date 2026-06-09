@@ -99,3 +99,12 @@ def test_notes_404(client, db_session):
 
 def test_notes_unauthenticated(client, db_session):
     assert client.get("/api/notes").status_code == 401
+
+
+def test_patch_null_title_returns_422(client, db_session):
+    csrf = _login_admin(client, db_session)
+    nid = client.post("/api/notes", headers={"X-CSRF-Token": csrf},
+                      json={"title": "Has Title"}).json()["id"]
+    r = client.patch(f"/api/notes/{nid}", headers={"X-CSRF-Token": csrf},
+                     json={"title": None})
+    assert r.status_code == 422, r.text
