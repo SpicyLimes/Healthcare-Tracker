@@ -1,6 +1,5 @@
 // frontend/src/pages/ShareLinksPage.tsx
-import { useEffect, useRef, useState } from "react";
-import { MoreHorizontal } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   listShareLinks, createShareLink, revokeShareLink,
   type ShareLink, type ShareLinkCreated,
@@ -19,6 +18,10 @@ const ALL_SECTIONS = [
   "insurances", "ailments", "doctors", "profile",
 ];
 
+function formatSection(s: string): string {
+  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function addDays(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() + days);
@@ -29,59 +32,6 @@ function linkStatus(link: ShareLink): string {
   if (link.revoked) return "Revoked";
   if (new Date(link.expires_at) < new Date()) return "Expired";
   return "Active";
-}
-
-interface ShareLinkActionsProps {
-  status: string;
-  copied: boolean;
-  onCopy: () => void;
-  onRevoke: () => void;
-}
-
-function ShareLinkActions({ status, copied, onCopy, onRevoke }: ShareLinkActionsProps) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative inline-block">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-7 w-7 p-0"
-        onClick={() => setOpen((v) => !v)}
-        aria-label="Row actions"
-        aria-expanded={open}
-      >
-        <MoreHorizontal className="h-4 w-4" />
-      </Button>
-      {open && (
-        <div className="absolute right-0 top-full z-10 mt-1 min-w-[140px] rounded-lg border border-border bg-card shadow-md">
-          <button
-            className="block w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted/50"
-            onClick={() => { onCopy(); setOpen(false); }}
-          >
-            {copied ? "Copied!" : "Copy Link"}
-          </button>
-          {status === "Active" && (
-            <button
-              className="block w-full px-4 py-2 text-left text-sm text-destructive hover:bg-muted/50"
-              onClick={() => { onRevoke(); setOpen(false); }}
-            >
-              Revoke
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
 }
 
 export default function ShareLinksPage() {
@@ -231,7 +181,7 @@ export default function ShareLinksPage() {
 
                 <fieldset className="border-0 p-0">
                   <legend className="mb-2 text-sm font-medium text-foreground">
-                    Sections <span className="text-muted-foreground">(none = all)</span>
+                    Sections <span className="text-muted-foreground">(None = All Sections Listed)</span>
                   </legend>
                   <div className="flex flex-wrap gap-x-4 gap-y-2">
                     {ALL_SECTIONS.map((s) => (
@@ -242,7 +192,7 @@ export default function ShareLinksPage() {
                           checked={selectedSections.includes(s)}
                           onChange={() => toggleSection(s)}
                         />
-                        {s.replace(/_/g, " ")}
+                        {formatSection(s)}
                       </label>
                     ))}
                   </div>
@@ -286,7 +236,7 @@ export default function ShareLinksPage() {
                     <td className="px-4 py-3 text-muted-foreground">
                       {link.allowed_sections.length === 0
                         ? "All"
-                        : link.allowed_sections.map((s) => s.replace(/_/g, " ")).join(", ")}
+                        : link.allowed_sections.map(formatSection).join(", ")}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{formatDate(link.expires_at)}</td>
                     <td className="px-4 py-3">
@@ -295,12 +245,24 @@ export default function ShareLinksPage() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
-                      <ShareLinkActions
-                        status={status}
-                        copied={copiedId === link.id}
-                        onCopy={() => handleCopyRow(link.token_url, link.id)}
-                        onRevoke={() => handleRevoke(link.id)}
-                      />
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopyRow(link.token_url, link.id)}
+                        >
+                          {copiedId === link.id ? "Copied!" : "Copy Link"}
+                        </Button>
+                        {status === "Active" && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleRevoke(link.id)}
+                          >
+                            Revoke
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

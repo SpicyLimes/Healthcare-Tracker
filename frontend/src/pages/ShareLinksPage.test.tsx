@@ -44,9 +44,7 @@ describe("ShareLinksPage", () => {
     const revokeSpy = vi.spyOn(api, "revokeShareLink").mockResolvedValue();
     render(<ShareLinksPage />);
     await screen.findByText("Dr. Smith");
-    // Open the row actions dropdown, then click Revoke
-    fireEvent.click(screen.getByRole("button", { name: /row actions/i }));
-    fireEvent.click(await screen.findByRole("button", { name: /revoke/i }));
+    fireEvent.click(screen.getByRole("button", { name: /revoke/i }));
     await waitFor(() => expect(revokeSpy).toHaveBeenCalledWith("abc-123"));
   });
 });
