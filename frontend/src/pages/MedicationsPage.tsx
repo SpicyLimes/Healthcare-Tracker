@@ -21,6 +21,8 @@ const EMPTY: MedicationInput = {
   route: null,
   prescribing_doctor: null,
   prescribing_doctor_id: null,
+  start_date: null,
+  end_date: null,
   is_active: true,
   notes: null,
 };
@@ -69,7 +71,13 @@ export default function MedicationsPage() {
 
   function openEdit(r: Medication) {
     setEditingRow(r);
-    setEditForm({ name: r.name, kind: r.kind, dose: r.dose, frequency: r.frequency, route: r.route, prescribing_doctor: r.prescribing_doctor, prescribing_doctor_id: r.prescribing_doctor_id, is_active: r.is_active, notes: r.notes });
+    setEditForm({
+      name: r.name, kind: r.kind, dose: r.dose, frequency: r.frequency,
+      route: r.route, prescribing_doctor: r.prescribing_doctor,
+      prescribing_doctor_id: r.prescribing_doctor_id,
+      start_date: r.start_date, end_date: r.end_date,
+      is_active: r.is_active, notes: r.notes,
+    });
     setEditError("");
   }
   function closeEdit() { setEditingRow(null); }
@@ -223,6 +231,18 @@ export default function MedicationsPage() {
                     </Select>
                   </FormField>
                 </div>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <FormField label="Start Date" htmlFor="med-start-date">
+                    <Input id="med-start-date" type="date"
+                      value={form.start_date ?? ""}
+                      onChange={(e) => setForm((s) => ({ ...s, start_date: e.target.value || null }))} />
+                  </FormField>
+                  <FormField label="End Date" htmlFor="med-end-date">
+                    <Input id="med-end-date" type="date"
+                      value={form.end_date ?? ""}
+                      onChange={(e) => setForm((s) => ({ ...s, end_date: e.target.value || null }))} />
+                  </FormField>
+                </div>
                 <FormField label="Prescribing Doctor" htmlFor="med-prescriber">
                   <DoctorPicker
                     doctorId={form.prescribing_doctor_id ?? null}
@@ -291,6 +311,14 @@ export default function MedicationsPage() {
                     <option value="true">Active</option>
                     <option value="false">Inactive</option>
                   </Select>
+                </FormField>
+                <FormField label="Start Date" htmlFor="edit-med-start">
+                  <Input id="edit-med-start" type="date" value={editForm.start_date ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, start_date: e.target.value || null }))} />
+                </FormField>
+                <FormField label="End Date" htmlFor="edit-med-end">
+                  <Input id="edit-med-end" type="date" value={editForm.end_date ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, end_date: e.target.value || null }))} />
                 </FormField>
               </div>
               <FormField label="Prescribing Doctor" htmlFor="edit-med-prescriber">

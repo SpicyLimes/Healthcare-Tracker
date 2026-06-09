@@ -1,8 +1,11 @@
-import type { CurrentUser } from "./auth";
 import { csrfHeader } from "./csrf";
 import { apiFetch } from "./client";
 
-export interface ManagedUser extends CurrentUser {
+export interface ManagedUser {
+  id: string;
+  email: string;
+  role: "admin" | "viewer";
+  full_name: string | null;
   is_active: boolean;
   created_at: string;
 }

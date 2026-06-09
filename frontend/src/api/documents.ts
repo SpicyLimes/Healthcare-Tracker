@@ -10,6 +10,7 @@ export interface DocumentRecord {
   mime_type: string;
   file_size: number;
   uploaded_at: string;
+  uploaded_by: string | null;
 }
 
 export async function listDocumentsForRecord(

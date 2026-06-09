@@ -1,6 +1,7 @@
 export interface HealthStatus {
   status: string;
   database: string;
+  version: string;
 }
 
 export async function fetchHealth(): Promise<HealthStatus> {
