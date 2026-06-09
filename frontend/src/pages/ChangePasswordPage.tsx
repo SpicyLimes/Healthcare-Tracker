@@ -114,7 +114,7 @@ export default function ChangePasswordPage() {
                 <p role="alert" className="mb-4 text-sm text-destructive">{tzError}</p>
               )}
               {tzMessage && (
-                <p role="status" className="mb-4 text-sm text-primary">{tzMessage}</p>
+                <p role="status" aria-label={tzMessage} className="mb-4 text-sm text-primary">{tzMessage}</p>
               )}
               <div className="flex flex-col gap-4">
                 <FormField label="Your Timezone" htmlFor="timezone">
