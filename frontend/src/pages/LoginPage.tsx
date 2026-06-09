@@ -14,15 +14,19 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+    setLoading(true);
     try {
       await login(email, password);
       navigate(from.startsWith("/") ? from : "/");
     } catch {
       setError("Invalid email or password");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -65,8 +69,8 @@ export default function LoginPage() {
                   {error}
                 </p>
               )}
-              <Button type="submit" className="w-full">
-                Sign in
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Signing in…" : "Sign in"}
               </Button>
             </form>
           </CardContent>
