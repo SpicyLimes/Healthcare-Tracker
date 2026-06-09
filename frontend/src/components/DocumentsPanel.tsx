@@ -40,16 +40,26 @@ interface Props {
 export default function DocumentsPanel({ section, recordId, isAdmin }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [docs, setDocs] = useState<DocumentRecord[]>([]);
+  const [hasDocuments, setHasDocuments] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState("");
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Load count on mount so dot indicator is correct before expand
+  useEffect(() => {
+    listDocumentsForRecord(section, recordId)
+      .then((data) => setHasDocuments(data.length > 0))
+      .catch(() => setHasDocuments(false));
+  }, [section, recordId]);
+
+  // Load full list when panel is expanded
   useEffect(() => {
     if (!expanded) return;
     listDocumentsForRecord(section, recordId)
       .then((data) => {
         setDocs(data);
+        setHasDocuments(data.length > 0);
         setError(null);
       })
       .catch(() => {
@@ -78,6 +88,7 @@ export default function DocumentsPanel({ section, recordId, isAdmin }: Props) {
     try {
       const doc = await uploadDocument(section, recordId, file);
       setDocs((prev) => [doc, ...prev]);
+      setHasDocuments(true);
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -89,7 +100,11 @@ export default function DocumentsPanel({ section, recordId, isAdmin }: Props) {
   async function handleDelete(docId: number) {
     try {
       await deleteDocument(docId);
-      setDocs((prev) => prev.filter((d) => d.id !== docId));
+      setDocs((prev) => {
+        const updated = prev.filter((d) => d.id !== docId);
+        setHasDocuments(updated.length > 0);
+        return updated;
+      });
     } catch {
       setUploadError("Failed to delete document");
     }
@@ -109,7 +124,13 @@ export default function DocumentsPanel({ section, recordId, isAdmin }: Props) {
         ) : (
           <ChevronRight className="h-3 w-3" />
         )}
-        Documents ({docs.length})
+        Documents
+        <span
+          className={`ml-1 inline-block h-2 w-2 rounded-full ${
+            hasDocuments ? "bg-green-500" : "bg-muted-foreground/40"
+          }`}
+          aria-label={hasDocuments ? "has documents" : "no documents"}
+        />
       </Button>
 
       {expanded && (
