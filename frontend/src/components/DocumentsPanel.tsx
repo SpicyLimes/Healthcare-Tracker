@@ -40,6 +40,7 @@ interface Props {
 export default function DocumentsPanel({ section, recordId, isAdmin }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [docs, setDocs] = useState<DocumentRecord[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState("");
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -47,8 +48,14 @@ export default function DocumentsPanel({ section, recordId, isAdmin }: Props) {
   useEffect(() => {
     if (!expanded) return;
     listDocumentsForRecord(section, recordId)
-      .then(setDocs)
-      .catch(() => setDocs([]));
+      .then((data) => {
+        setDocs(data);
+        setError(null);
+      })
+      .catch(() => {
+        setDocs([]);
+        setError("Failed to load documents.");
+      });
   }, [expanded, section, recordId]);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -107,6 +114,10 @@ export default function DocumentsPanel({ section, recordId, isAdmin }: Props) {
 
       {expanded && (
         <div className="mt-2 pl-2">
+          {error && (
+            <p className="mb-2 text-sm text-destructive">{error}</p>
+          )}
+
           {uploadError && (
             <p role="alert" className="mb-2 text-xs text-destructive">
               {uploadError}
