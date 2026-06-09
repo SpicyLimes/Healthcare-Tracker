@@ -52,6 +52,7 @@ def save_document(
         )
 
     safe_filename = os.path.basename(file.filename or "upload")
+    safe_filename = safe_filename.replace("\r", "").replace("\n", "").replace("\x00", "")
     stored_name = f"{uuid.uuid4()}_{safe_filename}"
     upload_dir = os.path.join(settings.uploads_root, section.value)
     os.makedirs(upload_dir, exist_ok=True)
