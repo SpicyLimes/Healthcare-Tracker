@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useGuest } from "../auth/GuestContext";
 import { Button } from "@/components/ui/button";
+import SummaryBuilder from "./SummaryBuilder";
 
 const SECTION_LABELS: Record<string, string> = {
   surgeries: "Surgeries",
@@ -24,7 +25,7 @@ interface Props {
 }
 
 export default function GuestLayout({ children, expired }: Props) {
-  const { allowedSections, expiresAt } = useGuest();
+  const { allowedSections, expiresAt, token } = useGuest();
 
   if (expired) {
     return (
@@ -55,6 +56,9 @@ export default function GuestLayout({ children, expired }: Props) {
             </Link>
           </Button>
         ))}
+        {allowedSections.length > 0 && (
+          <SummaryBuilder mode="guest" availableSections={allowedSections} token={token ?? ""} />
+        )}
       </nav>
       {children}
     </main>
