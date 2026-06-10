@@ -48,7 +48,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Button
             variant="ghost"
             size="icon-sm"
-            className="lg:hidden"
+            className="h-9 w-9 lg:h-8 lg:w-8 lg:hidden"
             onClick={() => setMobileOpen(true)}
           >
             <Menu />
@@ -81,7 +81,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <AccentPicker isDark={theme === "dark"} />
 
           {/* Theme toggle */}
-          <Button variant="ghost" size="icon-sm" onClick={toggleTheme}>
+          <Button variant="ghost" size="icon-sm" className="h-9 w-9 lg:h-8 lg:w-8" onClick={toggleTheme}>
             {theme === "dark" ? <Sun /> : <Moon />}
             <span className="sr-only">Toggle theme</span>
           </Button>
