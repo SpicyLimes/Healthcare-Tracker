@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import SummaryBuilder from "./SummaryBuilder";
+import { AppShell } from "./app-shell";
+import { MemoryRouter } from "react-router-dom";
+import { AuthContext } from "@/auth/AuthContext";
 
 vi.mock("../api/summary", () => ({
   generateSummary: vi.fn().mockResolvedValue("<html>ok</html>"),
@@ -34,5 +37,27 @@ describe("SummaryBuilder", () => {
       expect.objectContaining({ sections: ["doctors"] }),
       "tok123",
     );
+  });
+});
+
+describe("AppShell summary trigger", () => {
+  function renderShell(role: string) {
+    return render(
+      <MemoryRouter>
+        <AuthContext.Provider value={{ user: { id: "1", email: "a@b.c", role, full_name: "A" } } as never}>
+          <AppShell><div>content</div></AppShell>
+        </AuthContext.Provider>
+      </MemoryRouter>,
+    );
+  }
+
+  it("shows Generate Summary for admins", () => {
+    renderShell("admin");
+    expect(screen.getByRole("button", { name: /generate summary/i })).toBeInTheDocument();
+  });
+
+  it("hides Generate Summary for non-admins", () => {
+    renderShell("viewer");
+    expect(screen.queryByRole("button", { name: /generate summary/i })).not.toBeInTheDocument();
   });
 });
