@@ -24,6 +24,7 @@ class DocumentSection(str, enum.Enum):
     ailments = "ailments"
     doctors = "doctors"
     profile = "profile"
+    nutrition_plan = "nutrition_plan"
 
 
 class Document(Base):
