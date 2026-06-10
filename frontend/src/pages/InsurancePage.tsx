@@ -11,6 +11,7 @@ import { ChevronRight, ChevronDown } from "lucide-react";
 import { useSort } from "@/hooks/useSort";
 import { useColumnResize } from "@/hooks/useColumnResize";
 import { SortableTh } from "@/components/SortableTh";
+import { MobileRecordList } from "@/components/MobileRecordList";
 
 export default function InsurancePage() {
   const { user } = useAuth();
@@ -102,6 +103,25 @@ export default function InsurancePage() {
       <PageLayout title="Insurance" description="Health insurance policies and contact information.">
         <Card>
           <CardContent className="p-0">
+            <div className="md:hidden">
+              <MobileRecordList
+                records={sortedRows}
+                getHeadline={(r) => r.insurer_name}
+                getSubtitle={(r) => [r.contact_phone].filter(Boolean).join(" · ") || null}
+                getFields={(r) => [
+                  { key: "Policy #", value: r.policy_number ?? null },
+                  { key: "Group #", value: r.group_number ?? null },
+                  { key: "Phone", value: r.contact_phone ?? null },
+                  { key: "Notes", value: r.notes ?? null },
+                ]}
+                isAdmin={isAdmin}
+                onEdit={(r) => openEdit(r)}
+                onDelete={(r) => onDelete(r.id)}
+                expandedContent={(r) => <DocumentsPanel section="insurances" recordId={r.id} isAdmin={isAdmin} />}
+                emptyMessage="No insurance records yet."
+              />
+            </div>
+            <div className="hidden md:block">
             <div className="overflow-x-auto">
               <table ref={tableRef} className="w-full text-sm">
             <thead>
@@ -172,6 +192,7 @@ export default function InsurancePage() {
               )}
             </tbody>
           </table>
+            </div>
             </div>
           </CardContent>
         </Card>
@@ -251,7 +272,7 @@ export default function InsurancePage() {
              onKeyDown={(e) => e.key === "Escape" && closeEdit()}
              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
              onClick={closeEdit}>
-          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+          <div className="mx-4 sm:mx-auto w-full sm:max-w-lg rounded-xl border border-border bg-card p-4 sm:p-6 shadow-lg overflow-y-auto max-h-[90vh]"
                onClick={(e) => e.stopPropagation()}>
             <h2 id="edit-ins-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Insurance</h2>
             {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
