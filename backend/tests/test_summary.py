@@ -1,6 +1,7 @@
 # backend/tests/test_summary.py
 """One-Page Summary: schema, admin render, guest scoping."""
 from app.schemas.summary import SummaryRequest
+from app.services import summary_service
 
 
 def test_summary_request_defaults():
@@ -12,9 +13,6 @@ def test_summary_request_defaults():
     assert req.date_to is None
     assert req.prepared_for is None
     assert req.title == "Patient Health Summary"
-
-
-from app.services import summary_service
 
 
 def test_section_map_has_all_sections():
@@ -42,3 +40,27 @@ def test_gather_section_rows_returns_dicts(client, db_session):
     assert any(r.get("name") == "Dr. Render Test" for r in rows)
     # id and *_id columns are stringified but present; renderer filters them later
     assert all(isinstance(r, dict) for r in rows)
+
+
+def test_gather_section_rows_filters_by_date(client, db_session):
+    from datetime import date, datetime, timezone
+    from app.models.doctor import Doctor
+    from app.models.user import Role
+    from app.services import user_service
+
+    admin = user_service.create_user(db_session, "datefilter@example.com", "a-strong-passphrase-123", Role.admin)
+
+    old = Doctor(name="Old Doc", created_by=admin.id)
+    new = Doctor(name="New Doc", created_by=admin.id)
+    db_session.add_all([old, new])
+    db_session.flush()
+    old.created_at = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    new.created_at = datetime(2026, 6, 1, tzinfo=timezone.utc)
+    db_session.flush()
+
+    rows = summary_service.gather_section_rows(
+        db_session, "doctors", date_from=date(2026, 1, 1), date_to=None
+    )
+    names = {r.get("name") for r in rows}
+    assert "New Doc" in names
+    assert "Old Doc" not in names
