@@ -15,7 +15,7 @@ import { formatDate } from "@/lib/format";
 const ALL_SECTIONS = [
   "surgeries", "hospitalizations", "vision_history", "dental_history",
   "visit_logs", "appointments", "medications", "vaccinations",
-  "insurances", "ailments", "doctors", "profile",
+  "insurances", "ailments", "doctors", "pharmacies", "family_history", "profile",
 ];
 
 function formatSection(s: string): string {
