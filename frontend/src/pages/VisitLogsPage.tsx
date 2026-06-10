@@ -102,7 +102,7 @@ export default function VisitLogsPage() {
                   { key: "Doctor", value: resolveDoctorName(r.doctor_id, r.doctor_other) || null },
                   { key: "Reason", value: r.reason ?? null },
                   { key: "Summary", value: r.summary ?? null },
-                  { key: "Follow-up", value: r.follow_up ? "Yes" : r.follow_up === false ? "No" : null },
+                  { key: "Follow-up Notes", value: r.follow_up ?? null },
                   { key: "Follow-up Date", value: r.follow_up_date ?? null },
                   { key: "Notes", value: r.notes ?? null },
                 ]}
