@@ -3,19 +3,17 @@ import logging
 
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import HTMLResponse
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.limiter import limiter
 from app.models.audit_log import AuditAction, ActorType
+from app.models.profile import Profile
 from app.models.user import User
+from app.schemas.records import ProfileResponse
 from app.schemas.summary import SummaryRequest
-from app.security.dependencies import (
-    GuestContext,
-    get_guest_access,
-    require_admin,
-    verify_csrf,
-)
+from app.security.dependencies import require_admin, verify_csrf
 from app.services import summary_service
 from app.services.audit_service import log_event
 
@@ -25,9 +23,6 @@ router = APIRouter(prefix="/api/summary", tags=["summary"])
 
 
 def _get_patient(db: Session) -> dict | None:
-    from app.models.profile import Profile
-    from app.schemas.records import ProfileResponse
-    from sqlalchemy import select
     row = db.scalars(select(Profile)).first()
     return ProfileResponse.model_validate(row).model_dump(mode="json") if row else None
 

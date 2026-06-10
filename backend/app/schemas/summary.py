@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 class SummaryRequest(BaseModel):
     """Selection payload for generating a One-Page Summary."""
 
-    sections: list[str] = Field(default_factory=list)
+    sections: list[str] = Field(default_factory=list, min_length=1)
     include_patient_header: bool = True
     include_documents: bool = False
     date_from: date | None = None

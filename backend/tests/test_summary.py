@@ -123,3 +123,15 @@ def test_admin_summary_renders_html(client, db_session):
 def test_admin_summary_requires_auth(client, db_session):
     r = client.post("/api/summary", json={"sections": ["doctors"]})
     assert r.status_code == 401
+
+
+def test_admin_summary_requires_csrf(client, db_session):
+    _login_admin(client, db_session, email="csrfcheck@example.com")
+    r = client.post("/api/summary", json={"sections": ["doctors"]})  # no X-CSRF-Token header
+    assert r.status_code == 403
+
+
+def test_admin_summary_rejects_empty_sections(client, db_session):
+    csrf = _login_admin(client, db_session, email="emptysec@example.com")
+    r = client.post("/api/summary", headers={"X-CSRF-Token": csrf}, json={"sections": []})
+    assert r.status_code == 422
