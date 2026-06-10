@@ -1,7 +1,7 @@
 # backend/app/routers/summary.py
 import logging
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -78,13 +78,21 @@ def generate_guest_summary(
         granted = [s for s in payload.sections if s in ctx.allowed_sections]
     else:
         granted = list(payload.sections)
+
+    if not granted:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No requested sections are permitted by this share link.",
+        )
+
     scoped = payload.model_copy(update={"sections": granted})
 
     section_data = {
         s: summary_service.gather_section_rows(db, s, scoped.date_from, scoped.date_to)
         for s in granted
     }
-    patient = _get_patient(db) if (not ctx.allowed_sections or "profile" in ctx.allowed_sections) else None
+    profile_allowed = not ctx.allowed_sections or "profile" in ctx.allowed_sections
+    patient = _get_patient(db) if profile_allowed else None
     html = summary_service.render_summary(scoped, section_data, patient)
     try:
         log_event(

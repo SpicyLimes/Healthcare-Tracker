@@ -172,3 +172,40 @@ def test_guest_summary_only_renders_granted_sections(client, db_session):
 def test_guest_summary_rejects_invalid_token(client, db_session):
     r = client.post("/api/summary/guest?token=bogus", json={"sections": ["doctors"]})
     assert r.status_code == 401
+
+
+def test_guest_summary_403_when_no_granted_sections(client, db_session):
+    csrf = _login_admin(client, db_session, email="nogrant@example.com")
+    client.post("/api/medications", headers={"X-CSRF-Token": csrf}, json={"name": "SecretMed"})
+    token = _make_link(client, csrf, ["doctors"])  # granted: doctors only
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+
+    # Guest scoped to doctors requests ONLY medications -> nothing granted
+    r = client.post(f"/api/summary/guest?token={token}", json={"sections": ["medications"]})
+    assert r.status_code == 403
+    assert "SecretMed" not in r.text
+
+
+def test_guest_summary_rejects_revoked_token(client, db_session):
+    csrf = _login_admin(client, db_session, email="revoke@example.com")
+    expires = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    create = client.post(
+        "/api/share-links",
+        headers={"X-CSRF-Token": csrf},
+        json={"label": "Rev", "expires_at": expires, "allowed_sections": ["doctors"]},
+    )
+    assert create.status_code == 201
+    body = create.json()
+    link_id = body["id"]
+    token = body["token_url"].split("token=")[1]
+    # revoke it: DELETE /api/share-links/{link_id} sets revoked=True (204 No Content)
+    revoke = client.request(
+        "DELETE",
+        f"/api/share-links/{link_id}",
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert revoke.status_code in (200, 204)
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+
+    r = client.post(f"/api/summary/guest?token={token}", json={"sections": ["doctors"]})
+    assert r.status_code == 403  # get_guest_access raises 403 for revoked links
