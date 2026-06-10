@@ -28,6 +28,12 @@ export default function SummaryBuilder({ mode, availableSections, token }: Props
   const [includeHeader, setIncludeHeader] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [open, setOpen] = useState(false);
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (next) setError("");
+  }
 
   function toggle(section: string) {
     setSelected((cur) =>
@@ -57,7 +63,7 @@ export default function SummaryBuilder({ mode, availableSections, token }: Props
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">Generate Summary</Button>
       </DialogTrigger>
@@ -73,7 +79,6 @@ export default function SummaryBuilder({ mode, availableSections, token }: Props
               <Checkbox
                 checked={selected.includes(s)}
                 onChange={() => toggle(s)}
-                aria-label={SECTION_LABELS[s] ?? s}
               />
               {SECTION_LABELS[s] ?? s}
             </label>
@@ -81,12 +86,13 @@ export default function SummaryBuilder({ mode, availableSections, token }: Props
         </div>
 
         <label className="mt-4 flex items-center gap-2 text-sm text-foreground">
-          <Checkbox checked={includeHeader} onChange={() => setIncludeHeader((v) => !v)} aria-label="Include patient header" />
+          <Checkbox checked={includeHeader} onChange={() => setIncludeHeader((v) => !v)} />
           Include patient header
         </label>
 
         <input
           className="mt-3 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+          aria-label="Prepared for"
           placeholder="Prepared for (optional)"
           value={preparedFor}
           onChange={(e) => setPreparedFor(e.target.value)}
