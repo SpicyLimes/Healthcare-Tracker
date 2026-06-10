@@ -61,6 +61,7 @@ export function MobileRecordList<T extends { id: string | number }>({
           >
             <button
               type="button"
+              aria-expanded={isExpanded}
               className="flex w-full items-start justify-between gap-2 p-3 text-left"
               onClick={() => setExpandedId(isExpanded ? null : record.id)}
             >
