@@ -13,7 +13,7 @@ import { ChevronRight, ChevronDown } from "lucide-react";
 import { useSort } from "@/hooks/useSort";
 import { useColumnResize } from "@/hooks/useColumnResize";
 import { SortableTh } from "@/components/SortableTh";
-import { MobileRecordList, type MobileFieldConfig, type MobileBadgeConfig } from "@/components/MobileRecordList";
+import { MobileRecordList } from "@/components/MobileRecordList";
 
 const EMPTY: MedicationInput = {
   name: "",
