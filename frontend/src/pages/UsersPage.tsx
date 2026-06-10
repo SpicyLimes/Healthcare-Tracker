@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FormField, Input, Select } from "@/components/ui/form-field";
+import { MobileRecordList } from "@/components/MobileRecordList";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<ManagedUser[]>([]);
@@ -99,59 +100,82 @@ export default function UsersPage() {
           {/* Users table */}
           <Card>
             <CardContent className="pt-6">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-muted-foreground">
-                    <th className="pb-2 font-medium">Name</th>
-                    <th className="pb-2 font-medium">Email</th>
-                    <th className="pb-2 font-medium">Role</th>
-                    <th className="pb-2 font-medium text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) => (
-                    <tr key={u.id} className="border-b border-border last:border-0">
-                      <td className="py-3 text-foreground">
-                        {u.full_name ?? "—"}
-                      </td>
-                      <td className="py-3 text-foreground">
-                        {u.email}
-                        {!u.is_active && (
-                          <span className="ml-2 text-xs text-muted-foreground">(inactive)</span>
-                        )}
-                      </td>
-                      <td className="py-3">
-                        <Badge variant={u.role === "admin" ? "default" : "secondary"}>
-                          {u.role === "admin" ? "Admin" : "Viewer"}
-                        </Badge>
-                      </td>
-                      <td className="py-3 text-right space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEdit(u)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => onDelete(u.id)}
-                        >
-                          Delete
-                        </Button>
-                      </td>
+              <div className="md:hidden">
+                <MobileRecordList
+                  records={users}
+                  getHeadline={(u) => u.email}
+                  getSubtitle={(u) => u.full_name ?? null}
+                  getBadge={(u) => ({
+                    label: u.role === "admin" ? "Admin" : "Viewer",
+                    variant: u.role === "admin" ? "default" : "secondary",
+                  })}
+                  getFields={(u) => [
+                    { key: "Email", value: u.email },
+                    { key: "Name", value: u.full_name ?? null },
+                    { key: "Role", value: u.role === "admin" ? "Admin" : "Viewer" },
+                    { key: "Active", value: u.is_active ? "Yes" : "No" },
+                  ]}
+                  isAdmin={true}
+                  onEdit={(u) => openEdit(u)}
+                  onDelete={(u) => onDelete(u.id)}
+                  emptyMessage="No users found."
+                />
+              </div>
+              <div className="hidden md:block">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                      <th className="pb-2 font-medium">Name</th>
+                      <th className="pb-2 font-medium">Email</th>
+                      <th className="pb-2 font-medium">Role</th>
+                      <th className="pb-2 font-medium text-right">Actions</th>
                     </tr>
-                  ))}
-                  {users.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="py-6 text-center text-muted-foreground">
-                        No users found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u.id} className="border-b border-border last:border-0">
+                        <td className="py-3 text-foreground">
+                          {u.full_name ?? "—"}
+                        </td>
+                        <td className="py-3 text-foreground">
+                          {u.email}
+                          {!u.is_active && (
+                            <span className="ml-2 text-xs text-muted-foreground">(inactive)</span>
+                          )}
+                        </td>
+                        <td className="py-3">
+                          <Badge variant={u.role === "admin" ? "default" : "secondary"}>
+                            {u.role === "admin" ? "Admin" : "Viewer"}
+                          </Badge>
+                        </td>
+                        <td className="py-3 text-right space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEdit(u)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => onDelete(u.id)}
+                          >
+                            Delete
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                    {users.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="py-6 text-center text-muted-foreground">
+                          No users found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
 
@@ -227,7 +251,7 @@ export default function UsersPage() {
             onClick={closeEdit}
           >
             <div
-              className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg"
+              className="mx-4 sm:mx-auto w-full sm:max-w-md rounded-xl border border-border bg-card p-4 sm:p-6 shadow-lg"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 id="edit-user-heading" className="font-heading text-base font-semibold text-foreground mb-4">

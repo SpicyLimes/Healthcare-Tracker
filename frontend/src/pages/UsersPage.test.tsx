@@ -34,14 +34,15 @@ describe("UsersPage", () => {
     mockAuth();
     vi.spyOn(usersApi, "listUsers").mockResolvedValue(MOCK_USERS);
     render(<UsersPage />);
-    expect(await screen.findByText("Admin User")).toBeInTheDocument();
+    const matches = await screen.findAllByText("Admin User");
+    expect(matches.length).toBeGreaterThan(0);
   });
 
   it("shows em dash for users without a name", async () => {
     mockAuth();
     vi.spyOn(usersApi, "listUsers").mockResolvedValue(MOCK_USERS);
     render(<UsersPage />);
-    await screen.findByText("Admin User");
+    await screen.findAllByText("Admin User");
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
   });
 
@@ -83,7 +84,7 @@ describe("UsersPage", () => {
     mockAuth();
     vi.spyOn(usersApi, "listUsers").mockResolvedValue(MOCK_USERS);
     render(<UsersPage />);
-    await screen.findByText("Admin User");
+    await screen.findAllByText("Admin User");
     expect(screen.getByLabelText(/name \(optional\)/i)).toBeInTheDocument();
   });
 
@@ -92,7 +93,7 @@ describe("UsersPage", () => {
     vi.spyOn(usersApi, "listUsers").mockResolvedValue(MOCK_USERS);
     const mockCreate = vi.spyOn(usersApi, "createUser").mockResolvedValue(MOCK_USERS[0]);
     render(<UsersPage />);
-    await screen.findByText("Admin User");
+    await screen.findAllByText("Admin User");
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "new@example.com" } });
     fireEvent.change(screen.getByLabelText(/name \(optional\)/i), { target: { value: "New Person" } });
     fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "strong-passphrase-123" } });
