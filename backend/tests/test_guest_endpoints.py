@@ -40,7 +40,7 @@ def test_guest_can_list_sections(client, db_session):
     r = client.get(f"/api/guest/sections?token={token}")
     assert r.status_code == 200
     assert isinstance(r.json(), list)
-    assert len(r.json()) == 14  # unscoped = all sections
+    assert len(r.json()) == 15  # unscoped = all sections
 
 
 def test_scoped_token_only_returns_allowed_sections(client, db_session):

@@ -16,6 +16,7 @@ const ALL_SECTIONS = [
   "surgeries", "hospitalizations", "vision_history", "dental_history",
   "visit_logs", "appointments", "medications", "vaccinations",
   "insurances", "ailments", "doctors", "pharmacies", "family_history", "profile",
+  "nutrition_plan",
 ];
 
 function formatSection(s: string): string {
