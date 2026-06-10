@@ -13,6 +13,7 @@ import { ChevronRight, ChevronDown } from "lucide-react";
 import { useSort } from "@/hooks/useSort";
 import { useColumnResize } from "@/hooks/useColumnResize";
 import { SortableTh } from "@/components/SortableTh";
+import { MobileRecordList } from "@/components/MobileRecordList";
 
 export default function SurgeriesPage() {
   const { user } = useAuth();
@@ -79,6 +80,26 @@ export default function SurgeriesPage() {
       <PageLayout title="Surgery Records" description="Surgical procedures and outcomes.">
         <Card>
           <CardContent className="p-0">
+            <div className="md:hidden">
+              <MobileRecordList
+                records={sortedRows}
+                getHeadline={(r) => r.procedure}
+                getSubtitle={(r) => r.surgery_date ?? null}
+                getFields={(r) => [
+                  { key: "Date", value: r.surgery_date ?? null },
+                  { key: "Surgeon", value: resolveDoctorName(r.surgeon_id, r.surgeon_other) || null },
+                  { key: "Hospital", value: r.hospital ?? null },
+                  { key: "Outcome", value: r.outcome ?? null },
+                  { key: "Notes", value: r.notes ?? null },
+                ]}
+                expandedContent={(r) => <DocumentsPanel section="surgeries" recordId={r.id} isAdmin={isAdmin} />}
+                isAdmin={isAdmin}
+                onEdit={(r) => openEdit(r)}
+                onDelete={(r) => onDelete(r.id)}
+                emptyMessage="No surgery records yet."
+              />
+            </div>
+            <div className="hidden md:block">
             <div className="overflow-x-auto">
               <table ref={tableRef} className="w-full text-sm">
                 <thead>
@@ -153,6 +174,7 @@ export default function SurgeriesPage() {
                   )}
                 </tbody>
               </table>
+            </div>
             </div>
           </CardContent>
         </Card>
@@ -250,7 +272,7 @@ export default function SurgeriesPage() {
              onKeyDown={(e) => e.key === "Escape" && closeEdit()}
              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
              onClick={closeEdit}>
-          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+          <div className="mx-4 sm:mx-auto w-full sm:max-w-lg rounded-xl border border-border bg-card p-4 sm:p-6 shadow-lg overflow-y-auto max-h-[90vh]"
                onClick={(e) => e.stopPropagation()}>
             <h2 id="edit-surg-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Surgery</h2>
             {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
