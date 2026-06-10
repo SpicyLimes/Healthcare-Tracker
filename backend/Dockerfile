@@ -26,7 +26,9 @@ COPY app ./app
 
 EXPOSE 8000
 
-RUN adduser --disabled-password --gecos "" appuser
+RUN adduser --disabled-password --gecos "" appuser && \
+    mkdir -p /app/uploads && \
+    chown -R appuser:appuser /app/uploads
 USER appuser
 
 # Apply migrations, then run the API. Host 0.0.0.0 for inter-container reach.
