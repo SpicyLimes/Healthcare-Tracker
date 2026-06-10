@@ -13,6 +13,7 @@ import { ChevronRight, ChevronDown } from "lucide-react";
 import { useSort } from "@/hooks/useSort";
 import { useColumnResize } from "@/hooks/useColumnResize";
 import { SortableTh } from "@/components/SortableTh";
+import { MobileRecordList } from "@/components/MobileRecordList";
 
 export default function VisionHistoryPage() {
   const { user } = useAuth();
@@ -76,6 +77,26 @@ export default function VisionHistoryPage() {
       <PageLayout title="Vision History" description="Eye exams, prescriptions, and vision care.">
         <Card>
           <CardContent className="p-0">
+            <div className="md:hidden">
+              <MobileRecordList
+                records={sortedRows}
+                getHeadline={(r) => r.visit_date ?? "Exam"}
+                getSubtitle={(r) => resolveDoctorName(r.provider_id, r.provider_other) || null}
+                getFields={(r) => [
+                  { key: "Date", value: r.visit_date ?? null },
+                  { key: "Provider", value: resolveDoctorName(r.provider_id, r.provider_other) || null },
+                  { key: "Rx OD (Right)", value: r.rx_od ?? null },
+                  { key: "Rx OS (Left)", value: r.rx_os ?? null },
+                  { key: "Notes", value: r.notes ?? null },
+                ]}
+                expandedContent={(r) => <DocumentsPanel section="vision_history" recordId={r.id} isAdmin={isAdmin} />}
+                isAdmin={isAdmin}
+                onEdit={(r) => openEdit(r)}
+                onDelete={(r) => onDelete(r.id)}
+                emptyMessage="No vision history records yet."
+              />
+            </div>
+            <div className="hidden md:block">
             <div className="overflow-x-auto">
               <table ref={tableRef} className="w-full text-sm">
                 <thead>
@@ -146,6 +167,7 @@ export default function VisionHistoryPage() {
                   )}
                 </tbody>
               </table>
+            </div>
             </div>
           </CardContent>
         </Card>
@@ -229,7 +251,7 @@ export default function VisionHistoryPage() {
              onKeyDown={(e) => e.key === "Escape" && closeEdit()}
              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
              onClick={closeEdit}>
-          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+          <div className="mx-4 sm:mx-auto w-full sm:max-w-lg rounded-xl border border-border bg-card p-4 sm:p-6 shadow-lg overflow-y-auto max-h-[90vh]"
                onClick={(e) => e.stopPropagation()}>
             <h2 id="edit-vis-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Vision Record</h2>
             {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
