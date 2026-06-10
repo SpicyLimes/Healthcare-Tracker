@@ -13,7 +13,12 @@ from app.models.profile import Profile
 from app.models.user import User
 from app.schemas.records import ProfileResponse
 from app.schemas.summary import SummaryRequest
-from app.security.dependencies import require_admin, verify_csrf
+from app.security.dependencies import (
+    GuestContext,
+    get_guest_access,
+    require_admin,
+    verify_csrf,
+)
 from app.services import summary_service
 from app.services.audit_service import log_event
 
@@ -54,5 +59,44 @@ def generate_summary(
         db.commit()
     except Exception:
         logger.exception("Audit log failed for summary generation — ignoring")
+        db.rollback()
+    return HTMLResponse(content=html)
+
+
+@router.post("/guest")
+@limiter.limit("20/minute")
+def generate_guest_summary(
+    request: Request,
+    response: Response,
+    payload: SummaryRequest,
+    ctx: GuestContext = Depends(get_guest_access),
+    db: Session = Depends(get_db),
+):
+    # SECURITY: intersect requested sections with granted sections.
+    # Empty allowed_sections == all sections (existing guest semantics).
+    if ctx.allowed_sections:
+        granted = [s for s in payload.sections if s in ctx.allowed_sections]
+    else:
+        granted = list(payload.sections)
+    scoped = payload.model_copy(update={"sections": granted})
+
+    section_data = {
+        s: summary_service.gather_section_rows(db, s, scoped.date_from, scoped.date_to)
+        for s in granted
+    }
+    patient = _get_patient(db) if (not ctx.allowed_sections or "profile" in ctx.allowed_sections) else None
+    html = summary_service.render_summary(scoped, section_data, patient)
+    try:
+        log_event(
+            db,
+            action=AuditAction.share_link_access,
+            actor_type=ActorType.guest,
+            actor_share_link_id=ctx.share_link_id,
+            section=",".join(granted),
+            detail=f"Guest generated summary ({len(granted)} sections)",
+        )
+        db.commit()
+    except Exception:
+        logger.exception("Guest summary commit failed")
         db.rollback()
     return HTMLResponse(content=html)

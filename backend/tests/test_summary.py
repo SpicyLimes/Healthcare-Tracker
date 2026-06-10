@@ -1,5 +1,7 @@
 # backend/tests/test_summary.py
 """One-Page Summary: schema, admin render, guest scoping."""
+from datetime import datetime, timedelta, timezone
+
 from app.schemas.summary import SummaryRequest
 from app.services import summary_service
 
@@ -135,3 +137,38 @@ def test_admin_summary_rejects_empty_sections(client, db_session):
     csrf = _login_admin(client, db_session, email="emptysec@example.com")
     r = client.post("/api/summary", headers={"X-CSRF-Token": csrf}, json={"sections": []})
     assert r.status_code == 422
+
+
+def _make_link(client, csrf, sections):
+    expires = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    r = client.post(
+        "/api/share-links",
+        headers={"X-CSRF-Token": csrf},
+        json={"label": "Sum", "expires_at": expires, "allowed_sections": sections},
+    )
+    assert r.status_code == 201
+    return r.json()["token_url"].split("token=")[1]
+
+
+def test_guest_summary_only_renders_granted_sections(client, db_session):
+    csrf = _login_admin(client, db_session, email="guestsumadmin@example.com")
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Granted Doc"})
+    client.post("/api/medications", headers={"X-CSRF-Token": csrf}, json={"name": "SecretMed"})
+    token = _make_link(client, csrf, ["doctors"])
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+
+    # Guest requests BOTH doctors (granted) and medications (NOT granted)
+    r = client.post(
+        f"/api/summary/guest?token={token}",
+        json={"sections": ["doctors", "medications"]},
+    )
+    assert r.status_code == 200
+    assert "Granted Doc" in r.text
+    # The ungranted section's data must NOT leak
+    assert "SecretMed" not in r.text
+    assert "Medications" not in r.text
+
+
+def test_guest_summary_rejects_invalid_token(client, db_session):
+    r = client.post("/api/summary/guest?token=bogus", json={"sections": ["doctors"]})
+    assert r.status_code == 401
