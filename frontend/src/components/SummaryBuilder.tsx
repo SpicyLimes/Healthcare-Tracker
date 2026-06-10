@@ -26,6 +26,8 @@ export default function SummaryBuilder({ mode, availableSections, token }: Props
   const [selected, setSelected] = useState<string[]>([]);
   const [preparedFor, setPreparedFor] = useState("");
   const [includeHeader, setIncludeHeader] = useState(true);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
@@ -48,6 +50,8 @@ export default function SummaryBuilder({ mode, availableSections, token }: Props
       sections: selected,
       include_patient_header: includeHeader,
       prepared_for: preparedFor || null,
+      date_from: dateFrom || null,
+      date_to: dateTo || null,
     };
     try {
       const html =
@@ -97,6 +101,31 @@ export default function SummaryBuilder({ mode, availableSections, token }: Props
           value={preparedFor}
           onChange={(e) => setPreparedFor(e.target.value)}
         />
+
+        <fieldset className="mt-3">
+          <legend className="text-xs text-muted-foreground mb-1">
+            Date range (optional) — filters records by when they were added
+          </legend>
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              aria-label="From date"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={(e) => setDateFrom(e.target.value)}
+            />
+            <span className="text-sm text-muted-foreground">to</span>
+            <input
+              type="date"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              aria-label="To date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(e) => setDateTo(e.target.value)}
+            />
+          </div>
+        </fieldset>
 
         {error && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
 

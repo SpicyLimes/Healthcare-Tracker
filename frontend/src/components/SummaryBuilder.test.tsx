@@ -38,6 +38,30 @@ describe("SummaryBuilder", () => {
       "tok123",
     );
   });
+
+  it("passes the selected date range through to the API", async () => {
+    const { generateSummary } = await import("../api/summary");
+    render(<SummaryBuilder mode="admin" availableSections={["doctors"]} />);
+    fireEvent.click(screen.getByRole("button", { name: /generate summary/i }));
+    fireEvent.click(screen.getByLabelText(/doctors/i));
+    fireEvent.change(screen.getByLabelText(/from date/i), { target: { value: "2026-01-01" } });
+    fireEvent.change(screen.getByLabelText(/to date/i), { target: { value: "2026-06-30" } });
+    fireEvent.click(screen.getByRole("button", { name: /^generate$/i }));
+    expect(generateSummary).toHaveBeenCalledWith(
+      expect.objectContaining({ date_from: "2026-01-01", date_to: "2026-06-30" }),
+    );
+  });
+
+  it("sends null dates when the range is left empty", async () => {
+    const { generateSummary } = await import("../api/summary");
+    render(<SummaryBuilder mode="admin" availableSections={["doctors"]} />);
+    fireEvent.click(screen.getByRole("button", { name: /generate summary/i }));
+    fireEvent.click(screen.getByLabelText(/doctors/i));
+    fireEvent.click(screen.getByRole("button", { name: /^generate$/i }));
+    expect(generateSummary).toHaveBeenCalledWith(
+      expect.objectContaining({ date_from: null, date_to: null }),
+    );
+  });
 });
 
 describe("AppShell summary trigger", () => {

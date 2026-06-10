@@ -121,6 +121,29 @@ def test_admin_summary_renders_html(client, db_session):
     assert "Prepared for: Dr. Referral" in r.text
 
 
+def test_admin_summary_applies_date_range_from_json(client, db_session):
+    from datetime import date, datetime, timezone
+    from app.models.doctor import Doctor
+
+    csrf = _login_admin(client, db_session, email="daterange@example.com")
+    old = Doctor(name="Old Range Doc")
+    new = Doctor(name="New Range Doc")
+    db_session.add_all([old, new])
+    db_session.flush()
+    old.created_at = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    new.created_at = datetime(2026, 6, 1, tzinfo=timezone.utc)
+    db_session.flush()
+
+    r = client.post(
+        "/api/summary",
+        headers={"X-CSRF-Token": csrf},
+        json={"sections": ["doctors"], "date_from": "2026-01-01", "date_to": str(date(2026, 12, 31))},
+    )
+    assert r.status_code == 200
+    assert "New Range Doc" in r.text
+    assert "Old Range Doc" not in r.text
+
+
 def test_admin_summary_requires_auth(client, db_session):
     r = client.post("/api/summary", json={"sections": ["doctors"]})
     assert r.status_code == 401
