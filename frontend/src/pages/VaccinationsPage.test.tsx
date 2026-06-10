@@ -31,7 +31,7 @@ describe("VaccinationsPage", () => {
         administrator: null, next_due_date: null, notes: null },
     ]);
     render(<VaccinationsPage />);
-    expect(await screen.findByText("Flu Shot")).toBeInTheDocument();
+    expect((await screen.findAllByText("Flu Shot")).length).toBeGreaterThan(0);
   });
 
   it("viewer sees no Add button", async () => {
@@ -57,7 +57,7 @@ describe("VaccinationsPage", () => {
     await waitFor(() => expect(mockList).toHaveBeenCalled());
     fireEvent.change(screen.getByLabelText("Vaccine"), { target: { value: "COVID-19" } });
     fireEvent.click(screen.getByRole("button", { name: /add/i }));
-    expect(await screen.findByText("COVID-19")).toBeInTheDocument();
+    expect((await screen.findAllByText("COVID-19")).length).toBeGreaterThan(0);
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ vaccine: "COVID-19" }));
   });
 });
