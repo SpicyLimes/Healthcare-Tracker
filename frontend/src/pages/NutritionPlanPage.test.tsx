@@ -84,7 +84,7 @@ describe("NutritionPlanPage", () => {
     mockApis({ acceptable: [ACCEPTABLE] });
     render(<NutritionPlanPage />);
     fireEvent.click(await screen.findByText("Acceptable Foods"));
-    expect(await screen.findByText("Banana")).toBeInTheDocument();
+    expect((await screen.findAllByText("Banana")).length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders unacceptable food", async () => {
@@ -99,7 +99,7 @@ describe("NutritionPlanPage", () => {
     mockAuth();
     mockApis({ docs: [DOC] });
     render(<NutritionPlanPage />);
-    expect(await screen.findByText("scan_2.pdf")).toBeInTheDocument();
+    expect((await screen.findAllByText("scan_2.pdf")).length).toBeGreaterThanOrEqual(1);
   });
 
   it("card 1 add calls mealsApi.create and reloads", async () => {
@@ -134,8 +134,8 @@ describe("NutritionPlanPage", () => {
     });
     render(<NutritionPlanPage />);
     fireEvent.click(await screen.findByText("Acceptable Foods"));
-    const checkbox = await screen.findByLabelText("Banana for breakfast");
-    fireEvent.click(checkbox);
+    const checkboxes = await screen.findAllByLabelText("Banana for breakfast");
+    fireEvent.click(checkboxes[0]);
     await waitFor(() => {
       expect(createSpy).toHaveBeenCalledWith({ food_name: "Banana", meal_type: "breakfast" });
       expect(patchSpy).toHaveBeenCalledWith("af-1", { for_breakfast: true });
@@ -159,8 +159,8 @@ describe("NutritionPlanPage", () => {
     });
     render(<NutritionPlanPage />);
     fireEvent.click(await screen.findByText("Acceptable Foods"));
-    const checkbox = await screen.findByLabelText("Banana for breakfast");
-    fireEvent.click(checkbox);
+    const checkboxes = await screen.findAllByLabelText("Banana for breakfast");
+    fireEvent.click(checkboxes[0]);
     await waitFor(() => {
       expect(removeSpy).toHaveBeenCalledWith("meal-banana");
       expect(patchSpy).toHaveBeenCalledWith("af-1", { for_breakfast: false });
@@ -175,12 +175,12 @@ describe("NutritionPlanPage", () => {
     });
     render(<NutritionPlanPage />);
     fireEvent.click(await screen.findByText("Acceptable Foods"));
-    await screen.findByText("Banana");
+    await screen.findAllByText("Banana");
     const editBtn = screen.getAllByRole("button", { name: /edit/i })[0];
     fireEvent.click(editBtn);
-    const input = screen.getByLabelText("Edit food name");
+    const input = screen.getAllByLabelText("Edit food name")[0];
     fireEvent.change(input, { target: { value: "Banana (ripe)" } });
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getAllByRole("button", { name: /save/i })[0]);
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith("af-1", { food_name: "Banana (ripe)" })
     );
@@ -192,7 +192,7 @@ describe("NutritionPlanPage", () => {
     const removeSpy = vi.spyOn(nutritionModule.acceptableFoodsApi, "remove").mockResolvedValue(undefined);
     render(<NutritionPlanPage />);
     fireEvent.click(await screen.findByText("Acceptable Foods"));
-    await screen.findByText("Banana");
+    await screen.findAllByText("Banana");
     const deleteBtn = screen.getAllByRole("button", { name: /delete/i })[0];
     fireEvent.click(deleteBtn);
     await waitFor(() => expect(removeSpy).toHaveBeenCalledWith("af-1"));

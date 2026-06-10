@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form-field";
 import { formatDate } from "@/lib/format";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { MobileRecordList } from "@/components/MobileRecordList";
 
 const MEAL_TYPES: MealType[] = ["breakfast", "lunch", "dinner", "snacks"];
 const MEAL_LABELS: Record<MealType, string> = {
@@ -235,7 +236,7 @@ export default function NutritionPlanPage() {
         <Card>
           <CardContent className="py-6">
             <h2 className="mb-4 text-base font-semibold text-foreground">Meals</h2>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {MEAL_TYPES.map((mealType) => {
                 const entries = meals.filter((m) => m.meal_type === mealType);
                 return (
@@ -291,7 +292,69 @@ export default function NutritionPlanPage() {
             </button>
             {acceptableOpen && (
               <>
-                <div className="mt-4 overflow-x-auto">
+                {/* Mobile stacked layout */}
+                <div className="md:hidden mt-4 space-y-2">
+                  {acceptableFoods.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No acceptable foods added yet.</p>
+                  )}
+                  {acceptableFoods.map((food) => (
+                    <div key={food.id} className="rounded-md border border-border bg-muted/20 px-3 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        {editingAcceptableId === food.id ? (
+                          <div className="flex flex-1 gap-1">
+                            <Input
+                              value={editingAcceptableValue}
+                              onChange={(e) => setEditingAcceptableValue(e.target.value)}
+                              className="h-7 text-xs"
+                              aria-label="Edit food name"
+                            />
+                            <Button size="sm" className="h-7 px-2 text-xs" onClick={() => handleAcceptableEditSave(food.id)}>Save</Button>
+                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setEditingAcceptableId(null)}>Cancel</Button>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-foreground">{food.food_name}</span>
+                        )}
+                        {editingAcceptableId !== food.id && (
+                          <div className="flex shrink-0 gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => { setEditingAcceptableId(food.id); setEditingAcceptableValue(food.food_name); }}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                              onClick={() => handleAcceptableDelete(food.id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                        {MEAL_TYPES.map((mt) => (
+                          <label key={mt} className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={food[MEAL_FLAG[mt]] as boolean}
+                              onChange={() => handleCheckbox(food, mt)}
+                              aria-label={`${food.food_name} for ${mt}`}
+                              className="rounded border-border"
+                            />
+                            {MEAL_LABELS[mt]}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden md:block mt-4 overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border bg-muted/40">
@@ -483,44 +546,73 @@ export default function NutritionPlanPage() {
             {docs.length === 0 ? (
               <p className="text-xs text-muted-foreground">No documents uploaded yet.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/40">
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Filename</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Size</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Uploaded</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {docs.map((doc) => (
-                      <tr key={doc.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                        <td className="px-4 py-3 font-medium text-foreground">{doc.filename}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{formatBytes(doc.file_size)}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{formatDate(doc.uploaded_at)}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" asChild>
-                              <a href={getDownloadUrl(doc.id)} target="_blank" rel="noopener noreferrer">
-                                Open
-                              </a>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => handleDocDelete(doc.id)}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </td>
+              <>
+                <div className="md:hidden">
+                  <MobileRecordList
+                    records={docs}
+                    getHeadline={(doc) => doc.filename}
+                    getSubtitle={(doc) => `${formatBytes(doc.file_size)} · ${formatDate(doc.uploaded_at)}`}
+                    getFields={(doc) => [
+                      { key: "Size", value: formatBytes(doc.file_size) },
+                      { key: "Uploaded", value: formatDate(doc.uploaded_at) },
+                    ]}
+                    expandedContent={(doc) => (
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={getDownloadUrl(doc.id)} target="_blank" rel="noopener noreferrer">Open</a>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDocDelete(doc.id)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    )}
+                    emptyMessage="No documents uploaded yet."
+                  />
+                </div>
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/40">
+                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">Filename</th>
+                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">Size</th>
+                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">Uploaded</th>
+                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {docs.map((doc) => (
+                        <tr key={doc.id} className="border-b border-border last:border-0 hover:bg-muted/20">
+                          <td className="px-4 py-3 font-medium text-foreground">{doc.filename}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{formatBytes(doc.file_size)}</td>
+                          <td className="px-4 py-3 text-muted-foreground">{formatDate(doc.uploaded_at)}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={getDownloadUrl(doc.id)} target="_blank" rel="noopener noreferrer">
+                                  Open
+                                </a>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => handleDocDelete(doc.id)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
