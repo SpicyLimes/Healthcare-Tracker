@@ -1,5 +1,6 @@
 # backend/app/services/summary_service.py
-from datetime import date
+import html as _html
+from datetime import date, datetime, timezone
 from typing import Any, Optional
 
 from sqlalchemy import select
@@ -37,8 +38,6 @@ def gather_section_rows(
         result.append(schema.model_validate(row).model_dump(mode="json"))
     return result
 
-
-import html as _html
 
 # Human-readable section titles (matches the app's labels)
 SECTION_TITLES: dict[str, str] = {
@@ -93,8 +92,6 @@ def _render_section(section: str, rows: list[dict]) -> str:
 
 
 def render_summary(req: "SummaryRequest", section_data: dict[str, list[dict]], patient: dict | None) -> str:
-    from datetime import datetime, timezone
-
     generated = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     header_bits = [f"<div class='gen'>Generated {generated}"]
     if req.prepared_for:
