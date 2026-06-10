@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FormField, Input } from "@/components/ui/form-field";
 import { formatDate } from "@/lib/format";
+import { MobileRecordList } from "@/components/MobileRecordList";
 
 const ALL_SECTIONS = [
   "surgeries", "hospitalizations", "vision_history", "dental_history",
@@ -232,6 +233,30 @@ export default function ShareLinksPage() {
           </Card>
         )}
 
+        <div className="md:hidden">
+          <MobileRecordList
+            records={links}
+            getHeadline={(link) => link.label}
+            getSubtitle={(link) => `Expires: ${formatDate(link.expires_at)}`}
+            getBadge={(link) => {
+              const status = linkStatus(link)
+              return {
+                label: status,
+                variant: status === "Active" ? "default" : "secondary",
+              }
+            }}
+            getFields={(link) => [
+              { key: "Sections", value: link.allowed_sections.length === 0 ? "All sections" : link.allowed_sections.map(formatSection).join(", ") },
+              { key: "Expires", value: formatDate(link.expires_at) },
+              { key: "Created", value: formatDate(link.created_at) },
+            ]}
+            isAdmin={true}
+            onDelete={(link) => handleDelete(link.id)}
+            emptyMessage="No share links yet."
+          />
+        </div>
+
+        <div className="hidden md:block">
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <table className="w-full text-sm">
             <thead>
@@ -303,6 +328,7 @@ export default function ShareLinksPage() {
               })}
             </tbody>
           </table>
+        </div>
         </div>
       </PageLayout>
     </AppShell>

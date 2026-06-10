@@ -20,8 +20,8 @@ describe("ShareLinksPage", () => {
   it("renders link table", async () => {
     vi.spyOn(api, "listShareLinks").mockResolvedValue([LINK]);
     render(<ShareLinksPage />);
-    expect(await screen.findByText("Dr. Smith")).toBeInTheDocument();
-    expect(screen.getByText("Active")).toBeInTheDocument();
+    expect((await screen.findAllByText("Dr. Smith"))[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Active")[0]).toBeInTheDocument();
   });
 
   it("shows one-time token modal on create", async () => {
@@ -43,7 +43,7 @@ describe("ShareLinksPage", () => {
     vi.spyOn(api, "listShareLinks").mockResolvedValue([LINK]);
     const revokeSpy = vi.spyOn(api, "revokeShareLink").mockResolvedValue();
     render(<ShareLinksPage />);
-    await screen.findByText("Dr. Smith");
+    await screen.findAllByText("Dr. Smith");
     fireEvent.click(screen.getByRole("button", { name: /revoke/i }));
     await waitFor(() => expect(revokeSpy).toHaveBeenCalledWith("abc-123"));
   });
