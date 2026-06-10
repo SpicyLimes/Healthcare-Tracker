@@ -13,6 +13,7 @@ import { ChevronRight, ChevronDown } from "lucide-react";
 import { useSort } from "@/hooks/useSort";
 import { useColumnResize } from "@/hooks/useColumnResize";
 import { SortableTh } from "@/components/SortableTh";
+import { MobileRecordList, type MobileFieldConfig, type MobileBadgeConfig } from "@/components/MobileRecordList";
 
 const EMPTY: MedicationInput = {
   name: "",
@@ -110,6 +111,34 @@ export default function MedicationsPage() {
       >
         <Card>
           <CardContent className="p-0">
+            <div className="md:hidden">
+              <MobileRecordList
+                records={sortedRows}
+                getHeadline={(r) => r.name}
+                getSubtitle={(r) => [r.dose, r.route, r.frequency].filter(Boolean).join(" · ") || null}
+                getBadge={(r) => ({
+                  label: r.is_active ? "Active" : "Inactive",
+                  variant: r.is_active ? "default" : "secondary",
+                })}
+                getFields={(r) => [
+                  { key: "Kind", value: r.kind ?? null },
+                  { key: "Dose", value: r.dose ?? null },
+                  { key: "Frequency", value: r.frequency ?? null },
+                  { key: "Route", value: r.route ? r.route.charAt(0).toUpperCase() + r.route.slice(1) : null },
+                  { key: "Doctor", value: resolveDoctorName(r.prescribing_doctor_id, r.prescribing_doctor) || null },
+                  { key: "Start", value: r.start_date ?? null },
+                  { key: "End", value: r.end_date ?? null },
+                  { key: "Active", value: r.is_active ? "Yes" : "No" },
+                  { key: "Notes", value: r.notes ?? null },
+                ]}
+                expandedContent={(r) => <DocumentsPanel section="medications" recordId={r.id} isAdmin={isAdmin} />}
+                isAdmin={isAdmin}
+                onEdit={(r) => openEdit(r)}
+                onDelete={(r) => onDelete(r.id)}
+                emptyMessage="No medication records yet."
+              />
+            </div>
+            <div className="hidden md:block">
             <div className="overflow-x-auto">
               <table ref={tableRef} className="w-full text-sm">
             <thead>
@@ -188,6 +217,7 @@ export default function MedicationsPage() {
               )}
             </tbody>
           </table>
+            </div>
             </div>
           </CardContent>
         </Card>
@@ -280,7 +310,7 @@ export default function MedicationsPage() {
              onKeyDown={(e) => e.key === "Escape" && closeEdit()}
              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
              onClick={closeEdit}>
-          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+          <div className="mx-4 sm:mx-auto w-full sm:max-w-lg rounded-xl border border-border bg-card p-4 sm:p-6 shadow-lg overflow-y-auto max-h-[90vh]"
                onClick={(e) => e.stopPropagation()}>
             <h2 id="edit-med-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Medication</h2>
             {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}

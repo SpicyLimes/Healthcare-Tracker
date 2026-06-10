@@ -30,7 +30,7 @@ describe("MedicationsPage", () => {
         prescribing_doctor: null, start_date: null, end_date: null, is_active: true, notes: null },
     ]);
     render(<MedicationsPage />);
-    expect(await screen.findByText("Aspirin")).toBeInTheDocument();
+    expect((await screen.findAllByText("Aspirin")).length).toBeGreaterThan(0);
   });
 
   it("viewer sees no Add button", async () => {
