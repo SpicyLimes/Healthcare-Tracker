@@ -96,3 +96,30 @@ def test_render_summary_patient_header_optional():
     req_no = SummaryRequest(sections=["doctors"], include_patient_header=False)
     html_no = summary_service.render_summary(req_no, {"doctors": []}, patient=patient)
     assert "Jane Doe" not in html_no
+
+
+def _login_admin(client, db_session, email="endpadmin@example.com"):
+    from app.models.user import Role
+    from app.services import user_service
+    user_service.create_user(db_session, email, "a-strong-passphrase-123", Role.admin)
+    client.post("/api/auth/login", json={"email": email, "password": "a-strong-passphrase-123"})
+    return client.cookies.get("csrf_token")
+
+
+def test_admin_summary_renders_html(client, db_session):
+    csrf = _login_admin(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Dr. Endpoint"})
+    r = client.post(
+        "/api/summary",
+        headers={"X-CSRF-Token": csrf},
+        json={"sections": ["doctors"], "prepared_for": "Dr. Referral"},
+    )
+    assert r.status_code == 200
+    assert "text/html" in r.headers["content-type"]
+    assert "Dr. Endpoint" in r.text
+    assert "Prepared for: Dr. Referral" in r.text
+
+
+def test_admin_summary_requires_auth(client, db_session):
+    r = client.post("/api/summary", json={"sections": ["doctors"]})
+    assert r.status_code == 401
