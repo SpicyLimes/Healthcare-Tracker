@@ -13,7 +13,7 @@ import { SortableTh } from "@/components/SortableTh";
 const SECTIONS = [
   "surgeries", "hospitalizations", "vision_history", "dental_history",
   "visit_logs", "appointments", "medications", "vaccinations",
-  "insurances", "ailments", "doctors", "profile",
+  "insurances", "ailments", "doctors", "profile", "nutrition_plan",
 ];
 
 function formatSectionLabel(section: string): string {
