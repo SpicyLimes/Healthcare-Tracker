@@ -13,7 +13,8 @@ import { FormField, Input, Select, Textarea } from "@/components/ui/form-field";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { useSort } from "@/hooks/useSort";
 import { useColumnResize } from "@/hooks/useColumnResize";
-import { SortableTh } from "@/components/SortableTh";
+import { SortableTh } from "@/components/SortableTh"
+import { MobileRecordList } from "@/components/MobileRecordList";
 
 const EMPTY: AilmentInput = {
   condition: "",
@@ -100,6 +101,25 @@ export default function AilmentsPage() {
       >
         <Card>
           <CardContent className="p-0">
+            <div className="md:hidden">
+              <MobileRecordList
+                records={sortedRows}
+                getHeadline={(r) => r.condition}
+                getSubtitle={(r) => r.onset_date ?? null}
+                getFields={(r) => [
+                  { key: "Onset Date", value: r.onset_date ?? null },
+                  { key: "Status", value: r.status ?? null },
+                  { key: "Treating Doctor", value: resolveDoctorName(r.treating_doctor_id, r.treating_doctor) || null },
+                  { key: "Notes", value: r.notes ?? null },
+                ]}
+                expandedContent={(r) => <DocumentsPanel section="ailments" recordId={r.id} isAdmin={isAdmin} />}
+                isAdmin={isAdmin}
+                onEdit={(r) => openEdit(r)}
+                onDelete={(r) => onDelete(r.id)}
+                emptyMessage="No ailment records yet."
+              />
+            </div>
+            <div className="hidden md:block">
             <div className="overflow-x-auto">
               <table ref={tableRef} className="w-full text-sm">
             <thead>
@@ -177,6 +197,7 @@ export default function AilmentsPage() {
             </tbody>
           </table>
             </div>
+            </div>
           </CardContent>
         </Card>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
@@ -243,7 +264,7 @@ export default function AilmentsPage() {
              onKeyDown={(e) => e.key === "Escape" && closeEdit()}
              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
              onClick={closeEdit}>
-          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+          <div className="mx-4 sm:mx-auto w-full sm:max-w-lg rounded-xl border border-border bg-card p-4 sm:p-6 shadow-lg overflow-y-auto max-h-[90vh]"
                onClick={(e) => e.stopPropagation()}>
             <h2 id="edit-ail-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Ailment</h2>
             {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
