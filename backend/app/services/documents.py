@@ -36,7 +36,7 @@ def save_document(
     db: Session,
     file: UploadFile,
     section: DocumentSection,
-    record_id: str,
+    record_id: Optional[str],
     uploaded_by_id: uuid.UUID,
 ) -> Document:
     declared_mime = file.content_type or ""
@@ -93,7 +93,7 @@ def save_document(
         filename=safe_filename,
         stored_filename=stored_name,
         section=section,
-        record_id=str(record_id),
+        record_id=str(record_id) if record_id is not None else None,
         mime_type=declared_mime,
         file_size=len(data),
         uploaded_by=uploaded_by_id,

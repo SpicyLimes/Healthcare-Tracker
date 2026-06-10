@@ -2,13 +2,15 @@
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File as FastAPIFile, HTTPException, Query, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.document import DocumentSection
 from app.models.nutrition import MealType, NutritionAcceptableFood, NutritionMeal, NutritionUnacceptableFood
 from app.models.user import User
+from app.schemas.document import DocumentRead
 from app.schemas.nutrition import (
     NutritionAcceptableFoodCreate,
     NutritionAcceptableFoodPatch,
@@ -20,6 +22,7 @@ from app.schemas.nutrition import (
     NutritionUnacceptableFoodResponse,
 )
 from app.security.dependencies import get_current_user, require_admin, verify_csrf
+from app.services.documents import save_document
 
 router = APIRouter(prefix="/api/nutrition", tags=["nutrition"])
 
@@ -214,3 +217,21 @@ def delete_unacceptable_food(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     db.delete(food)
     db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Documents
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/documents",
+    response_model=DocumentRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(verify_csrf)],
+)
+def upload_nutrition_document(
+    file: UploadFile = FastAPIFile(...),
+    db: Session = Depends(get_db),
+    current: User = Depends(require_admin),
+):
+    return save_document(db, file, DocumentSection.nutrition_plan, None, current.id)

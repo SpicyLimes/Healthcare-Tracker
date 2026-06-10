@@ -116,3 +116,18 @@ export const unacceptableFoodsApi = {
     if (!res.ok) throw new Error("Failed to delete unacceptable food");
   },
 };
+
+export async function uploadNutritionDocument(file: File): Promise<import("./documents").DocumentRecord> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await apiFetch("/api/nutrition/documents", {
+    method: "POST",
+    headers: { ...csrfHeader() },
+    body: formData,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { detail?: string }).detail ?? "Upload failed");
+  }
+  return res.json();
+}
