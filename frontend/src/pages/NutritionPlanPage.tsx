@@ -1,16 +1,17 @@
 // frontend/src/pages/NutritionPlanPage.tsx
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
-  mealsApi, acceptableFoodsApi, unacceptableFoodsApi,
+  mealsApi, acceptableFoodsApi, unacceptableFoodsApi, uploadNutritionDocument,
   type MealType, type NutritionMeal, type NutritionAcceptableFood, type NutritionUnacceptableFood,
 } from "../api/nutritionPlan";
-import { listAllDocuments, getDownloadUrl, type DocumentRecord } from "../api/documents";
+import { listAllDocuments, deleteDocument, getDownloadUrl, type DocumentRecord } from "../api/documents";
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form-field";
 import { formatDate } from "@/lib/format";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 const MEAL_TYPES: MealType[] = ["breakfast", "lunch", "dinner", "snacks"];
 const MEAL_LABELS: Record<MealType, string> = {
@@ -55,6 +56,14 @@ export default function NutritionPlanPage() {
   // Card 3 inline edit
   const [editingUnacceptableId, setEditingUnacceptableId] = useState<string | null>(null);
   const [editingUnacceptableValue, setEditingUnacceptableValue] = useState("");
+
+  // Collapse state for Cards 2 & 3
+  const [acceptableOpen, setAcceptableOpen] = useState(true);
+  const [unacceptableOpen, setUnacceptableOpen] = useState(true);
+
+  // Card 4 upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
   async function reload() {
     const [m, af, uf, d] = await Promise.all([
@@ -190,6 +199,33 @@ export default function NutritionPlanPage() {
     }
   }
 
+  // Card 4: upload document
+  async function handleDocUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError("");
+    try {
+      await uploadNutritionDocument(file);
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  // Card 4: delete document
+  async function handleDocDelete(id: number) {
+    try {
+      await deleteDocument(id);
+      await reload();
+    } catch {
+      setError("Could not delete document");
+    }
+  }
+
   return (
     <AppShell>
       <PageLayout title="Nutrition Plan" description="Manage meals, acceptable foods, and dietary restrictions.">
@@ -245,169 +281,207 @@ export default function NutritionPlanPage() {
         {/* Card 2 — Acceptable Foods */}
         <Card>
           <CardContent className="py-6">
-            <h2 className="mb-4 text-base font-semibold text-foreground">Acceptable Foods</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/40">
-                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">Food</th>
-                    {MEAL_TYPES.map((mt) => (
-                      <th key={mt} className="px-3 py-2 text-center font-medium text-muted-foreground">
-                        {MEAL_LABELS[mt]}
-                      </th>
-                    ))}
-                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {acceptableFoods.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="text-center py-4 text-muted-foreground text-xs">
-                        No acceptable foods added yet.
-                      </td>
-                    </tr>
-                  )}
-                  {acceptableFoods.map((food) => (
-                    <tr key={food.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                      <td className="px-3 py-2 text-foreground">
-                        {editingAcceptableId === food.id ? (
-                          <div className="flex gap-1">
-                            <Input
-                              value={editingAcceptableValue}
-                              onChange={(e) => setEditingAcceptableValue(e.target.value)}
-                              className="h-7 text-xs"
-                              aria-label="Edit food name"
-                            />
-                            <Button size="sm" className="h-7 px-2 text-xs" onClick={() => handleAcceptableEditSave(food.id)}>Save</Button>
-                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setEditingAcceptableId(null)}>Cancel</Button>
-                          </div>
-                        ) : (
-                          food.food_name
-                        )}
-                      </td>
-                      {MEAL_TYPES.map((mt) => (
-                        <td key={mt} className="px-3 py-2 text-center">
-                          <input
-                            type="checkbox"
-                            checked={food[MEAL_FLAG[mt]] as boolean}
-                            onChange={() => handleCheckbox(food, mt)}
-                            aria-label={`${food.food_name} for ${mt}`}
-                            className="rounded border-border"
-                          />
-                        </td>
+            <button
+              className="flex w-full items-center justify-between text-left"
+              onClick={() => setAcceptableOpen((o) => !o)}
+              aria-expanded={acceptableOpen}
+            >
+              <h2 className="text-base font-semibold text-foreground">Acceptable Foods</h2>
+              {acceptableOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+            </button>
+            {acceptableOpen && (
+              <>
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/40">
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Food</th>
+                        {MEAL_TYPES.map((mt) => (
+                          <th key={mt} className="px-3 py-2 text-center font-medium text-muted-foreground">
+                            {MEAL_LABELS[mt]}
+                          </th>
+                        ))}
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {acceptableFoods.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="text-center py-4 text-muted-foreground text-xs">
+                            No acceptable foods added yet.
+                          </td>
+                        </tr>
+                      )}
+                      {acceptableFoods.map((food) => (
+                        <tr key={food.id} className="border-b border-border last:border-0 hover:bg-muted/20">
+                          <td className="px-3 py-2 text-foreground">
+                            {editingAcceptableId === food.id ? (
+                              <div className="flex gap-1">
+                                <Input
+                                  value={editingAcceptableValue}
+                                  onChange={(e) => setEditingAcceptableValue(e.target.value)}
+                                  className="h-7 text-xs"
+                                  aria-label="Edit food name"
+                                />
+                                <Button size="sm" className="h-7 px-2 text-xs" onClick={() => handleAcceptableEditSave(food.id)}>Save</Button>
+                                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setEditingAcceptableId(null)}>Cancel</Button>
+                              </div>
+                            ) : (
+                              food.food_name
+                            )}
+                          </td>
+                          {MEAL_TYPES.map((mt) => (
+                            <td key={mt} className="px-3 py-2 text-center">
+                              <input
+                                type="checkbox"
+                                checked={food[MEAL_FLAG[mt]] as boolean}
+                                onChange={() => handleCheckbox(food, mt)}
+                                aria-label={`${food.food_name} for ${mt}`}
+                                className="rounded border-border"
+                              />
+                            </td>
+                          ))}
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-1">
+                              {editingAcceptableId !== food.id && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => {
+                                    setEditingAcceptableId(food.id);
+                                    setEditingAcceptableValue(food.food_name);
+                                  }}
+                                >
+                                  Edit
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                                onClick={() => handleAcceptableDelete(food.id)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
                       ))}
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-1">
-                          {editingAcceptableId !== food.id && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 px-2 text-xs"
-                              onClick={() => {
-                                setEditingAcceptableId(food.id);
-                                setEditingAcceptableValue(food.food_name);
-                              }}
-                            >
-                              Edit
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-                            onClick={() => handleAcceptableDelete(food.id)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <form onSubmit={handleCard2Add} className="mt-3 flex gap-2">
-              <Input
-                placeholder="Add acceptable food…"
-                value={card2Input}
-                onChange={(e) => setCard2Input(e.target.value)}
-                aria-label="Add acceptable food"
-              />
-              <Button type="submit" size="sm" className="shrink-0">Add</Button>
-            </form>
+                    </tbody>
+                  </table>
+                </div>
+                <form onSubmit={handleCard2Add} className="mt-3 flex gap-2">
+                  <Input
+                    placeholder="Add acceptable food…"
+                    value={card2Input}
+                    onChange={(e) => setCard2Input(e.target.value)}
+                    aria-label="Add acceptable food"
+                  />
+                  <Button type="submit" size="sm" className="shrink-0">Add</Button>
+                </form>
+              </>
+            )}
           </CardContent>
         </Card>
 
         {/* Card 3 — Unacceptable Foods */}
         <Card>
           <CardContent className="py-6">
-            <h2 className="mb-4 text-base font-semibold text-foreground">Unacceptable Foods</h2>
-            <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-              {unacceptableFoods.length === 0 && (
-                <p className="text-xs text-muted-foreground col-span-2">No unacceptable foods added yet.</p>
-              )}
-              {unacceptableFoods.map((food) => (
-                <div key={food.id} className="flex items-center gap-2 rounded-md border border-border bg-muted/20 px-3 py-2 text-sm">
-                  {editingUnacceptableId === food.id ? (
-                    <div className="flex flex-1 gap-1">
-                      <Input
-                        value={editingUnacceptableValue}
-                        onChange={(e) => setEditingUnacceptableValue(e.target.value)}
-                        className="h-7 text-xs flex-1"
-                        aria-label="Edit food name"
-                      />
-                      <Button size="sm" className="h-7 px-2 text-xs shrink-0" onClick={() => handleUnacceptableEditSave(food.id)}>Save</Button>
-                      <Button variant="outline" size="sm" className="h-7 px-2 text-xs shrink-0" onClick={() => setEditingUnacceptableId(null)}>Cancel</Button>
-                    </div>
-                  ) : (
-                    <>
-                      <span className="flex-1 text-foreground truncate">{food.food_name}</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-xs shrink-0"
-                        onClick={() => {
-                          setEditingUnacceptableId(food.id);
-                          setEditingUnacceptableValue(food.food_name);
-                        }}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-xs text-destructive hover:text-destructive shrink-0"
-                        onClick={() => handleUnacceptableDelete(food.id)}
-                      >
-                        Delete
-                      </Button>
-                    </>
+            <button
+              className="flex w-full items-center justify-between text-left"
+              onClick={() => setUnacceptableOpen((o) => !o)}
+              aria-expanded={unacceptableOpen}
+            >
+              <h2 className="text-base font-semibold text-foreground">Unacceptable Foods</h2>
+              {unacceptableOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+            </button>
+            {unacceptableOpen && (
+              <>
+                <div className="mt-4 grid grid-cols-1 gap-1 sm:grid-cols-2">
+                  {unacceptableFoods.length === 0 && (
+                    <p className="text-xs text-muted-foreground col-span-2">No unacceptable foods added yet.</p>
                   )}
+                  {unacceptableFoods.map((food) => (
+                    <div key={food.id} className="flex items-center gap-2 rounded-md border border-border bg-muted/20 px-3 py-2 text-sm">
+                      {editingUnacceptableId === food.id ? (
+                        <div className="flex flex-1 gap-1">
+                          <Input
+                            value={editingUnacceptableValue}
+                            onChange={(e) => setEditingUnacceptableValue(e.target.value)}
+                            className="h-7 text-xs flex-1"
+                            aria-label="Edit food name"
+                          />
+                          <Button size="sm" className="h-7 px-2 text-xs shrink-0" onClick={() => handleUnacceptableEditSave(food.id)}>Save</Button>
+                          <Button variant="outline" size="sm" className="h-7 px-2 text-xs shrink-0" onClick={() => setEditingUnacceptableId(null)}>Cancel</Button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="flex-1 text-foreground truncate">{food.food_name}</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-xs shrink-0"
+                            onClick={() => {
+                              setEditingUnacceptableId(food.id);
+                              setEditingUnacceptableValue(food.food_name);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs text-destructive hover:text-destructive shrink-0"
+                            onClick={() => handleUnacceptableDelete(food.id)}
+                          >
+                            Delete
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <form onSubmit={handleCard3Add} className="mt-3 flex gap-2">
-              <Input
-                placeholder="Add unacceptable food…"
-                value={card3Input}
-                onChange={(e) => setCard3Input(e.target.value)}
-                aria-label="Add unacceptable food"
-              />
-              <Button type="submit" size="sm" className="shrink-0">Add</Button>
-            </form>
+                <form onSubmit={handleCard3Add} className="mt-3 flex gap-2">
+                  <Input
+                    placeholder="Add unacceptable food…"
+                    value={card3Input}
+                    onChange={(e) => setCard3Input(e.target.value)}
+                    aria-label="Add unacceptable food"
+                  />
+                  <Button type="submit" size="sm" className="shrink-0">Add</Button>
+                </form>
+              </>
+            )}
           </CardContent>
         </Card>
 
         {/* Card 4 — Documents */}
         <Card>
           <CardContent className="py-6">
-            <h2 className="mb-4 text-base font-semibold text-foreground">Documents</h2>
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <h2 className="text-base font-semibold text-foreground">Documents</h2>
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.txt,.csv"
+                  onChange={handleDocUpload}
+                  aria-label="Upload nutrition plan document"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? "Uploading…" : "Upload Document"}
+                </Button>
+              </div>
+            </div>
             {docs.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                No documents yet. Upload via the{" "}
-                <a href="/documents" className="underline text-primary">Documents</a> page
-                selecting the <strong>Nutrition Plan</strong> section.
-              </p>
+              <p className="text-xs text-muted-foreground">No documents uploaded yet.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -426,11 +500,21 @@ export default function NutritionPlanPage() {
                         <td className="px-4 py-3 text-muted-foreground">{formatBytes(doc.file_size)}</td>
                         <td className="px-4 py-3 text-muted-foreground">{formatDate(doc.uploaded_at)}</td>
                         <td className="px-4 py-3">
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={getDownloadUrl(doc.id)} target="_blank" rel="noopener noreferrer">
-                              Open
-                            </a>
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" asChild>
+                              <a href={getDownloadUrl(doc.id)} target="_blank" rel="noopener noreferrer">
+                                Open
+                              </a>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => handleDocDelete(doc.id)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
