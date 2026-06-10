@@ -10,7 +10,7 @@ interface PageLayoutProps {
 export function PageLayout({ title, description, children, action }: PageLayoutProps) {
   return (
     <div className="w-full px-6 py-8 lg:px-12">
-      <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div>
           <h1 className="font-heading text-xl font-semibold text-foreground">
             {title}
