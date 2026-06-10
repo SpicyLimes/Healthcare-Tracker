@@ -64,3 +64,35 @@ def test_gather_section_rows_filters_by_date(client, db_session):
     names = {r.get("name") for r in rows}
     assert "New Doc" in names
     assert "Old Doc" not in names
+
+
+def test_render_summary_includes_selected_section_and_excludes_others():
+    req = SummaryRequest(sections=["doctors"], prepared_for="Dr. Smith")
+    section_data = {
+        "doctors": [
+            {"id": "x", "name": "Dr. A", "specialty": "Cardiology", "created_at": "2026-01-01T00:00:00Z"}
+        ]
+    }
+    html = summary_service.render_summary(req, section_data, patient=None)
+    assert "<!DOCTYPE html>" in html
+    assert "Patient Health Summary" in html
+    assert "Prepared for: Dr. Smith" in html
+    assert "Dr. A" in html
+    assert "Cardiology" in html
+    # generic renderer hides id and timestamp columns
+    assert ">id<" not in html
+    assert "created_at" not in html
+    # a non-selected section must not appear
+    assert "Medications" not in html
+    assert "@media print" in html
+
+
+def test_render_summary_patient_header_optional():
+    req = SummaryRequest(sections=["doctors"], include_patient_header=True)
+    patient = {"full_name": "Jane Doe", "date_of_birth": "1950-01-02"}
+    html = summary_service.render_summary(req, {"doctors": []}, patient=patient)
+    assert "Jane Doe" in html
+
+    req_no = SummaryRequest(sections=["doctors"], include_patient_header=False)
+    html_no = summary_service.render_summary(req_no, {"doctors": []}, patient=patient)
+    assert "Jane Doe" not in html_no
