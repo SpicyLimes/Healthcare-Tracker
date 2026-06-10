@@ -104,3 +104,27 @@ def revoke_share_link(
         detail=f"Revoked share link: {link.label}",
     )
     db.commit()
+
+
+@router.delete(
+    "/{link_id}/permanent",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(verify_csrf)],
+)
+def delete_share_link(
+    link_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current: User = Depends(require_admin),
+):
+    link = db.get(ShareLink, link_id)
+    if link is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share link not found")
+    log_event(
+        db,
+        action=AuditAction.delete,
+        actor_type=ActorType.user,
+        actor_user_id=current.id,
+        detail=f"Deleted share link: {link.label}",
+    )
+    db.delete(link)
+    db.commit()

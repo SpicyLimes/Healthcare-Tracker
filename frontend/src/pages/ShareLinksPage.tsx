@@ -1,7 +1,7 @@
 // frontend/src/pages/ShareLinksPage.tsx
 import { useEffect, useState } from "react";
 import {
-  listShareLinks, createShareLink, revokeShareLink,
+  listShareLinks, createShareLink, revokeShareLink, deleteShareLink,
   type ShareLink, type ShareLinkCreated,
 } from "../api/shareLinks";
 import { AppShell } from "@/components/app-shell";
@@ -85,6 +85,16 @@ export default function ShareLinksPage() {
       await reload();
     } catch {
       setError("Failed to revoke link");
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!window.confirm("Permanently delete this share link? This cannot be undone.")) return;
+    try {
+      await deleteShareLink(id);
+      await reload();
+    } catch {
+      setError("Failed to delete link");
     }
   }
 
@@ -277,6 +287,14 @@ export default function ShareLinksPage() {
                             Revoke
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDelete(link.id)}
+                        >
+                          Delete
+                        </Button>
                       </div>
                     </td>
                   </tr>

@@ -44,3 +44,11 @@ export async function revokeShareLink(id: string): Promise<void> {
   });
   if (!res.ok) throw new Error("Failed to revoke share link");
 }
+
+export async function deleteShareLink(id: string): Promise<void> {
+  const res = await apiFetch(`/api/share-links/${id}/permanent`, {
+    method: "DELETE",
+    headers: { ...csrfHeader() },
+  });
+  if (!res.ok) throw new Error("Failed to delete share link");
+}
