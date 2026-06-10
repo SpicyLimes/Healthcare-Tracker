@@ -8,6 +8,14 @@ import { NavSidebar } from "@/components/nav-sidebar"
 import { useTheme } from "@/components/theme-provider"
 import { AccentPicker } from "@/components/accent-picker"
 import { AuthContext } from "@/auth/AuthContext"
+import SummaryBuilder from "@/components/SummaryBuilder"
+
+const ALL_SECTIONS = [
+  "doctors", "appointments", "medications", "ailments", "surgeries",
+  "hospitalizations", "vaccinations", "vision_history", "dental_history",
+  "visit_logs", "insurances", "pharmacies", "family_history",
+  "nutrition_plan", "profile",
+]
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { theme, toggleTheme } = useTheme()
@@ -76,6 +84,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           {/* Spacer */}
           <div className="flex-1" />
+
+          {/* Admin summary trigger */}
+          {user?.role === "admin" && (
+            <SummaryBuilder mode="admin" availableSections={ALL_SECTIONS} />
+          )}
 
           {/* Accent color picker */}
           <AccentPicker isDark={theme === "dark"} />

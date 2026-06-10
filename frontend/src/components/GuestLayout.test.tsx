@@ -1,9 +1,24 @@
 // frontend/src/components/GuestLayout.test.tsx
-import { describe, expect, it } from "vitest";
+import { useEffect } from "react";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import GuestLayout from "./GuestLayout";
-import { GuestProvider } from "../auth/GuestContext";
+import { GuestProvider, useGuest } from "../auth/GuestContext";
+
+vi.mock("../api/summary", () => ({
+  generateSummary: vi.fn(),
+  generateGuestSummary: vi.fn(),
+  openSummaryInNewTab: vi.fn(),
+}));
+
+function SeedGuest({ sections }: { sections: string[] }) {
+  const { setGuest } = useGuest();
+  useEffect(() => {
+    setGuest("test-token", sections, "2099-01-01T00:00:00Z");
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+}
 
 function renderWithGuest(ui: React.ReactNode) {
   return render(
@@ -27,5 +42,17 @@ describe("GuestLayout", () => {
   it("renders children when not expired", () => {
     renderWithGuest(<GuestLayout><p>Hello guest</p></GuestLayout>);
     expect(screen.getByText("Hello guest")).toBeInTheDocument();
+  });
+
+  it("offers a Generate Summary button scoped to allowed sections", () => {
+    render(
+      <GuestProvider>
+        <MemoryRouter>
+          <SeedGuest sections={["doctors"]} />
+          <GuestLayout><p>content</p></GuestLayout>
+        </MemoryRouter>
+      </GuestProvider>
+    );
+    expect(screen.getByRole("button", { name: /generate summary/i })).toBeInTheDocument();
   });
 });
