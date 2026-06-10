@@ -89,9 +89,7 @@ def _get_section_map() -> dict[str, tuple[Any, Any]]:
 @limiter.limit("30/minute")
 def get_allowed_sections(request: Request, response: Response, ctx: GuestContext = Depends(get_guest_access)):
     """Return the list of sections this token grants access to."""
-    from app.models.document import DocumentSection
-    all_sections = [s.value for s in DocumentSection]
-    return ctx.allowed_sections if ctx.allowed_sections else all_sections
+    return ctx.allowed_sections if ctx.allowed_sections else list(_get_section_map().keys())
 
 
 @router.get("/documents/{doc_id}/download")
