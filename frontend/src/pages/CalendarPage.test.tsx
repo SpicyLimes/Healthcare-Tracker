@@ -56,9 +56,9 @@ describe("CalendarPage", () => {
     render(<CalendarPage />);
     await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     fireEvent.click(screen.getByText("Agenda"));
-    expect(await screen.findByText("Annual physical")).toBeInTheDocument();
-    expect(screen.getByText("Flu Shot")).toBeInTheDocument();
-    expect(screen.getByText("Metformin 500mg")).toBeInTheDocument();
+    expect((await screen.findAllByText("Annual physical")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Flu Shot").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Metformin 500mg").length).toBeGreaterThan(0);
   });
 
   it("shows empty state in agenda view when no events", async () => {
@@ -67,7 +67,7 @@ describe("CalendarPage", () => {
     render(<CalendarPage />);
     await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     fireEvent.click(screen.getByText("Agenda"));
-    expect(await screen.findByText("No events to show")).toBeInTheDocument();
+    expect((await screen.findAllByText("No events to show")).length).toBeGreaterThan(0);
   });
 
   it("agenda view shows type badges", async () => {
@@ -78,6 +78,6 @@ describe("CalendarPage", () => {
     render(<CalendarPage />);
     await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     fireEvent.click(screen.getByText("Agenda"));
-    expect(await screen.findByText("Appointment")).toBeInTheDocument();
+    expect((await screen.findAllByText("Appointment")).length).toBeGreaterThan(0);
   });
 });

@@ -20,6 +20,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Select, Textarea } from "@/components/ui/form-field";
 import { cn } from "@/lib/utils";
+import { MobileRecordList } from "@/components/MobileRecordList";
 import { localToUtcIso, formatInTimezone } from "@/lib/datetime";
 import { useSort } from "@/hooks/useSort";
 import { useColumnResize } from "@/hooks/useColumnResize";
@@ -391,6 +392,39 @@ function AppointmentsSection({ tz, isAdmin }: AppointmentsSectionProps) {
 
   return (
     <>
+      <div className="md:hidden">
+        <Card>
+          <CardContent className="p-0">
+            <MobileRecordList
+              records={sortedRows}
+              getHeadline={(r) => {
+                const typeLabel = APPOINTMENT_TYPES.find((t) => t.value === r.appointment_type)?.label ?? "Appointment"
+                return typeLabel
+              }}
+              getSubtitle={(r) => formatInTimezone(r.appointment_datetime, tz)}
+              getBadge={(r) => ({
+                label: r.status.charAt(0).toUpperCase() + r.status.slice(1),
+                variant: STATUS_VARIANT[r.status],
+              })}
+              getFields={(r) => [
+                { key: "Date / Time", value: formatInTimezone(r.appointment_datetime, tz) },
+                { key: "Doctor", value: resolveDoctorName(r.doctor_id, r.doctor_other) || null },
+                { key: "Location", value: r.location ?? null },
+                { key: "Reason", value: r.reason ?? null },
+                { key: "Status", value: r.status.charAt(0).toUpperCase() + r.status.slice(1) },
+                { key: "Notes", value: r.notes ?? null },
+              ]}
+              expandedContent={(r) => <DocumentsPanel section="appointments" recordId={r.id} isAdmin={isAdmin} />}
+              isAdmin={isAdmin}
+              onEdit={(r) => openEdit(r)}
+              onDelete={(r) => onDelete(r.id)}
+              emptyMessage="No appointment records yet."
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="hidden md:block">
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -468,6 +502,7 @@ function AppointmentsSection({ tz, isAdmin }: AppointmentsSectionProps) {
           </div>
         </CardContent>
       </Card>
+      </div>
 
       {error && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
 
@@ -569,7 +604,7 @@ function AppointmentsSection({ tz, isAdmin }: AppointmentsSectionProps) {
           onClick={closeEdit}
         >
           <div
-            className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+            className="mx-4 sm:mx-auto w-full sm:max-w-lg rounded-xl border border-border bg-card p-4 sm:p-6 shadow-lg overflow-y-auto max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="edit-appt-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Appointment</h2>
@@ -681,68 +716,109 @@ export default function CalendarPage() {
         title="Calendar"
         description="A unified view of all time-based health records."
         action={
-          <div className="flex rounded-lg border border-border overflow-hidden">
-            <button
-              onClick={() => setView("month")}
-              className={cn(
-                "px-3 py-1.5 text-sm font-medium transition-colors",
-                view === "month"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-background text-muted-foreground hover:bg-muted"
-              )}
-            >
-              Month
-            </button>
-            <button
-              onClick={() => setView("agenda")}
-              className={cn(
-                "px-3 py-1.5 text-sm font-medium transition-colors",
-                view === "agenda"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-background text-muted-foreground hover:bg-muted"
-              )}
-            >
-              Agenda
-            </button>
+          <div className="hidden md:flex">
+            <div className="flex rounded-lg border border-border overflow-hidden">
+              <button
+                onClick={() => setView("month")}
+                className={cn(
+                  "px-3 py-1.5 text-sm font-medium transition-colors",
+                  view === "month"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-muted-foreground hover:bg-muted"
+                )}
+              >
+                Month
+              </button>
+              <button
+                onClick={() => setView("agenda")}
+                className={cn(
+                  "px-3 py-1.5 text-sm font-medium transition-colors",
+                  view === "agenda"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-muted-foreground hover:bg-muted"
+                )}
+              >
+                Agenda
+              </button>
+            </div>
           </div>
         }
       >
         {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
+        {/* Mobile: always show mobile nav + AgendaList */}
+        {!loading && !error && (
+          <div className="md:hidden">
+            <Card>
+              <CardContent className="p-4 flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={prevMonth}
+                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    aria-label="Previous month"
+                  >
+                    <ChevronLeft className="size-4" />
+                  </button>
+                  <span className="text-sm font-semibold text-foreground">
+                    {MONTH_NAMES[month]} {year}
+                  </span>
+                  <button
+                    onClick={nextMonth}
+                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    aria-label="Next month"
+                  >
+                    <ChevronRight className="size-4" />
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="mt-4">
+              <CardContent className="p-0">
+                <AgendaList events={events} />
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Desktop: show month grid or agenda based on view toggle */}
         {!loading && !error && view === "month" && (
-          <Card>
-            <CardContent className="p-4 flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <button
-                  onClick={prevMonth}
-                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                  aria-label="Previous month"
-                >
-                  <ChevronLeft className="size-4" />
-                </button>
-                <span className="text-sm font-semibold text-foreground">
-                  {MONTH_NAMES[month]} {year}
-                </span>
-                <button
-                  onClick={nextMonth}
-                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                  aria-label="Next month"
-                >
-                  <ChevronRight className="size-4" />
-                </button>
-              </div>
-              <MonthGrid events={monthEvents} year={year} month={month} />
-            </CardContent>
-          </Card>
+          <div className="hidden md:block">
+            <Card>
+              <CardContent className="p-4 flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={prevMonth}
+                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    aria-label="Previous month"
+                  >
+                    <ChevronLeft className="size-4" />
+                  </button>
+                  <span className="text-sm font-semibold text-foreground">
+                    {MONTH_NAMES[month]} {year}
+                  </span>
+                  <button
+                    onClick={nextMonth}
+                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    aria-label="Next month"
+                  >
+                    <ChevronRight className="size-4" />
+                  </button>
+                </div>
+                <MonthGrid events={monthEvents} year={year} month={month} />
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {!loading && !error && view === "agenda" && (
-          <Card>
-            <CardContent className="p-0">
-              <AgendaList events={events} />
-            </CardContent>
-          </Card>
+          <div className="hidden md:block">
+            <Card>
+              <CardContent className="p-0">
+                <AgendaList events={events} />
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {!loading && (
