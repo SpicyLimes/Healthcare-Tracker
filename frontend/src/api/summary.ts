@@ -4,7 +4,6 @@ import { csrfHeader } from "./csrf";
 export interface SummaryRequest {
   sections: string[];
   include_patient_header?: boolean;
-  include_documents?: boolean;
   date_from?: string | null;
   date_to?: string | null;
   prepared_for?: string | null;
