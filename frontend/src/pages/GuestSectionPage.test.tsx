@@ -26,7 +26,7 @@ describe("GuestSectionPage", () => {
       { id: "1", vaccine: "Flu Shot" },
     ]);
     renderSection();
-    expect(await screen.findByText("View record")).toBeInTheDocument();
+    expect(await screen.findByText("View Record")).toBeInTheDocument();
   });
 
   it("shows empty state when no records", async () => {
@@ -38,7 +38,7 @@ describe("GuestSectionPage", () => {
   it("shows no add or delete buttons", async () => {
     vi.spyOn(guestApi, "listGuestRecords").mockResolvedValue([{ id: "1", vaccine: "Flu" }]);
     renderSection();
-    await screen.findByText("View record");
+    await screen.findByText("View Record");
     expect(screen.queryByRole("button", { name: /add/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /delete/i })).not.toBeInTheDocument();
   });

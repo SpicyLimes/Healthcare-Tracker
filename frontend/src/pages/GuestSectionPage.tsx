@@ -55,7 +55,7 @@ export default function GuestSectionPage() {
                       to={`/guest/sections/${section}/${row.id}`}
                       className="text-primary font-medium hover:underline underline-offset-4"
                     >
-                      View record
+                      View Record
                     </Link>
                   </td>
                   {Object.entries(row)
