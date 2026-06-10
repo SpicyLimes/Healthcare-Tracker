@@ -119,8 +119,8 @@ def test_note_response_includes_updated_at(client, db_session):
     assert body["updated_at"] is not None
 
 
-def test_viewer_only_sees_own_notes(client, db_session):
-    """A viewer should not see notes authored by other users."""
+def test_viewer_sees_all_notes(client, db_session):
+    """A viewer should see notes authored by all users, not just their own."""
     # Log in as admin, create a note
     admin_csrf = _login_admin(client, db_session)
     client.post("/api/notes", headers={"X-CSRF-Token": admin_csrf}, json={"title": "Admin Note"})
@@ -129,7 +129,25 @@ def test_viewer_only_sees_own_notes(client, db_session):
     # Log in as viewer, create own note
     viewer_csrf = _login_viewer(client, db_session, email="viewer_scoped@notes.example.com")
     client.post("/api/notes", headers={"X-CSRF-Token": viewer_csrf}, json={"title": "Viewer Note"})
-    # Viewer should only see their own note
+    # Viewer should see both notes
     notes = client.get("/api/notes").json()
-    assert len(notes) == 1
-    assert notes[0]["title"] == "Viewer Note"
+    titles = {n["title"] for n in notes}
+    assert "Admin Note" in titles
+    assert "Viewer Note" in titles
+
+
+def test_viewer_can_see_admin_created_note(client, db_session):
+    """A viewer can see a note created by an admin."""
+    # Admin creates a note
+    admin_csrf = _login_admin(client, db_session)
+    admin_note_id = client.post(
+        "/api/notes",
+        headers={"X-CSRF-Token": admin_csrf},
+        json={"title": "Admin Created Note"},
+    ).json()["id"]
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": admin_csrf})
+
+    # Viewer logs in and lists notes
+    _login_viewer(client, db_session, email="viewer_admin_note@notes.example.com")
+    notes = client.get("/api/notes").json()
+    assert any(n["id"] == admin_note_id for n in notes)

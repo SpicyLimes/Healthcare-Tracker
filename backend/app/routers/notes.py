@@ -20,8 +20,6 @@ def list_notes(
     current: User = Depends(get_current_user),
 ):
     stmt = select(Note).order_by(Note.pinned.desc(), Note.created_at.desc())
-    if current.role != Role.admin:
-        stmt = stmt.where(Note.author_user_id == current.id)
     return db.execute(stmt).scalars().all()
 
 
