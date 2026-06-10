@@ -13,6 +13,7 @@ import { ChevronRight, ChevronDown } from "lucide-react";
 import { useSort } from "@/hooks/useSort";
 import { useColumnResize } from "@/hooks/useColumnResize";
 import { SortableTh } from "@/components/SortableTh";
+import { MobileRecordList } from "@/components/MobileRecordList";
 
 export default function HospitalizationsPage() {
   const { user } = useAuth();
@@ -76,6 +77,31 @@ export default function HospitalizationsPage() {
       <PageLayout title="Hospitalizations" description="Hospital stays and inpatient events.">
         <Card>
           <CardContent className="p-0">
+            <div className="md:hidden">
+              <MobileRecordList
+                records={sortedRows}
+                getHeadline={(r) => r.reason ?? r.facility ?? "Hospitalization"}
+                getSubtitle={(r) => {
+                  const parts = [r.admission_date, r.discharge_date].filter(Boolean)
+                  return parts.length ? parts.join(" – ") : null
+                }}
+                getFields={(r) => [
+                  { key: "Facility", value: r.facility ?? null },
+                  { key: "Admission", value: r.admission_date ?? null },
+                  { key: "Discharge", value: r.discharge_date ?? null },
+                  { key: "Reason", value: r.reason ?? null },
+                  { key: "Physician", value: resolveDoctorName(r.attending_physician_id, r.attending_physician_other) || null },
+                  { key: "Outcome", value: r.outcome ?? null },
+                  { key: "Notes", value: r.notes ?? null },
+                ]}
+                expandedContent={(r) => <DocumentsPanel section="hospitalizations" recordId={r.id} isAdmin={isAdmin} />}
+                isAdmin={isAdmin}
+                onEdit={(r) => openEdit(r)}
+                onDelete={(r) => onDelete(r.id)}
+                emptyMessage="No hospitalization records yet."
+              />
+            </div>
+            <div className="hidden md:block">
             <div className="overflow-x-auto">
               <table ref={tableRef} className="w-full text-sm">
                 <thead>
@@ -152,6 +178,7 @@ export default function HospitalizationsPage() {
                   )}
                 </tbody>
               </table>
+            </div>
             </div>
           </CardContent>
         </Card>
@@ -261,7 +288,7 @@ export default function HospitalizationsPage() {
              onKeyDown={(e) => e.key === "Escape" && closeEdit()}
              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
              onClick={closeEdit}>
-          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+          <div className="mx-4 sm:mx-auto w-full sm:max-w-lg rounded-xl border border-border bg-card p-4 sm:p-6 shadow-lg overflow-y-auto max-h-[90vh]"
                onClick={(e) => e.stopPropagation()}>
             <h2 id="edit-hosp-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Hospitalization</h2>
             {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
