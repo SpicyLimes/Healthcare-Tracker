@@ -83,6 +83,7 @@ describe("NutritionPlanPage", () => {
     mockAuth();
     mockApis({ acceptable: [ACCEPTABLE] });
     render(<NutritionPlanPage />);
+    fireEvent.click(await screen.findByText("Acceptable Foods"));
     expect(await screen.findByText("Banana")).toBeInTheDocument();
   });
 
@@ -90,6 +91,7 @@ describe("NutritionPlanPage", () => {
     mockAuth();
     mockApis({ unacceptable: [UNACCEPTABLE] });
     render(<NutritionPlanPage />);
+    fireEvent.click(await screen.findByText("Unacceptable Foods"));
     expect(await screen.findByText("Fried chicken")).toBeInTheDocument();
   });
 
@@ -131,6 +133,7 @@ describe("NutritionPlanPage", () => {
       ...ACCEPTABLE, for_breakfast: true,
     });
     render(<NutritionPlanPage />);
+    fireEvent.click(await screen.findByText("Acceptable Foods"));
     const checkbox = await screen.findByLabelText("Banana for breakfast");
     fireEvent.click(checkbox);
     await waitFor(() => {
@@ -155,6 +158,7 @@ describe("NutritionPlanPage", () => {
       ...checkedFood, for_breakfast: false,
     });
     render(<NutritionPlanPage />);
+    fireEvent.click(await screen.findByText("Acceptable Foods"));
     const checkbox = await screen.findByLabelText("Banana for breakfast");
     fireEvent.click(checkbox);
     await waitFor(() => {
@@ -170,6 +174,7 @@ describe("NutritionPlanPage", () => {
       ...ACCEPTABLE, food_name: "Banana (ripe)",
     });
     render(<NutritionPlanPage />);
+    fireEvent.click(await screen.findByText("Acceptable Foods"));
     await screen.findByText("Banana");
     const editBtn = screen.getAllByRole("button", { name: /edit/i })[0];
     fireEvent.click(editBtn);
@@ -186,6 +191,7 @@ describe("NutritionPlanPage", () => {
     mockApis({ acceptable: [ACCEPTABLE] });
     const removeSpy = vi.spyOn(nutritionModule.acceptableFoodsApi, "remove").mockResolvedValue(undefined);
     render(<NutritionPlanPage />);
+    fireEvent.click(await screen.findByText("Acceptable Foods"));
     await screen.findByText("Banana");
     const deleteBtn = screen.getAllByRole("button", { name: /delete/i })[0];
     fireEvent.click(deleteBtn);
@@ -197,6 +203,7 @@ describe("NutritionPlanPage", () => {
     mockApis({ unacceptable: [UNACCEPTABLE] });
     const removeSpy = vi.spyOn(nutritionModule.unacceptableFoodsApi, "remove").mockResolvedValue(undefined);
     render(<NutritionPlanPage />);
+    fireEvent.click(await screen.findByText("Unacceptable Foods"));
     await screen.findByText("Fried chicken");
     const deleteBtn = screen.getByRole("button", { name: /delete/i });
     fireEvent.click(deleteBtn);

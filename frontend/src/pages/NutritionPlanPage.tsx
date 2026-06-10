@@ -58,8 +58,8 @@ export default function NutritionPlanPage() {
   const [editingUnacceptableValue, setEditingUnacceptableValue] = useState("");
 
   // Collapse state for Cards 2 & 3
-  const [acceptableOpen, setAcceptableOpen] = useState(true);
-  const [unacceptableOpen, setUnacceptableOpen] = useState(true);
+  const [acceptableOpen, setAcceptableOpen] = useState(false);
+  const [unacceptableOpen, setUnacceptableOpen] = useState(false);
 
   // Card 4 upload
   const fileInputRef = useRef<HTMLInputElement>(null);
