@@ -14,6 +14,7 @@ import { ChevronRight, ChevronDown } from "lucide-react";
 import { useSort } from "@/hooks/useSort";
 import { useColumnResize } from "@/hooks/useColumnResize";
 import { SortableTh } from "@/components/SortableTh";
+import { MobileRecordList } from "@/components/MobileRecordList";
 
 const EMPTY: VisitLogInput = {
   visit_date: null,
@@ -91,6 +92,28 @@ export default function VisitLogsPage() {
       >
         <Card>
           <CardContent className="p-0">
+            <div className="md:hidden">
+              <MobileRecordList
+                records={sortedRows}
+                getHeadline={(r) => r.visit_date ?? "Visit"}
+                getSubtitle={(r) => resolveDoctorName(r.doctor_id, r.doctor_other) || null}
+                getFields={(r) => [
+                  { key: "Date", value: r.visit_date ?? null },
+                  { key: "Doctor", value: resolveDoctorName(r.doctor_id, r.doctor_other) || null },
+                  { key: "Reason", value: r.reason ?? null },
+                  { key: "Summary", value: r.summary ?? null },
+                  { key: "Follow-up", value: r.follow_up ? "Yes" : r.follow_up === false ? "No" : null },
+                  { key: "Follow-up Date", value: r.follow_up_date ?? null },
+                  { key: "Notes", value: r.notes ?? null },
+                ]}
+                expandedContent={(r) => <DocumentsPanel section="visit_logs" recordId={r.id} isAdmin={isAdmin} />}
+                isAdmin={isAdmin}
+                onEdit={(r) => openEdit(r)}
+                onDelete={(r) => onDelete(r.id)}
+                emptyMessage="No visit log records yet."
+              />
+            </div>
+            <div className="hidden md:block">
             <div className="overflow-x-auto">
               <table ref={tableRef} className="w-full text-sm">
                 <thead>
@@ -178,6 +201,7 @@ export default function VisitLogsPage() {
                   )}
                 </tbody>
               </table>
+            </div>
             </div>
           </CardContent>
         </Card>
@@ -285,7 +309,7 @@ export default function VisitLogsPage() {
              onKeyDown={(e) => e.key === "Escape" && closeEdit()}
              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
              onClick={closeEdit}>
-          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+          <div className="mx-4 sm:mx-auto w-full sm:max-w-lg rounded-xl border border-border bg-card p-4 sm:p-6 shadow-lg overflow-y-auto max-h-[90vh]"
                onClick={(e) => e.stopPropagation()}>
             <h2 id="edit-vl-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Visit Log</h2>
             {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
