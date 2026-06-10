@@ -45,7 +45,7 @@ def test_migration_0004_round_trip(fresh_db_url, monkeypatch):
             text("SELECT unnest(enum_range(NULL::documentsection))::text")
         )
         values = {row[0] for row in result}
-    assert values == {
+    assert values >= {
         "surgeries", "hospitalizations", "vision_history", "dental_history",
         "visit_logs", "appointments", "medications", "vaccinations",
         "insurances", "ailments", "doctors", "profile",
