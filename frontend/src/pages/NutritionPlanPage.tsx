@@ -286,7 +286,7 @@ export default function NutritionPlanPage() {
               onClick={() => setAcceptableOpen((o) => !o)}
               aria-expanded={acceptableOpen}
             >
-              <h2 className="text-base font-semibold text-foreground">Acceptable Foods</h2>
+              <span className="text-base font-semibold text-foreground">Acceptable Foods</span>
               {acceptableOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
             </button>
             {acceptableOpen && (
@@ -393,7 +393,7 @@ export default function NutritionPlanPage() {
               onClick={() => setUnacceptableOpen((o) => !o)}
               aria-expanded={unacceptableOpen}
             >
-              <h2 className="text-base font-semibold text-foreground">Unacceptable Foods</h2>
+              <span className="text-base font-semibold text-foreground">Unacceptable Foods</span>
               {unacceptableOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
             </button>
             {unacceptableOpen && (
