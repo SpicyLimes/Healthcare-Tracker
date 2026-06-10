@@ -38,7 +38,7 @@ export default function GuestSectionPage() {
               <tr className="border-b border-border bg-muted/40">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
                 {Object.keys((records as Record<string, unknown>[])[0])
-                  .filter((k) => k !== "id")
+                  .filter((k) => k !== "id" && !k.endsWith("_id"))
                   .slice(0, 4)
                   .map((k) => (
                     <th key={k} className="px-4 py-3 text-left font-medium text-muted-foreground capitalize">
@@ -59,7 +59,7 @@ export default function GuestSectionPage() {
                     </Link>
                   </td>
                   {Object.entries(row)
-                    .filter(([k]) => k !== "id")
+                    .filter(([k]) => k !== "id" && !k.endsWith("_id"))
                     .slice(0, 4)
                     .map(([k, v]) => (
                       <td key={k} className="px-4 py-3 text-foreground">

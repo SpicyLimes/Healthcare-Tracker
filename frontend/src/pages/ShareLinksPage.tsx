@@ -94,14 +94,29 @@ export default function ShareLinksPage() {
     );
   }
 
+  async function copyToClipboard(text: string) {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const el = document.createElement("textarea");
+      el.value = text;
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    }
+  }
+
   async function handleCopyBanner(url: string) {
-    await navigator.clipboard.writeText(window.location.origin + url);
+    await copyToClipboard(window.location.origin + url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
 
   async function handleCopyRow(url: string, id: string) {
-    await navigator.clipboard.writeText(window.location.origin + url);
+    await copyToClipboard(window.location.origin + url);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   }

@@ -36,7 +36,7 @@ export default function GuestRecordPage() {
         <div className="rounded-xl border border-border overflow-hidden mb-6">
           <dl className="divide-y divide-border">
             {Object.entries(record)
-              .filter(([k]) => k !== "id")
+              .filter(([k]) => k !== "id" && !k.endsWith("_id"))
               .map(([k, v]) => (
                 <div key={k} className="grid grid-cols-3 px-4 py-3 text-sm">
                   <dt className="font-medium text-muted-foreground capitalize">{k.replace(/_/g, " ")}</dt>
