@@ -4,7 +4,7 @@ import {
   User, Pill, Stethoscope, HeartPulse, Shield, Building2, Users,
   Scissors, Hospital, Eye, Smile, Syringe, ClipboardList,
   FolderOpen, KeyRound, Share2, ScrollText, UserCog, LogOut,
-  LayoutDashboard, Calendar, CheckCircle2, Database, StickyNote, Salad,
+  LayoutDashboard, Calendar, CheckCircle2, Database, StickyNote, Salad, Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -73,6 +73,7 @@ const navGroups = [
 const adminItems = [
   { to: "/audit-log", label: "Audit Log", icon: ScrollText },
   { to: "/users", label: "Manage Users", icon: UserCog },
+  { to: "/settings", label: "AI Settings", icon: Bot },
 ];
 
 interface NavSidebarProps {

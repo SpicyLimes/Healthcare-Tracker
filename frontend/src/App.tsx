@@ -29,6 +29,7 @@ import NutritionPlanPage from "./pages/NutritionPlanPage";
 import GuestEntryPage from "./pages/GuestEntryPage";
 import GuestSectionPage from "./pages/GuestSectionPage";
 import GuestRecordPage from "./pages/GuestRecordPage";
+import SettingsPage from "./pages/SettingsPage";
 
 export default function App() {
   return (
@@ -60,6 +61,7 @@ export default function App() {
             <Route path="/documents" element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
             <Route path="/share-links" element={<RequireAdmin><ShareLinksPage /></RequireAdmin>} />
             <Route path="/audit-log" element={<RequireAdmin><AuditLogPage /></RequireAdmin>} />
+            <Route path="/settings" element={<RequireAdmin><SettingsPage /></RequireAdmin>} />
             <Route path="/guest" element={<GuestEntryPage />} />
             <Route path="/guest/sections/:section" element={<GuestSectionPage />} />
             <Route path="/guest/sections/:section/:recordId" element={<GuestRecordPage />} />
