@@ -39,9 +39,37 @@ def test_update_ai_settings_admin(client, db_session):
     )
     assert res.status_code == 200
     assert res.json()["enabled"] is True
+    # Confirm it actually persisted, not just echoed back.
+    assert client.get("/api/settings/ai").json()["enabled"] is True
+
+
+def test_update_ai_settings_partial_does_not_clobber(client, db_session):
+    csrf = _login_admin(client, db_session, email="partial@example.com")
+    client.put("/api/settings/ai", headers={"X-CSRF-Token": csrf},
+               json={"enabled": True, "base_url": "http://localhost:1234/v1", "model": "m"})
+    # Send only enabled=false; base_url/model must survive.
+    res = client.put("/api/settings/ai", headers={"X-CSRF-Token": csrf}, json={"enabled": False})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["enabled"] is False
+    assert body["base_url"] == "http://localhost:1234/v1"
+    assert body["model"] == "m"
 
 
 def test_update_ai_settings_requires_csrf(client, db_session):
     _login_admin(client, db_session, email="putcsrf@example.com")
     res = client.put("/api/settings/ai", json={"enabled": True})
+    assert res.status_code == 403
+
+
+def test_ai_test_unconfigured_returns_not_reachable(client, db_session):
+    csrf = _login_admin(client, db_session, email="testping@example.com")
+    res = client.post("/api/settings/ai/test", headers={"X-CSRF-Token": csrf})
+    assert res.status_code == 200
+    assert res.json()["reachable"] is False
+
+
+def test_ai_test_viewer_forbidden(client, db_session):
+    csrf = _login_viewer(client, db_session, email="testpingv@example.com")
+    res = client.post("/api/settings/ai/test", headers={"X-CSRF-Token": csrf})
     assert res.status_code == 403

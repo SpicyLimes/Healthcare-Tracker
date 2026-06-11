@@ -33,10 +33,18 @@ def update_ai_settings(
     current: User = Depends(require_admin),
 ):
     kwargs = payload.model_dump(exclude_unset=True)
+    if not kwargs:
+        # Empty patch: no-op, don't pollute the audit log with a false "updated" entry.
+        return ai_settings_service.get_settings(db)
     row = ai_settings_service.update_settings(db, **kwargs)
-    log_event(db, action=AuditAction.update, actor_type=ActorType.user,
-              actor_user_id=current.id, section="ai_settings", detail="Updated AI provider settings")
-    db.commit()
+    try:
+        log_event(db, action=AuditAction.update, actor_type=ActorType.user,
+                  actor_user_id=current.id, section="ai_settings", detail="Updated AI provider settings")
+        db.commit()
+    except Exception:
+        logger.exception("Audit log/commit failed for AI settings update — rolling back")
+        db.rollback()
+        raise
     db.refresh(row)
     return row
 
