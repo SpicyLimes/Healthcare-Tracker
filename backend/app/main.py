@@ -10,8 +10,8 @@ from app.database import SessionLocal
 from app.routers import (
     ailments, appointments, audit_log, auth, calendar, dental_history, documents,
     doctors, family_history, guest, health, hospitalizations, insurances, medications,
-    notes, nutrition, pharmacies, profile, share_links, summary, surgeries, users, vaccinations, vision_history,
-    visit_logs,
+    notes, nutrition, pharmacies, profile, settings, share_links, summary, surgeries,
+    users, vaccinations, vision_history, visit_logs,
 )
 from app.limiter import limiter
 from app.services import user_service
@@ -64,3 +64,4 @@ app.include_router(calendar.router)
 app.include_router(guest.router)
 app.include_router(notes.router)
 app.include_router(nutrition.router)
+app.include_router(settings.router)
