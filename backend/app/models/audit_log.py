@@ -15,6 +15,7 @@ class AuditAction(str, enum.Enum):
     update = "update"
     delete = "delete"
     share_link_access = "share_link_access"
+    ai_query = "ai_query"
 
 
 class ActorType(str, enum.Enum):

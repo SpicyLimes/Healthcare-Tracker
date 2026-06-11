@@ -1,3 +1,4 @@
+from app.models.ai_settings import AiSettings
 from app.models.user import Role, User
 from app.models.refresh_token import RefreshToken
 from app.models.profile import Profile
@@ -19,6 +20,7 @@ from app.models.extended_records import (
 )
 
 __all__ = [
+    "AiSettings",
     "Role",
     "User",
     "RefreshToken",
