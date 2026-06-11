@@ -1,5 +1,6 @@
 """The bounded agent loop. Pure orchestration over ai_provider + ai_tools."""
 import json
+import uuid
 
 from sqlalchemy.orm import Session
 
@@ -26,7 +27,15 @@ def run_chat(db: Session, settings, messages: list[dict]) -> ChatResponse:
         message = choice.get("message", {})
         tool_calls = message.get("tool_calls")
         if not tool_calls:
-            return ChatResponse(answer=message.get("content") or "", tools_used=tools_used)
+            return ChatResponse(answer=message.get("content") or "", tools_used=_unique(tools_used))
+
+        # Self-hosted models (LM Studio, Ollama, llama.cpp) sometimes omit the
+        # tool-call "id". A null id breaks the follow-up request on strict
+        # OpenAI-compatible servers, so we synthesize one and keep the assistant
+        # message and its tool replies referring to the SAME id.
+        for call in tool_calls:
+            if not call.get("id"):
+                call["id"] = f"call_{uuid.uuid4().hex[:8]}"
 
         convo.append({"role": "assistant", "content": message.get("content"), "tool_calls": tool_calls})
         for call in tool_calls:
@@ -40,8 +49,13 @@ def run_chat(db: Session, settings, messages: list[dict]) -> ChatResponse:
             tools_used.append(name)
             convo.append({
                 "role": "tool",
-                "tool_call_id": call.get("id"),
+                "tool_call_id": call["id"],
                 "content": json.dumps(result, default=str),
             })
 
-    return ChatResponse(answer="(Stopped: too many tool rounds.)", tools_used=tools_used)
+    return ChatResponse(answer="(Stopped: too many tool rounds.)", tools_used=_unique(tools_used))
+
+
+def _unique(names: list[str]) -> list[str]:
+    """De-duplicate tool names while preserving first-seen order (for clean audit labels)."""
+    return list(dict.fromkeys(names))

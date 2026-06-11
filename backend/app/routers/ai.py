@@ -42,7 +42,7 @@ def chat(
     except ai_provider.ProviderUnavailable:
         raise _UNAVAILABLE
 
-    last_user = next((m.content for m in reversed(payload.messages) if m.role == "user"), "")
+    last_user = next((m.content for m in reversed(payload.messages) if m.role == "user" and m.content), "")
     try:
         log_event(
             db, action=AuditAction.ai_query, actor_type=ActorType.user, actor_user_id=current.id,
