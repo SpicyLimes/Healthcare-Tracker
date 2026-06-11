@@ -128,3 +128,13 @@ def test_chat_provider_unavailable_returns_503(client, db_session, monkeypatch):
     res = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},
                       json={"messages": [{"role": "user", "content": "hi"}]})
     assert res.status_code == 503
+
+
+def test_get_ai_settings_unauthenticated(client, db_session):
+    res = client.get("/api/settings/ai")
+    assert res.status_code == 401
+
+
+def test_chat_unauthenticated(client, db_session):
+    res = client.post("/api/ai/chat", json={"messages": [{"role": "user", "content": "hi"}]})
+    assert res.status_code == 401

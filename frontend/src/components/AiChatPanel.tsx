@@ -134,7 +134,7 @@ export default function AiChatPanel() {
                   Ask about your health records
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  e.g. “What medications is she currently taking?” or “List upcoming appointments.”
+                  e.g. “What are the current medications?” or “List upcoming appointments.”
                 </p>
               </div>
             )}
