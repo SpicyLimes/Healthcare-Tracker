@@ -52,7 +52,9 @@ def test_migration_0005_round_trip(fresh_db_url, monkeypatch):
                 text("SELECT unnest(enum_range(NULL::actortype))::text")
             )
         }
-    assert actions == {"create", "update", "delete", "share_link_access"}
+    # Note: this test upgrades to head, so later migrations that extend the enum
+    # are reflected here. 0015 adds 'ai_query'.
+    assert actions == {"create", "update", "delete", "share_link_access", "ai_query"}
     assert actor_types == {"user", "guest"}
     eng.dispose()
 
