@@ -18,6 +18,8 @@
 - **Notes / To-Do's:** Personal notes with pin-to-top and done/completed toggles; any user can create and edit their own notes
 - **Document uploads:** PDFs, images, and Office files attached to any section or record; preview in-browser
 - **Calendar:** Unified timeline view of appointments, visits, vaccinations, surgeries, hospitalizations, and medications
+- **One-page summary:** Generate a printable health summary across selected sections and date ranges (browser print → save as PDF)
+- **AI assistant (optional, admin-only):** A built-in chat that answers questions about the patient's records by querying the database through read-only tools — answers are grounded in real data, never invented. Bring your own self-hosted, OpenAI-compatible endpoint (e.g. LM Studio or Ollama); the model URL and name are set in-app and the assistant is disabled by default. No record data is sent anywhere unless you configure and enable it.
 - **Role-based access:** Admin (full access), Viewer (read-only), Guest (time-limited share links)
 - **Share links:** Admin generates signed, expiring URLs scoped to specific sections for doctors; one-time token display, revocable
 - **Audit log:** Every write and share link access logged with actor, timestamp, and detail; filterable in-app
