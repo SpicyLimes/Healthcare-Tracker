@@ -62,6 +62,29 @@ describe("SummaryBuilder", () => {
       expect.objectContaining({ date_from: null, date_to: null }),
     );
   });
+
+  it("All Records checkbox selects and deselects all sections", () => {
+    render(<SummaryBuilder mode="admin" availableSections={["doctors", "medications"]} />);
+    fireEvent.click(screen.getByRole("button", { name: /generate summary/i }));
+    fireEvent.click(screen.getByLabelText(/all records/i));
+    expect(screen.getByLabelText(/doctors/i)).toBeChecked();
+    expect(screen.getByLabelText(/medications/i)).toBeChecked();
+    fireEvent.click(screen.getByLabelText(/all records/i));
+    expect(screen.getByLabelText(/doctors/i)).not.toBeChecked();
+  });
+
+  it("All time checkbox hides the date inputs and sends null dates", async () => {
+    const { generateSummary } = await import("../api/summary");
+    render(<SummaryBuilder mode="admin" availableSections={["doctors"]} />);
+    fireEvent.click(screen.getByRole("button", { name: /generate summary/i }));
+    fireEvent.click(screen.getByLabelText(/all time/i));
+    expect(screen.queryByLabelText(/from date/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(/doctors/i));
+    fireEvent.click(screen.getByRole("button", { name: /^generate$/i }));
+    expect(generateSummary).toHaveBeenCalledWith(
+      expect.objectContaining({ date_from: null, date_to: null }),
+    );
+  });
 });
 
 describe("AppShell summary trigger", () => {

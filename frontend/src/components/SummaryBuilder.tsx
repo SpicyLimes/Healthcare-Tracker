@@ -26,6 +26,7 @@ export default function SummaryBuilder({ mode, availableSections, token }: Props
   const [selected, setSelected] = useState<string[]>([]);
   const [preparedFor, setPreparedFor] = useState("");
   const [includeHeader, setIncludeHeader] = useState(true);
+  const [allTime, setAllTime] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [busy, setBusy] = useState(false);
@@ -50,8 +51,8 @@ export default function SummaryBuilder({ mode, availableSections, token }: Props
       sections: selected,
       include_patient_header: includeHeader,
       prepared_for: preparedFor || null,
-      date_from: dateFrom || null,
-      date_to: dateTo || null,
+      date_from: allTime ? null : dateFrom || null,
+      date_to: allTime ? null : dateTo || null,
     };
     try {
       const html =
@@ -78,20 +79,33 @@ export default function SummaryBuilder({ mode, availableSections, token }: Props
         </DialogDescription>
 
         <div className="mt-4 space-y-2 max-h-64 overflow-y-auto">
-          {availableSections.map((s) => (
-            <label key={s} className="flex items-center gap-2 text-sm text-foreground">
-              <Checkbox
-                checked={selected.includes(s)}
-                onChange={() => toggle(s)}
-              />
-              {SECTION_LABELS[s] ?? s}
-            </label>
-          ))}
+          <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <Checkbox
+              checked={selected.length === availableSections.length}
+              onChange={() =>
+                setSelected(
+                  selected.length === availableSections.length ? [] : [...availableSections],
+                )
+              }
+            />
+            All Records
+          </label>
+          <div className="border-t border-border pt-1 space-y-2">
+            {availableSections.map((s) => (
+              <label key={s} className="flex items-center gap-2 text-sm text-foreground">
+                <Checkbox
+                  checked={selected.includes(s)}
+                  onChange={() => toggle(s)}
+                />
+                {SECTION_LABELS[s] ?? s}
+              </label>
+            ))}
+          </div>
         </div>
 
         <label className="mt-4 flex items-center gap-2 text-sm text-foreground">
           <Checkbox checked={includeHeader} onChange={() => setIncludeHeader((v) => !v)} />
-          Include patient header
+          Patient Profile
         </label>
 
         <input
@@ -104,27 +118,41 @@ export default function SummaryBuilder({ mode, availableSections, token }: Props
 
         <fieldset className="mt-3">
           <legend className="text-xs text-muted-foreground mb-1">
-            Date range (optional) — filters records by when they were added
+            Date range — filters records by when they were added
           </legend>
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-              aria-label="From date"
-              value={dateFrom}
-              max={dateTo || undefined}
-              onChange={(e) => setDateFrom(e.target.value)}
+          <label className="flex items-center gap-2 text-sm text-foreground mb-2">
+            <Checkbox
+              checked={allTime}
+              onChange={() => {
+                setAllTime((v) => {
+                  if (!v) { setDateFrom(""); setDateTo(""); }
+                  return !v;
+                });
+              }}
             />
-            <span className="text-sm text-muted-foreground">to</span>
-            <input
-              type="date"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-              aria-label="To date"
-              value={dateTo}
-              min={dateFrom || undefined}
-              onChange={(e) => setDateTo(e.target.value)}
-            />
-          </div>
+            All time
+          </label>
+          {!allTime && (
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                aria-label="From date"
+                value={dateFrom}
+                max={dateTo || undefined}
+                onChange={(e) => setDateFrom(e.target.value)}
+              />
+              <span className="text-sm text-muted-foreground">to</span>
+              <input
+                type="date"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                aria-label="To date"
+                value={dateTo}
+                min={dateFrom || undefined}
+                onChange={(e) => setDateTo(e.target.value)}
+              />
+            </div>
+          )}
         </fieldset>
 
         {error && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
