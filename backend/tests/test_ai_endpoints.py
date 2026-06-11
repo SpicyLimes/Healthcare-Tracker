@@ -73,3 +73,58 @@ def test_ai_test_viewer_forbidden(client, db_session):
     csrf = _login_viewer(client, db_session, email="testpingv@example.com")
     res = client.post("/api/settings/ai/test", headers={"X-CSRF-Token": csrf})
     assert res.status_code == 403
+
+
+def test_chat_503_when_disabled(client, db_session):
+    csrf = _login_admin(client, db_session, email="chatoff@example.com")
+    res = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},
+                      json={"messages": [{"role": "user", "content": "hi"}]})
+    assert res.status_code == 503
+
+
+def test_chat_viewer_forbidden(client, db_session):
+    csrf = _login_viewer(client, db_session, email="chatviewer@example.com")
+    res = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},
+                      json={"messages": [{"role": "user", "content": "hi"}]})
+    assert res.status_code == 403
+
+
+def test_chat_requires_csrf(client, db_session):
+    _login_admin(client, db_session, email="chatcsrf@example.com")
+    res = client.post("/api/ai/chat", json={"messages": [{"role": "user", "content": "hi"}]})
+    assert res.status_code == 403
+
+
+def test_chat_happy_path_logs_ai_query(client, db_session, monkeypatch):
+    from app.models.audit_log import AuditAction, AuditLog
+    from app.services import ai_provider
+    csrf = _login_admin(client, db_session, email="chatok@example.com")
+    client.put("/api/settings/ai", headers={"X-CSRF-Token": csrf},
+               json={"enabled": True, "base_url": "http://x/v1", "model": "m"})
+
+    def fake_completion(base_url, model, messages, tools):
+        return {"message": {"role": "assistant", "content": "Hello from AI.", "tool_calls": None}}
+
+    monkeypatch.setattr(ai_provider, "chat_completion", fake_completion)
+    res = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},
+                      json={"messages": [{"role": "user", "content": "what meds?"}]})
+    assert res.status_code == 200
+    assert res.json()["answer"] == "Hello from AI."
+    logged = db_session.query(AuditLog).filter(AuditLog.action == AuditAction.ai_query).all()
+    assert len(logged) >= 1
+    assert "what meds?" in (logged[-1].detail or "")
+
+
+def test_chat_provider_unavailable_returns_503(client, db_session, monkeypatch):
+    from app.services import ai_provider
+    csrf = _login_admin(client, db_session, email="chatdown@example.com")
+    client.put("/api/settings/ai", headers={"X-CSRF-Token": csrf},
+               json={"enabled": True, "base_url": "http://x/v1", "model": "m"})
+
+    def boom(base_url, model, messages, tools):
+        raise ai_provider.ProviderUnavailable("down")
+
+    monkeypatch.setattr(ai_provider, "chat_completion", boom)
+    res = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},
+                      json={"messages": [{"role": "user", "content": "hi"}]})
+    assert res.status_code == 503

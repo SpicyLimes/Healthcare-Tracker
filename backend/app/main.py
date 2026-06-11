@@ -8,7 +8,7 @@ from app import __version__
 from app.config import settings
 from app.database import SessionLocal
 from app.routers import (
-    ailments, appointments, audit_log, auth, calendar, dental_history, documents,
+    ai, ailments, appointments, audit_log, auth, calendar, dental_history, documents,
     doctors, family_history, guest, health, hospitalizations, insurances, medications,
     notes, nutrition, pharmacies, profile, share_links, summary, surgeries,
     users, vaccinations, vision_history, visit_logs,
@@ -40,6 +40,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Healthcare Tracker API", version=__version__, lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.include_router(ai.router)
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(users.router)
