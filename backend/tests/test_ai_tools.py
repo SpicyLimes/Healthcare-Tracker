@@ -59,3 +59,56 @@ def test_dispatch_unknown_section_returns_error_not_raises(db_session):
 def test_dispatch_unknown_tool_returns_error_not_raises(db_session):
     result = ai_tools.dispatch(db_session, "delete_everything", {})
     assert "error" in result
+
+
+def test_dispatch_converts_datetimes_to_admin_timezone(client, db_session):
+    """Appointment stored in UTC must be presented to the model in the admin's
+    local timezone — not raw UTC — so the model reports the correct local time."""
+    from datetime import datetime, timezone
+    from app.models.extended_records import Appointment
+    from app.models.user import Role
+    from app.services import user_service
+
+    admin = user_service.create_user(
+        db_session, "tzadmin@example.com", "a-strong-passphrase-123", Role.admin
+    )
+    # 14:45 UTC on 2026-06-22. In America/Chicago (CDT, UTC-5 in June) this is 09:45.
+    appt = Appointment(
+        appointment_datetime=datetime(2026, 6, 22, 14, 45, tzinfo=timezone.utc),
+        reason="Follow-up",
+        created_by=admin.id,
+    )
+    db_session.add(appt)
+    db_session.flush()
+
+    result = ai_tools.dispatch(
+        db_session, "get_section_records", {"section": "appointments"}, tz="America/Chicago"
+    )
+    row = next(r for r in result["records"] if r.get("reason") == "Follow-up")
+    dt_str = str(row["appointment_datetime"])
+    # Local time must appear; raw UTC 14:45 must not be what the model sees.
+    assert "09:45" in dt_str
+    assert "14:45" not in dt_str
+
+
+def test_dispatch_without_tz_leaves_datetimes_as_is(client, db_session):
+    """Backward-compatible: no tz passed → existing behavior (no conversion)."""
+    from datetime import datetime, timezone
+    from app.models.extended_records import Appointment
+    from app.models.user import Role
+    from app.services import user_service
+
+    admin = user_service.create_user(
+        db_session, "notzadmin@example.com", "a-strong-passphrase-123", Role.admin
+    )
+    appt = Appointment(
+        appointment_datetime=datetime(2026, 6, 22, 14, 45, tzinfo=timezone.utc),
+        reason="NoTz",
+        created_by=admin.id,
+    )
+    db_session.add(appt)
+    db_session.flush()
+
+    result = ai_tools.dispatch(db_session, "get_section_records", {"section": "appointments"})
+    row = next(r for r in result["records"] if r.get("reason") == "NoTz")
+    assert "14:45" in str(row["appointment_datetime"])
