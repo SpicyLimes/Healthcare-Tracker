@@ -3,9 +3,10 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # Install dependencies first for better layer caching.
-# Pins match backend/pyproject.toml exactly; no editable install needed
-# because uvicorn resolves the app by module path (app.main:app) with
-# WORKDIR /app already on the Python path.
+# Pins match the [project.dependencies] block in backend/pyproject.toml exactly
+# (NOT the dev extras); no editable install needed because uvicorn resolves the
+# app by module path (app.main:app) with WORKDIR /app already on the Python path.
+# Keep this list in sync with pyproject's runtime dependencies.
 RUN pip install --no-cache-dir \
     "fastapi==0.136.3" \
     "uvicorn[standard]==0.34.0" \
@@ -18,7 +19,8 @@ RUN pip install --no-cache-dir \
     "email-validator==2.2.0" \
     "python-multipart==0.0.32" \
     "slowapi==0.1.9" \
-    "filetype==1.2.0"
+    "filetype==1.2.0" \
+    "httpx==0.28.1"
 
 # Copy Alembic config and application code (migrations live under app/migrations)
 COPY alembic.ini ./
