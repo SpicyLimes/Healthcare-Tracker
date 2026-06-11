@@ -31,6 +31,7 @@ export async function testAiConnection(): Promise<AiConnectionTest> {
   const res = await fetch("/api/settings/ai/test", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...csrfHeader() },
+    body: "{}",
   });
   if (!res.ok) throw new Error("Failed to test connection");
   return res.json();

@@ -3,11 +3,11 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import SettingsPage from "./SettingsPage";
 
 vi.mock("../api/settings", () => ({
-  getAiSettings: vi.fn().mockResolvedValue({ enabled: false, base_url: "", model: "" }),
+  getAiSettings: vi.fn().mockResolvedValue({ enabled: false, base_url: null, model: null }),
   updateAiSettings: vi.fn().mockResolvedValue({ enabled: true, base_url: "http://localhost:1234/v1", model: "m" }),
   testAiConnection: vi.fn().mockResolvedValue({ reachable: true, detail: "Reachable." }),
 }));
-import { updateAiSettings, testAiConnection } from "../api/settings";
+import { getAiSettings, updateAiSettings, testAiConnection } from "../api/settings";
 
 describe("SettingsPage", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -15,6 +15,7 @@ describe("SettingsPage", () => {
   it("loads current settings", async () => {
     render(<SettingsPage />);
     await waitFor(() => expect(screen.getByText(/AI Assistant/i)).toBeInTheDocument());
+    expect(getAiSettings).toHaveBeenCalledOnce();
   });
 
   it("saves settings on Save", async () => {
