@@ -9,6 +9,7 @@ import { useTheme } from "@/components/theme-provider"
 import { AccentPicker } from "@/components/accent-picker"
 import { AuthContext } from "@/auth/AuthContext"
 import SummaryBuilder from "@/components/SummaryBuilder"
+import AiChatPanel from "@/components/AiChatPanel"
 
 const ALL_SECTIONS = [
   "doctors", "appointments", "medications", "ailments", "surgeries",
@@ -104,6 +105,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>
+
+        {/* Admin-only floating AI chat panel */}
+        {user?.role === "admin" && <AiChatPanel />}
 
         {/* Footer */}
         <footer className="shrink-0 border-t border-border bg-card px-6 py-3">
