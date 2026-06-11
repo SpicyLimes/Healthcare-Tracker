@@ -1,4 +1,4 @@
-"""Ai settings singleton: defaults, get-creates-row, update."""
+"""AI settings singleton: defaults, get-creates-row, update."""
 from app.services import ai_settings_service
 
 
@@ -14,6 +14,7 @@ def test_get_settings_is_singleton(db_session):
     a = ai_settings_service.get_settings(db_session)
     b = ai_settings_service.get_settings(db_session)
     assert a.id == b.id == 1
+    assert a is b
 
 
 def test_update_settings_persists_fields(db_session):
