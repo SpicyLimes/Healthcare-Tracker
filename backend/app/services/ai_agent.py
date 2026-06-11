@@ -17,7 +17,7 @@ _SYSTEM_PROMPT = (
 )
 
 
-def run_chat(db: Session, settings, messages: list[dict]) -> ChatResponse:
+def run_chat(db: Session, settings, messages: list[dict], tz: str | None = None) -> ChatResponse:
     convo: list[dict] = [{"role": "system", "content": _SYSTEM_PROMPT}]
     convo.extend({"role": m["role"], "content": m["content"]} for m in messages)
     tools_used: list[str] = []
@@ -45,7 +45,7 @@ def run_chat(db: Session, settings, messages: list[dict]) -> ChatResponse:
                 args = json.loads(fn.get("arguments") or "{}")
             except json.JSONDecodeError:
                 args = {}
-            result = ai_tools.dispatch(db, name, args)
+            result = ai_tools.dispatch(db, name, args, tz=tz)
             tools_used.append(name)
             convo.append({
                 "role": "tool",
