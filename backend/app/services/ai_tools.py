@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy.orm import Session
 
-from app.services import summary_service
+from app.services import ai_write, summary_service
 
 _TITLES = summary_service.SECTION_TITLES
 
@@ -41,6 +41,25 @@ TOOL_DEFS: list[dict] = [
                     "date_to": {"type": "string", "description": "YYYY-MM-DD inclusive upper bound"},
                 },
                 "required": ["section"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "propose_record",
+            "description": (
+                "Draft a NEW record for the user to confirm. Does NOT save. Use after "
+                "gathering the fields conversationally. Fill doctor names into the "
+                "*_other free-text field (never an id)."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "section": {"type": "string", "enum": ai_write.write_section_names()},
+                    "fields": {"type": "object", "description": "Proposed field values."},
+                },
+                "required": ["section", "fields"],
             },
         },
     },
@@ -104,6 +123,13 @@ def dispatch(db: Session, name: str, args: dict, tz: str | None = None) -> dict:
             if tz:
                 rows = _localize_datetimes(rows, tz)
             return {"section": section, "count": len(rows), "records": rows}
+        if name == "propose_record":
+            section = args.get("section")
+            fields = args.get("fields") or {}
+            if section not in ai_write.WRITE_SECTION_MAP:
+                return {"error": f"Section '{section}' is not writable by the assistant."}
+            cleaned, warnings = ai_write.validate_fields(section, fields, mode="create")
+            return {"action": "create", "section": section, "fields": cleaned, "warnings": warnings}
         return {"error": f"Unknown tool '{name}'."}
     except Exception as exc:  # never leak an exception back into the loop
         return {"error": f"Tool execution failed: {exc}"}

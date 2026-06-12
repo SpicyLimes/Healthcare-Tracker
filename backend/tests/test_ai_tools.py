@@ -6,7 +6,7 @@ from app.services import ai_tools, user_service
 def test_tool_defs_are_read_only_and_well_formed():
     defs = ai_tools.TOOL_DEFS
     names = {d["function"]["name"] for d in defs}
-    assert names == {"list_sections", "get_section_records"}
+    assert names == {"list_sections", "get_section_records", "propose_record"}
     # No write/delete/mutate tool may ever exist.
     _MUTATE_KEYWORDS = (
         "create", "update", "delete", "write", "add", "remove",
@@ -112,3 +112,32 @@ def test_dispatch_without_tz_leaves_datetimes_as_is(client, db_session):
     result = ai_tools.dispatch(db_session, "get_section_records", {"section": "appointments"})
     row = next(r for r in result["records"] if r.get("reason") == "NoTz")
     assert "14:45" in str(row["appointment_datetime"])
+
+
+def test_propose_record_returns_draft_no_write(db_session):
+    from app.services import ai_tools
+    from app.models.extended_records import Surgery
+    before = db_session.query(Surgery).count()
+    result = ai_tools.dispatch(
+        db_session, "propose_record",
+        {"section": "surgeries", "fields": {"procedure": "Appendectomy", "surgery_date": "2026-06-04"}},
+    )
+    assert result["action"] == "create"
+    assert result["section"] == "surgeries"
+    assert result["fields"]["procedure"] == "Appendectomy"
+    assert db_session.query(Surgery).count() == before     # NOTHING written
+
+
+def test_propose_record_bad_date_warns(db_session):
+    from app.services import ai_tools
+    result = ai_tools.dispatch(
+        db_session, "propose_record",
+        {"section": "surgeries", "fields": {"procedure": "X", "surgery_date": "nope"}},
+    )
+    assert any("surgery_date" in w for w in result["warnings"])
+
+
+def test_propose_record_unknown_section(db_session):
+    from app.services import ai_tools
+    result = ai_tools.dispatch(db_session, "propose_record", {"section": "profile", "fields": {}})
+    assert "error" in result
