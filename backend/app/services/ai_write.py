@@ -1,0 +1,77 @@
+"""AI write concerns: the write-capable section map, a non-raising field
+validator, and the in-process confirmation-token store. NO endpoint logic here."""
+from __future__ import annotations
+
+import secrets
+import time
+from typing import Any
+
+from pydantic import BaseModel, TypeAdapter
+
+from app.models.ailment import Ailment
+from app.models.doctor import Doctor
+from app.models.extended_records import (
+    Appointment, DentalHistory, FamilyHistory, Hospitalization, Insurance,
+    Pharmacy, Surgery, Vaccination, VisionHistory, VisitLog,
+)
+from app.models.medication import Medication
+from app.schemas.extended_records import (
+    AppointmentCreate, AppointmentUpdate, DentalHistoryCreate, DentalHistoryUpdate,
+    FamilyHistoryCreate, FamilyHistoryUpdate, HospitalizationCreate, HospitalizationUpdate,
+    InsuranceCreate, InsuranceUpdate, PharmacyCreate, PharmacyUpdate,
+    SurgeryCreate, SurgeryUpdate, VaccinationCreate, VaccinationUpdate,
+    VisionHistoryCreate, VisionHistoryUpdate, VisitLogCreate, VisitLogUpdate,
+)
+from app.schemas.records import (
+    AilmentCreate, AilmentUpdate, DoctorCreate, DoctorUpdate,
+    MedicationCreate, MedicationUpdate,
+)
+
+# name -> (SQLAlchemy model, *Create schema, *Update schema)
+WRITE_SECTION_MAP: dict[str, tuple[type, type[BaseModel], type[BaseModel]]] = {
+    "medications": (Medication, MedicationCreate, MedicationUpdate),
+    "doctors": (Doctor, DoctorCreate, DoctorUpdate),
+    "ailments": (Ailment, AilmentCreate, AilmentUpdate),
+    "surgeries": (Surgery, SurgeryCreate, SurgeryUpdate),
+    "hospitalizations": (Hospitalization, HospitalizationCreate, HospitalizationUpdate),
+    "vision_history": (VisionHistory, VisionHistoryCreate, VisionHistoryUpdate),
+    "dental_history": (DentalHistory, DentalHistoryCreate, DentalHistoryUpdate),
+    "visit_logs": (VisitLog, VisitLogCreate, VisitLogUpdate),
+    "appointments": (Appointment, AppointmentCreate, AppointmentUpdate),
+    "vaccinations": (Vaccination, VaccinationCreate, VaccinationUpdate),
+    "insurances": (Insurance, InsuranceCreate, InsuranceUpdate),
+    "pharmacies": (Pharmacy, PharmacyCreate, PharmacyUpdate),
+    "family_history": (FamilyHistory, FamilyHistoryCreate, FamilyHistoryUpdate),
+}
+
+
+def write_section_names() -> list[str]:
+    return list(WRITE_SECTION_MAP.keys())
+
+
+def validate_fields(section: str, fields: dict, mode: str) -> tuple[dict[str, Any], list[str]]:
+    """Validate `fields` against the section's create/update schema WITHOUT raising.
+    Returns (cleaned_fields, warnings). Valid values coerce through; invalid or
+    unknown ones are dropped and described in warnings. Never raises."""
+    entry = WRITE_SECTION_MAP.get(section)
+    if entry is None:
+        return {}, [f"Unknown writable section '{section}'."]
+    _, create_schema, update_schema = entry
+    schema = create_schema if mode == "create" else update_schema
+
+    cleaned: dict[str, Any] = {}
+    warnings: list[str] = []
+
+    # Validate each field against ITS OWN type, independently — so a missing
+    # required field never poisons a valid one, and one bad value never discards
+    # the whole proposal.
+    for key, value in fields.items():
+        field = schema.model_fields.get(key)
+        if field is None:
+            warnings.append(f"Ignored unknown field '{key}' for {section}.")
+            continue
+        try:
+            cleaned[key] = TypeAdapter(field.annotation).validate_python(value)
+        except Exception:
+            warnings.append(f"Could not use value for '{key}' ({value!r}); left blank.")
+    return cleaned, warnings
