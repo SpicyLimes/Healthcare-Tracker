@@ -1,5 +1,7 @@
-"""Read-only tools the agent loop may call. Each runs a SELECT via the existing
-15-section map. There is NO write/delete/mutate path here by design."""
+"""Tools the agent loop may call. Read tools run a SELECT via the existing
+15-section map; draft tools (propose_record) stage values without writing; and
+explicitly-allowlisted write tools (commit_create) persist via CRUDService after
+the user has confirmed conversationally."""
 from datetime import date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -63,6 +65,24 @@ TOOL_DEFS: list[dict] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "commit_create",
+            "description": (
+                "Create a new record. Only call after the user has confirmed they "
+                "want it added."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "section": {"type": "string", "enum": ai_write.write_section_names()},
+                    "fields": {"type": "object", "description": "Field values for the new record."},
+                },
+                "required": ["section", "fields"],
+            },
+        },
+    },
 ]
 
 
@@ -105,11 +125,23 @@ def _localize_datetimes(rows: list[dict], tz: str) -> list[dict]:
     return [{k: convert(v) for k, v in row.items()} for row in rows]
 
 
-def dispatch(db: Session, name: str, args: dict, tz: str | None = None) -> dict:
-    """Execute a read-only tool. Always returns a dict; never raises.
+def dispatch(
+    db: Session,
+    name: str,
+    args: dict,
+    tz: str | None = None,
+    actor_id=None,
+    token_store=None,
+) -> dict:
+    """Execute an agent tool. Read tools and draft tools never write; create/commit
+    tools write via CRUDService. Always returns a dict; never raises.
 
     `tz` is the IANA timezone (e.g. "America/Chicago") that datetime values should
-    be presented in. When None, datetimes are left as stored (UTC)."""
+    be presented in. When None, datetimes are left as stored (UTC).
+    `actor_id` is the acting admin's user id, threaded through so writes record the
+    right `created_by` and audit actor; write tools refuse if it is missing.
+    `token_store` is the per-request confirmation-token store used by later
+    edit/delete tools."""
     try:
         if name == "list_sections":
             return {"sections": [{"name": n, "title": _TITLES.get(n, n)} for n in _section_names()]}
@@ -130,6 +162,24 @@ def dispatch(db: Session, name: str, args: dict, tz: str | None = None) -> dict:
                 return {"error": f"Section '{section}' is not writable by the assistant."}
             cleaned, warnings = ai_write.validate_fields(section, fields, mode="create")
             return {"action": "create", "section": section, "fields": cleaned, "warnings": warnings}
+        if name == "commit_create":
+            from app.services.crud_service import CRUDService
+            from app.models.audit_log import AuditAction, ActorType
+            from app.services.audit_service import log_event
+            section = args.get("section")
+            entry = ai_write.WRITE_SECTION_MAP.get(section)
+            if entry is None or actor_id is None:
+                return {"error": f"Cannot create in section '{section}'."}
+            model = entry[0]
+            cleaned, warnings = ai_write.validate_fields(section, args.get("fields") or {}, mode="create")
+            row = CRUDService(model).create(db, cleaned, created_by=actor_id)
+            try:
+                log_event(db, action=AuditAction.create, actor_type=ActorType.user,
+                          actor_user_id=actor_id, section=section, record_id=str(row.id),
+                          detail=f"AI created record in {section}")
+            except Exception:
+                pass
+            return {"created": True, "record_id": str(row.id), "section": section, "warnings": warnings}
         return {"error": f"Unknown tool '{name}'."}
     except Exception as exc:  # never leak an exception back into the loop
         return {"error": f"Tool execution failed: {exc}"}

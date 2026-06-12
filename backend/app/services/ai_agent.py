@@ -17,7 +17,9 @@ _SYSTEM_PROMPT = (
 )
 
 
-def run_chat(db: Session, settings, messages: list[dict], tz: str | None = None) -> ChatResponse:
+def run_chat(db: Session, settings, messages: list[dict], tz: str | None = None, actor_id=None) -> ChatResponse:
+    from app.services.ai_write import TokenStore
+    token_store = TokenStore()
     convo: list[dict] = [{"role": "system", "content": _SYSTEM_PROMPT}]
     convo.extend({"role": m["role"], "content": m["content"]} for m in messages)
     tools_used: list[str] = []
@@ -45,7 +47,7 @@ def run_chat(db: Session, settings, messages: list[dict], tz: str | None = None)
                 args = json.loads(fn.get("arguments") or "{}")
             except json.JSONDecodeError:
                 args = {}
-            result = ai_tools.dispatch(db, name, args, tz=tz)
+            result = ai_tools.dispatch(db, name, args, tz=tz, actor_id=actor_id, token_store=token_store)
             tools_used.append(name)
             convo.append({
                 "role": "tool",

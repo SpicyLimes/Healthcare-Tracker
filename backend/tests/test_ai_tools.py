@@ -6,15 +6,24 @@ from app.services import ai_tools, user_service
 def test_tool_defs_are_read_only_and_well_formed():
     defs = ai_tools.TOOL_DEFS
     names = {d["function"]["name"] for d in defs}
-    assert names == {"list_sections", "get_section_records", "propose_record"}
-    # No write/delete/mutate tool may ever exist.
+    assert names == {"list_sections", "get_section_records", "propose_record", "commit_create"}
+    # NEW INVARIANT: read/draft tools can never mutate; write tools must be
+    # explicitly allowlisted here (and, as later tasks enforce, gated by user
+    # confirmation). A write tool appearing that is NOT on _WRITE_TOOLS fails the
+    # build — no surprise write paths.
+    _WRITE_TOOLS = {"commit_create"}   # later tasks add commit_edit/commit_delete
+    _READ_OR_DRAFT = {"list_sections", "get_section_records", "propose_record"}
     _MUTATE_KEYWORDS = (
         "create", "update", "delete", "write", "add", "remove",
         "insert", "patch", "put", "set", "upsert", "edit",
     )
     for d in defs:
         n = d["function"]["name"]
-        assert not any(kw in n for kw in _MUTATE_KEYWORDS)
+        if n in _READ_OR_DRAFT:
+            assert not any(kw in n for kw in _MUTATE_KEYWORDS), f"{n} must stay read/draft-only"
+    # every write tool must be explicitly allowlisted — no surprise write tools
+    write_named = {d["function"]["name"] for d in defs if any(kw in d["function"]["name"] for kw in _MUTATE_KEYWORDS)}
+    assert write_named == _WRITE_TOOLS, f"unexpected write tools: {write_named - _WRITE_TOOLS}"
     # section arg is enum-constrained to the known section map
     grec = next(d for d in defs if d["function"]["name"] == "get_section_records")
     section_enum = grec["function"]["parameters"]["properties"]["section"]["enum"]
@@ -141,3 +150,42 @@ def test_propose_record_unknown_section(db_session):
     from app.services import ai_tools
     result = ai_tools.dispatch(db_session, "propose_record", {"section": "profile", "fields": {}})
     assert "error" in result
+
+
+def test_commit_create_writes_and_audits(db_session):
+    from app.services import ai_tools, user_service
+    from app.models.user import Role
+    from app.models.extended_records import Surgery
+    admin = user_service.create_user(db_session, "writeadmin@example.com", "a-strong-passphrase-123", Role.admin)
+    db_session.flush()
+    before = db_session.query(Surgery).count()
+    result = ai_tools.dispatch(
+        db_session, "commit_create",
+        {"section": "surgeries", "fields": {"procedure": "Appendectomy"}},
+        actor_id=admin.id,
+    )
+    assert result["created"] is True
+    assert "record_id" in result
+    assert db_session.query(Surgery).count() == before + 1
+
+
+def test_commit_create_unknown_section_no_write(db_session):
+    from app.services import ai_tools, user_service
+    from app.models.user import Role
+    admin = user_service.create_user(db_session, "writeadmin2@example.com", "a-strong-passphrase-123", Role.admin)
+    db_session.flush()
+    result = ai_tools.dispatch(
+        db_session, "commit_create",
+        {"section": "profile", "fields": {}}, actor_id=admin.id,
+    )
+    assert "error" in result
+
+
+def test_commit_create_without_actor_no_write(db_session):
+    from app.services import ai_tools
+    from app.models.extended_records import Surgery
+    before = db_session.query(Surgery).count()
+    result = ai_tools.dispatch(db_session, "commit_create",
+        {"section": "surgeries", "fields": {"procedure": "X"}}, actor_id=None)
+    assert "error" in result
+    assert db_session.query(Surgery).count() == before

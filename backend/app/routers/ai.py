@@ -38,7 +38,7 @@ def chat(
 
     messages = [{"role": m.role, "content": m.content} for m in payload.messages]
     try:
-        result = ai_agent.run_chat(db, s, messages, tz=current.timezone)
+        result = ai_agent.run_chat(db, s, messages, tz=current.timezone, actor_id=current.id)
     except ai_provider.ProviderUnavailable:
         raise _UNAVAILABLE
 
