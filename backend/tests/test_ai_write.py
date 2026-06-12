@@ -62,10 +62,11 @@ def test_profile_and_nutrition_excluded():
 
 def test_token_store_round_trip():
     store = ai_write.TokenStore()
-    token = store.stage({"action": "delete", "section": "surgeries", "record_id": "abc"})
+    action = {"action": "delete", "section": "surgeries", "record_id": "abc"}
+    token = store.stage(action)
     assert isinstance(token, str) and token
     staged = store.consume(token)
-    assert staged["section"] == "surgeries"
+    assert staged == {"action": "delete", "section": "surgeries", "record_id": "abc"}
 
 
 def test_token_is_single_use():
@@ -85,3 +86,4 @@ def test_expired_token_returns_none(monkeypatch):
     token = store.stage({"action": "delete"})
     monkeypatch.setattr(ai_write.time, "monotonic", lambda: 1_000_000.0)
     assert store.consume(token) is None
+    assert store.consume(token) is None        # expired token not retained
