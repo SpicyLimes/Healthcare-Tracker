@@ -80,27 +80,44 @@ def validate_fields(section: str, fields: dict, mode: Literal["create", "update"
 
 
 class TokenStore:
-    """In-process, single-use, TTL-bounded store of staged edit/delete actions.
-    One instance is created per chat request, so tokens are inherently scoped to
-    the conversation and never persist or leave the server."""
+    """Single-use, TTL-bounded store of staged edit/delete actions, namespaced by
+    the acting admin's id. Lives as a module-level singleton (see get_token_store)
+    so a token staged in one chat request can be confirmed in the admin's NEXT
+    request. Tokens never leave the server. A token can only be consumed by the
+    same owner that staged it."""
 
     def __init__(self, ttl_seconds: int = 300):
         self._ttl = ttl_seconds
-        self._staged: dict[str, tuple[float, dict]] = {}
+        self._staged: dict[str, tuple[float, str, dict]] = {}   # token -> (staged_at, owner_id, action)
 
-    def stage(self, action: dict) -> str:
+    def stage(self, action: dict, owner_id) -> str:
         token = secrets.token_urlsafe(16)
-        self._staged[token] = (time.monotonic(), action)
+        self._staged[token] = (time.monotonic(), str(owner_id), action)
         return token
 
-    def consume(self, token: str) -> dict | None:
-        entry = self._staged.pop(token, None)   # pop = single use
+    def consume(self, token: str, owner_id) -> dict | None:
+        entry = self._staged.get(token)
         if entry is None:
             return None
-        staged_at, action = entry
+        staged_at, owner, action = entry
+        if owner != str(owner_id):
+            return None                      # wrong owner: refuse WITHOUT burning
+        # correct owner from here: consume (single-use) regardless of outcome
+        self._staged.pop(token, None)
         if time.monotonic() - staged_at > self._ttl:
             return None
         return action
+
+
+_TOKEN_STORE: "TokenStore | None" = None
+
+
+def get_token_store() -> TokenStore:
+    """Return the process-wide singleton token store (survives across requests)."""
+    global _TOKEN_STORE
+    if _TOKEN_STORE is None:
+        _TOKEN_STORE = TokenStore()
+    return _TOKEN_STORE
 
 
 def row_summary(row, keys=None) -> dict:

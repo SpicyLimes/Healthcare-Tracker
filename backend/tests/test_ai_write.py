@@ -63,27 +63,65 @@ def test_profile_and_nutrition_excluded():
 def test_token_store_round_trip():
     store = ai_write.TokenStore()
     action = {"action": "delete", "section": "surgeries", "record_id": "abc"}
-    token = store.stage(action)
+    token = store.stage(action, owner_id="x")
     assert isinstance(token, str) and token
-    staged = store.consume(token)
+    staged = store.consume(token, owner_id="x")
     assert staged == {"action": "delete", "section": "surgeries", "record_id": "abc"}
 
 
 def test_token_is_single_use():
     store = ai_write.TokenStore()
-    token = store.stage({"action": "delete"})
-    store.consume(token)
-    assert store.consume(token) is None        # second use refused
+    token = store.stage({"action": "delete"}, owner_id="x")
+    store.consume(token, owner_id="x")
+    assert store.consume(token, owner_id="x") is None        # second use refused
 
 
 def test_unknown_token_returns_none():
     store = ai_write.TokenStore()
-    assert store.consume("not-a-real-token") is None
+    assert store.consume("not-a-real-token", owner_id="x") is None
 
 
 def test_expired_token_returns_none(monkeypatch):
     store = ai_write.TokenStore(ttl_seconds=10)
-    token = store.stage({"action": "delete"})
+    token = store.stage({"action": "delete"}, owner_id="x")
     monkeypatch.setattr(ai_write.time, "monotonic", lambda: 1_000_000.0)
-    assert store.consume(token) is None
-    assert store.consume(token) is None        # expired token not retained
+    assert store.consume(token, owner_id="x") is None
+    assert store.consume(token, owner_id="x") is None        # expired token not retained
+
+
+def test_token_namespaced_by_owner():
+    store = ai_write.TokenStore()
+    token = store.stage({"action": "delete", "section": "surgeries", "record_id": "abc"}, owner_id="admin-1")
+    # wrong owner cannot consume
+    assert store.consume(token, owner_id="admin-2") is None
+    # right owner can
+    staged = store.consume(token, owner_id="admin-1")
+    assert staged["section"] == "surgeries"
+
+
+def test_token_wrong_owner_does_not_burn_token():
+    # a wrong-owner consume attempt must NOT consume the token (so the real owner can still use it)
+    store = ai_write.TokenStore()
+    token = store.stage({"action": "delete"}, owner_id="admin-1")
+    assert store.consume(token, owner_id="admin-2") is None
+    assert store.consume(token, owner_id="admin-1") is not None     # still usable by real owner
+
+
+def test_get_token_store_returns_singleton():
+    a = ai_write.get_token_store()
+    b = ai_write.get_token_store()
+    assert a is b
+
+
+def test_token_single_use_still_enforced_with_owner():
+    store = ai_write.TokenStore()
+    token = store.stage({"action": "delete"}, owner_id="x")
+    assert store.consume(token, owner_id="x") is not None
+    assert store.consume(token, owner_id="x") is None              # single-use
+
+
+def test_token_expired_with_owner(monkeypatch):
+    store = ai_write.TokenStore(ttl_seconds=10)
+    token = store.stage({"action": "delete"}, owner_id="x")
+    monkeypatch.setattr(ai_write.time, "monotonic", lambda: 1_000_000.0)
+    assert store.consume(token, owner_id="x") is None

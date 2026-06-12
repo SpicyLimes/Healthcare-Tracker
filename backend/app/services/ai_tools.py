@@ -230,8 +230,9 @@ def dispatch(
     be presented in. When None, datetimes are left as stored (UTC).
     `actor_id` is the acting admin's user id, threaded through so writes record the
     right `created_by` and audit actor; write tools refuse if it is missing.
-    `token_store` is the per-request confirmation-token store used by later
-    edit/delete tools."""
+    `token_store` is the process-wide confirmation-token store used by later
+    edit/delete tools; tokens are namespaced to `actor_id` so an admin can only
+    consume their own staged action, in this or a subsequent request."""
     try:
         if name == "list_sections":
             return {"sections": [{"name": n, "title": _TITLES.get(n, n)} for n in _section_names()]}
@@ -277,7 +278,7 @@ def dispatch(
             if err:
                 return {"error": err}
             summary = ai_write.row_summary(row)
-            token = token_store.stage({"action": "delete", "section": args["section"], "record_id": str(row.id)})
+            token = token_store.stage({"action": "delete", "section": args["section"], "record_id": str(row.id)}, owner_id=actor_id)
             return {"action": "delete", "section": args["section"], "record_id": str(row.id),
                     "summary": summary, "token": token}
         if name == "stage_edit":
@@ -292,18 +293,20 @@ def dispatch(
             before = ai_write.row_summary(row, keys=cleaned.keys())
             after = ai_write.row_summary_values(cleaned)
             token = token_store.stage({"action": "edit", "section": args["section"],
-                                       "record_id": str(row.id), "fields": cleaned})
+                                       "record_id": str(row.id), "fields": cleaned}, owner_id=actor_id)
             return {"action": "edit", "section": args["section"], "record_id": str(row.id),
                     "before": before, "after": after, "warnings": warnings, "token": token}
         if name in ("commit_delete", "commit_edit"):
             if token_store is None:
                 return {"error": "No confirmation channel available."}
-            # Consume the token FIRST (single-use, fail-closed): the gate must burn
-            # the token before any write is attempted, so no token can survive a
-            # commit call. consume() pops the entry and returns None if it is
-            # missing, reused, or expired — every refusal path below thus leaves the
-            # token already destroyed and performs no write.
-            staged = token_store.consume(args.get("token", ""))
+            # Consume the token FIRST (single-use, fail-closed): for the matching
+            # owner the gate burns the token before any write is attempted, so no
+            # token can survive a commit call. consume() returns None if the token
+            # is missing, reused, expired, or owned by a different admin — every
+            # refusal path below thus performs no write. (A wrong-owner attempt is
+            # the one case that intentionally does NOT burn the token, so the real
+            # owner can still confirm their own staged action.)
+            staged = token_store.consume(args.get("token", ""), owner_id=actor_id)
             expected = "delete" if name == "commit_delete" else "edit"
             if staged is None or staged.get("action") != expected:
                 return {"error": "No matching confirmation. Ask the user to confirm, then stage again."}

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.schemas.ai import ChatResponse, Proposal
 from app.services import ai_provider, ai_tools
-from app.services.ai_write import TokenStore
+from app.services.ai_write import get_token_store
 
 MAX_ROUNDS = 5
 
@@ -31,7 +31,7 @@ _SYSTEM_PROMPT = (
 
 
 def run_chat(db: Session, settings, messages: list[dict], tz: str | None = None, actor_id=None) -> ChatResponse:
-    token_store = TokenStore()
+    token_store = get_token_store()
     convo: list[dict] = [{"role": "system", "content": _SYSTEM_PROMPT}]
     convo.extend({"role": m["role"], "content": m["content"]} for m in messages)
     tools_used: list[str] = []
