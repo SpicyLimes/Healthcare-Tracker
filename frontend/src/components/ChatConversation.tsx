@@ -142,7 +142,7 @@ export default function ChatConversation() {
                       )}
                       {p.warnings &&
                         p.warnings.map((w, k) => (
-                          <div key={k} className="mt-0.5 text-amber-600">
+                          <div key={k} className="mt-0.5 text-amber-600 dark:text-amber-400">
                             ⚠ {w}
                           </div>
                         ))}

@@ -1,5 +1,5 @@
 import * as React from "react"
-import { UNSAFE_NavigationContext, useInRouterContext } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { MessageCircle, Sparkles, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -11,28 +11,10 @@ import {
 import { getAiSettings } from "@/api/settings"
 import ChatConversation from "./ChatConversation"
 
-/**
- * Like useNavigate, but safe to call when there is no surrounding Router (e.g.
- * the existing AiChatPanel unit tests render the panel without a router). The
- * underlying NavigationContext is always available and never throws; we read
- * its navigator directly and fall back to a no-op when one isn't present.
- */
-function useSafeNavigate() {
-  const inRouter = useInRouterContext()
-  const ctx = React.useContext(UNSAFE_NavigationContext)
-  const navigator = ctx?.navigator
-  return React.useCallback(
-    (to: string) => {
-      if (inRouter && navigator) navigator.push(to)
-    },
-    [inRouter, navigator]
-  )
-}
-
 export default function AiChatPanel() {
   const [enabled, setEnabled] = React.useState<boolean | null>(null)
   const [open, setOpen] = React.useState(false)
-  const navigate = useSafeNavigate()
+  const navigate = useNavigate()
 
   // Load settings on mount
   React.useEffect(() => {
