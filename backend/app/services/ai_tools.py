@@ -2,6 +2,7 @@
 15-section map; draft tools (propose_record) stage values without writing; and
 explicitly-allowlisted write tools (commit_create) persist via CRUDService after
 the user has confirmed conversationally."""
+import uuid as _uuid
 from datetime import date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -18,6 +19,22 @@ _TITLES = summary_service.SECTION_TITLES
 
 def _section_names() -> list[str]:
     return list(summary_service.get_section_map().keys())
+
+
+def _load_writable_row(db, section, record_id):
+    """Return (model, row, None) or (None, None, error_str). No write."""
+    entry = ai_write.WRITE_SECTION_MAP.get(section)
+    if entry is None:
+        return None, None, f"Section '{section}' is not writable by the assistant."
+    model = entry[0]
+    try:
+        rid = _uuid.UUID(str(record_id))
+    except (ValueError, TypeError):
+        return None, None, "Invalid record id."
+    row = db.get(model, rid)
+    if row is None:
+        return None, None, "Record not found."
+    return model, row, None
 
 
 TOOL_DEFS: list[dict] = [
@@ -83,6 +100,44 @@ TOOL_DEFS: list[dict] = [
                     "fields": {"type": "object", "description": "Field values for the new record."},
                 },
                 "required": ["section", "fields"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "stage_delete",
+            "description": (
+                "Prepare to DELETE a record. Does NOT delete. Returns a summary to "
+                "read back to the user and a confirmation token; call commit_delete "
+                "only after the user confirms."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "section": {"type": "string", "enum": ai_write.write_section_names()},
+                    "record_id": {"type": "string"},
+                },
+                "required": ["section", "record_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "stage_edit",
+            "description": (
+                "Prepare to EDIT a record. Does NOT save. Returns before/after and a "
+                "confirmation token; call commit_edit only after the user confirms."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "section": {"type": "string", "enum": ai_write.write_section_names()},
+                    "record_id": {"type": "string"},
+                    "fields": {"type": "object", "description": "Field values to change."},
+                },
+                "required": ["section", "record_id", "fields"],
             },
         },
     },
@@ -183,6 +238,29 @@ def dispatch(
                       actor_user_id=actor_id, section=section, record_id=str(row.id),
                       detail=f"AI created record in {section}")
             return {"created": True, "record_id": str(row.id), "section": section, "warnings": warnings}
+        if name == "stage_delete":
+            if token_store is None:
+                return {"error": "No confirmation channel available."}
+            _, row, err = _load_writable_row(db, args.get("section"), args.get("record_id"))
+            if err:
+                return {"error": err}
+            summary = ai_write.row_summary(row)
+            token = token_store.stage({"action": "delete", "section": args["section"], "record_id": str(row.id)})
+            return {"action": "delete", "section": args["section"], "record_id": str(row.id),
+                    "summary": summary, "token": token}
+        if name == "stage_edit":
+            if token_store is None:
+                return {"error": "No confirmation channel available."}
+            _, row, err = _load_writable_row(db, args.get("section"), args.get("record_id"))
+            if err:
+                return {"error": err}
+            cleaned, warnings = ai_write.validate_fields(args["section"], args.get("fields") or {}, mode="update")
+            before = ai_write.row_summary(row, keys=cleaned.keys())
+            after = {k: cleaned[k] for k in cleaned}
+            token = token_store.stage({"action": "edit", "section": args["section"],
+                                       "record_id": str(row.id), "fields": cleaned})
+            return {"action": "edit", "section": args["section"], "record_id": str(row.id),
+                    "before": before, "after": after, "warnings": warnings, "token": token}
         return {"error": f"Unknown tool '{name}'."}
     except Exception as exc:  # never leak an exception back into the loop
         return {"error": f"Tool execution failed: {exc}"}

@@ -4,27 +4,31 @@ from app.services import ai_tools, user_service
 
 
 def test_tool_defs_are_read_only_and_well_formed():
+    # Safety invariant: most tools are read/draft and never touch the DB. Some
+    # record-management tools carry a mutate-keyword in their NAME, but that does
+    # NOT mean they write: draft tools (propose_/stage_) only stage values or mint
+    # a confirmation token; only commit_ tools actually write, and they are token-
+    # /confirmation-gated (enforced in the next task). This invariant therefore
+    # distinguishes DRAFT-but-keyword-named tools from real WRITE tools by name.
     defs = ai_tools.TOOL_DEFS
     names = {d["function"]["name"] for d in defs}
-    assert names == {"list_sections", "get_section_records", "propose_record", "commit_create"}
-    # NEW INVARIANT: read/draft tools can never mutate; write tools must be
-    # explicitly allowlisted here (and, as later tasks enforce, gated by user
-    # confirmation). A write tool appearing that is NOT on _WRITE_TOOLS fails the
-    # build — no surprise write paths.
-    _WRITE_TOOLS = {"commit_create"}   # later tasks add commit_edit/commit_delete
-    _READ_OR_DRAFT = {"list_sections", "get_section_records", "propose_record"}
-    _MUTATE_KEYWORDS = (
-        "create", "update", "delete", "write", "add", "remove",
-        "insert", "patch", "put", "set", "upsert", "edit",
-    )
+    assert names == {
+        "list_sections", "get_section_records", "propose_record",
+        "commit_create", "stage_edit", "stage_delete",
+    }
+    # Invariant: the ONLY tools that may carry a mutate-keyword in their name are
+    # the explicit record-management flow tools. Of those, stage_/propose_ tools
+    # DRAFT (no DB write); only commit_ tools write, and they are confirmation-gated.
+    _DRAFT_TOOLS = {"propose_record", "stage_edit", "stage_delete"}   # no DB write
+    _WRITE_TOOLS = {"commit_create"}                                 # later: commit_edit, commit_delete
+    _ALLOWED_MUTATING_NAMES = _DRAFT_TOOLS | _WRITE_TOOLS
+    _MUTATE_KEYWORDS = ("create", "update", "delete", "write", "add", "remove",
+                        "insert", "patch", "put", "set", "upsert", "edit")
     for d in defs:
         n = d["function"]["name"]
-        if n in _READ_OR_DRAFT:
-            assert not any(kw in n for kw in _MUTATE_KEYWORDS), f"{n} must stay read/draft-only"
-    # every write tool must be explicitly allowlisted — no surprise write tools
-    write_named = {d["function"]["name"] for d in defs if any(kw in d["function"]["name"] for kw in _MUTATE_KEYWORDS)}
-    assert write_named == _WRITE_TOOLS, f"unexpected write tools: {write_named - _WRITE_TOOLS}"
-    # section arg is enum-constrained to the known section map
+        if any(kw in n for kw in _MUTATE_KEYWORDS):
+            assert n in _ALLOWED_MUTATING_NAMES, f"unexpected mutating-named tool: {n}"
+    # keep the section-enum sanity check
     grec = next(d for d in defs if d["function"]["name"] == "get_section_records")
     section_enum = grec["function"]["parameters"]["properties"]["section"]["enum"]
     assert "doctors" in section_enum and "medications" in section_enum
@@ -210,3 +214,62 @@ def test_commit_create_without_actor_no_write(db_session):
         {"section": "surgeries", "fields": {"procedure": "X"}}, actor_id=None)
     assert "error" in result
     assert db_session.query(Surgery).count() == before
+
+
+def _make_surgery_for_stage(db_session):
+    from app.services import user_service
+    from app.models.user import Role
+    from app.services.crud_service import CRUDService
+    from app.models.extended_records import Surgery
+    admin = user_service.create_user(db_session, f"stage{id(db_session)}@example.com", "a-strong-passphrase-123", Role.admin)
+    db_session.flush()
+    row = CRUDService(Surgery).create(db_session, {"procedure": "Old"}, created_by=admin.id)
+    db_session.flush()
+    return admin, row
+
+
+def test_stage_delete_returns_token_no_write(db_session):
+    from app.services import ai_tools
+    from app.services.ai_write import TokenStore
+    from app.models.extended_records import Surgery
+    admin, row = _make_surgery_for_stage(db_session)
+    store = TokenStore()
+    before = db_session.query(Surgery).count()
+    result = ai_tools.dispatch(db_session, "stage_delete",
+        {"section": "surgeries", "record_id": str(row.id)},
+        token_store=store, actor_id=admin.id)
+    assert result["action"] == "delete"
+    assert result["token"]
+    assert "Old" in str(result["summary"])
+    assert db_session.query(Surgery).count() == before     # NO write
+
+
+def test_stage_edit_returns_before_and_token(db_session):
+    from app.services import ai_tools
+    from app.services.ai_write import TokenStore
+    admin, row = _make_surgery_for_stage(db_session)
+    store = TokenStore()
+    result = ai_tools.dispatch(db_session, "stage_edit",
+        {"section": "surgeries", "record_id": str(row.id), "fields": {"procedure": "New"}},
+        token_store=store, actor_id=admin.id)
+    assert result["before"]["procedure"] == "Old"
+    assert result["after"]["procedure"] == "New"
+    assert result["token"]
+
+
+def test_stage_delete_missing_record(db_session):
+    from app.services import ai_tools
+    from app.services.ai_write import TokenStore
+    result = ai_tools.dispatch(db_session, "stage_delete",
+        {"section": "surgeries", "record_id": "00000000-0000-0000-0000-000000000000"},
+        token_store=TokenStore(), actor_id=None)
+    assert "error" in result
+
+
+def test_stage_edit_invalid_record_id(db_session):
+    from app.services import ai_tools
+    from app.services.ai_write import TokenStore
+    result = ai_tools.dispatch(db_session, "stage_edit",
+        {"section": "surgeries", "record_id": "not-a-uuid", "fields": {"procedure": "New"}},
+        token_store=TokenStore(), actor_id=None)
+    assert "error" in result

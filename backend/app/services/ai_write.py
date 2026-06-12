@@ -100,3 +100,23 @@ class TokenStore:
         if time.monotonic() - staged_at > self._ttl:
             return None
         return action
+
+
+def row_summary(row, keys=None) -> dict:
+    """Plain-dict snapshot of a model row for human read-back. Skips nothing but
+    coerces dates/UUIDs to strings. If `keys` is given, only those columns."""
+    cols = [c.name for c in row.__table__.columns]
+    if keys is not None:
+        wanted = set(keys)
+        cols = [c for c in cols if c in wanted]
+    return {c: _jsonable(getattr(row, c)) for c in cols}
+
+
+def _jsonable(v):
+    if v is None:
+        return None
+    if hasattr(v, "isoformat"):      # date / datetime
+        return v.isoformat()
+    if hasattr(v, "hex"):            # UUID
+        return str(v)
+    return v
