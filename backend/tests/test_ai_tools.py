@@ -15,12 +15,13 @@ def test_tool_defs_are_read_only_and_well_formed():
     assert names == {
         "list_sections", "get_section_records", "propose_record",
         "commit_create", "stage_edit", "stage_delete",
+        "commit_edit", "commit_delete",
     }
     # Invariant: the ONLY tools that may carry a mutate-keyword in their name are
     # the explicit record-management flow tools. Of those, stage_/propose_ tools
     # DRAFT (no DB write); only commit_ tools write, and they are confirmation-gated.
     _DRAFT_TOOLS = {"propose_record", "stage_edit", "stage_delete"}   # no DB write
-    _WRITE_TOOLS = {"commit_create"}                                 # later: commit_edit, commit_delete
+    _WRITE_TOOLS = {"commit_create", "commit_edit", "commit_delete"}
     _ALLOWED_MUTATING_NAMES = _DRAFT_TOOLS | _WRITE_TOOLS
     _MUTATE_KEYWORDS = ("create", "update", "delete", "write", "add", "remove",
                         "insert", "patch", "put", "set", "upsert", "edit")
@@ -306,3 +307,77 @@ def test_stage_edit_read_only_section_rejected(db_session):
         token_store=TokenStore(), actor_id=None)
     assert "error" in result
     assert "token" not in result
+
+
+def test_commit_delete_with_valid_token_writes(db_session):
+    from app.services import ai_tools
+    from app.services.ai_write import TokenStore
+    from app.models.extended_records import Surgery
+    admin, row = _make_surgery_for_stage(db_session)
+    store = TokenStore()
+    staged = ai_tools.dispatch(db_session, "stage_delete",
+        {"section": "surgeries", "record_id": str(row.id)}, token_store=store, actor_id=admin.id)
+    result = ai_tools.dispatch(db_session, "commit_delete",
+        {"token": staged["token"]}, token_store=store, actor_id=admin.id)
+    assert result["deleted"] is True
+    assert db_session.get(Surgery, row.id) is None
+
+
+def test_commit_delete_without_token_refused_no_write(db_session):
+    from app.services import ai_tools
+    from app.services.ai_write import TokenStore
+    from app.models.extended_records import Surgery
+    admin, row = _make_surgery_for_stage(db_session)
+    result = ai_tools.dispatch(db_session, "commit_delete",
+        {"token": "fabricated"}, token_store=TokenStore(), actor_id=admin.id)
+    assert "error" in result
+    assert db_session.get(Surgery, row.id) is not None     # STILL THERE
+
+
+def test_commit_delete_reused_token_refused(db_session):
+    from app.services import ai_tools
+    from app.services.ai_write import TokenStore
+    admin, row = _make_surgery_for_stage(db_session)
+    store = TokenStore()
+    staged = ai_tools.dispatch(db_session, "stage_delete",
+        {"section": "surgeries", "record_id": str(row.id)}, token_store=store, actor_id=admin.id)
+    ai_tools.dispatch(db_session, "commit_delete", {"token": staged["token"]}, token_store=store, actor_id=admin.id)
+    second = ai_tools.dispatch(db_session, "commit_delete", {"token": staged["token"]}, token_store=store, actor_id=admin.id)
+    assert "error" in second
+
+
+def test_commit_delete_wrong_action_token_refused(db_session):
+    # an EDIT token must not drive a delete
+    from app.services import ai_tools
+    from app.services.ai_write import TokenStore
+    from app.models.extended_records import Surgery
+    admin, row = _make_surgery_for_stage(db_session)
+    store = TokenStore()
+    staged = ai_tools.dispatch(db_session, "stage_edit",
+        {"section": "surgeries", "record_id": str(row.id), "fields": {"procedure": "New"}},
+        token_store=store, actor_id=admin.id)
+    result = ai_tools.dispatch(db_session, "commit_delete",
+        {"token": staged["token"]}, token_store=store, actor_id=admin.id)
+    assert "error" in result
+    assert db_session.get(Surgery, row.id) is not None
+
+
+def test_commit_edit_with_valid_token_writes(db_session):
+    from app.services import ai_tools
+    from app.services.ai_write import TokenStore
+    from app.models.extended_records import Surgery
+    admin, row = _make_surgery_for_stage(db_session)
+    store = TokenStore()
+    staged = ai_tools.dispatch(db_session, "stage_edit",
+        {"section": "surgeries", "record_id": str(row.id), "fields": {"procedure": "New"}},
+        token_store=store, actor_id=admin.id)
+    result = ai_tools.dispatch(db_session, "commit_edit", {"token": staged["token"]}, token_store=store, actor_id=admin.id)
+    assert result["updated"] is True
+    db_session.expire_all()
+    assert db_session.get(Surgery, row.id).procedure == "New"
+
+
+def test_commit_edit_no_token_store_refused(db_session):
+    from app.services import ai_tools
+    result = ai_tools.dispatch(db_session, "commit_edit", {"token": "x"}, token_store=None, actor_id=None)
+    assert "error" in result

@@ -141,6 +141,38 @@ TOOL_DEFS: list[dict] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "commit_delete",
+            "description": (
+                "Permanently delete the record that was just staged. Only call after "
+                "the user confirmed the deletion you read back to them. Requires the "
+                "token from stage_delete."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"token": {"type": "string"}},
+                "required": ["token"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "commit_edit",
+            "description": (
+                "Apply the edit that was just staged. Only call after the user "
+                "confirmed the changes you read back to them. Requires the token from "
+                "stage_edit."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"token": {"type": "string"}},
+                "required": ["token"],
+            },
+        },
+    },
 ]
 
 
@@ -263,6 +295,29 @@ def dispatch(
                                        "record_id": str(row.id), "fields": cleaned})
             return {"action": "edit", "section": args["section"], "record_id": str(row.id),
                     "before": before, "after": after, "warnings": warnings, "token": token}
+        if name in ("commit_delete", "commit_edit"):
+            if token_store is None:
+                return {"error": "No confirmation channel available."}
+            staged = token_store.consume(args.get("token", ""))
+            expected = "delete" if name == "commit_delete" else "edit"
+            if staged is None or staged.get("action") != expected:
+                return {"error": "No matching confirmation. Ask the user to confirm, then stage again."}
+            entry = ai_write.WRITE_SECTION_MAP.get(staged["section"])
+            if entry is None or actor_id is None:
+                return {"error": "Cannot complete this action."}
+            model = entry[0]
+            rid = _uuid.UUID(staged["record_id"])
+            service = CRUDService(model)
+            if expected == "delete":
+                service.delete(db, rid)
+                audit_action = AuditAction.delete
+            else:
+                service.update(db, rid, staged["fields"])
+                audit_action = AuditAction.update
+            log_event(db, action=audit_action, actor_type=ActorType.user, actor_user_id=actor_id,
+                      section=staged["section"], record_id=staged["record_id"],
+                      detail=f"AI {expected} record in {staged['section']}")
+            return {("deleted" if expected == "delete" else "updated"): True, "section": staged["section"]}
         return {"error": f"Unknown tool '{name}'."}
     except Exception as exc:  # never leak an exception back into the loop
         return {"error": f"Tool execution failed: {exc}"}
