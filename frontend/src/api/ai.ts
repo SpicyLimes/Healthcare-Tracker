@@ -5,9 +5,19 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface Proposal {
+  action: "create" | "edit" | "delete";
+  section: string;
+  fields?: Record<string, unknown> | null;
+  record_id?: string | null;
+  before?: Record<string, unknown> | null;
+  warnings?: string[];
+}
+
 export interface ChatResponse {
   answer: string;
   tools_used: string[];
+  proposals?: Proposal[];
 }
 
 export class AiUnavailableError extends Error {}

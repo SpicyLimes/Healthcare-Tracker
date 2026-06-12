@@ -138,3 +138,111 @@ def test_get_ai_settings_unauthenticated(client, db_session):
 def test_chat_unauthenticated(client, db_session):
     res = client.post("/api/ai/chat", json={"messages": [{"role": "user", "content": "hi"}]})
     assert res.status_code == 401
+
+
+def test_chat_response_defaults_proposals_empty():
+    from app.schemas.ai import ChatResponse
+    r = ChatResponse(answer="hi", tools_used=[])
+    assert r.proposals == []
+
+
+def test_proposal_model_shape():
+    from app.schemas.ai import Proposal
+    p = Proposal(action="create", section="surgeries", fields={"procedure": "X"}, warnings=[])
+    assert p.action == "create"
+    assert p.record_id is None
+
+
+def test_chat_endpoint_surfaces_proposals(client, db_session, monkeypatch):
+    import json
+    from app.services import ai_provider
+    csrf = _login_admin(client, db_session, email="chatprop@example.com")
+    client.put("/api/settings/ai", headers={"X-CSRF-Token": csrf},
+               json={"enabled": True, "base_url": "http://x/v1", "model": "m"})
+    calls = {"n": 0}
+    def fake(base_url, model, messages, tools):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return {"message": {"role": "assistant", "content": None, "tool_calls": [
+                {"id": "c1", "type": "function", "function": {
+                    "name": "propose_record",
+                    "arguments": json.dumps({"section": "surgeries", "fields": {"procedure": "Appendectomy"}})}}]}}
+        return {"message": {"role": "assistant", "content": "I'll add it. Confirm?", "tool_calls": None}}
+    monkeypatch.setattr(ai_provider, "chat_completion", fake)
+    res = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},
+                      json={"messages": [{"role": "user", "content": "she had an appendectomy"}]})
+    assert res.status_code == 200
+    body = res.json()
+    assert "proposals" in body
+    assert len(body["proposals"]) == 1
+    assert body["proposals"][0]["section"] == "surgeries"
+    assert body["proposals"][0]["action"] == "create"
+    assert body["proposals"][0]["fields"]["procedure"] == "Appendectomy"
+
+
+def test_chat_endpoint_plain_qa_empty_proposals(client, db_session, monkeypatch):
+    from app.services import ai_provider
+    csrf = _login_admin(client, db_session, email="chatqa@example.com")
+    client.put("/api/settings/ai", headers={"X-CSRF-Token": csrf},
+               json={"enabled": True, "base_url": "http://x/v1", "model": "m"})
+    monkeypatch.setattr(ai_provider, "chat_completion",
+        lambda *a, **k: {"message": {"role": "assistant", "content": "You have 2 meds.", "tool_calls": None}})
+    res = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},
+                      json={"messages": [{"role": "user", "content": "how many meds?"}]})
+    assert res.status_code == 200
+    assert res.json()["proposals"] == []
+
+
+def test_edit_gate_survives_across_two_requests(client, db_session, monkeypatch):
+    """stage in request 1, confirm 'yes' in request 2 -> the write happens.
+    This is the cross-request flow the per-request store could not do."""
+    import json
+    from app.services import ai_provider, user_service
+    from app.services.crud_service import CRUDService
+    from app.models.user import Role
+    from app.models.extended_records import Surgery
+    csrf = _login_admin(client, db_session, email="gateadmin@example.com")
+    client.put("/api/settings/ai", headers={"X-CSRF-Token": csrf},
+               json={"enabled": True, "base_url": "http://x/v1", "model": "m"})
+    # make a surgery to edit
+    admin = db_session.query(__import__("app.models.user", fromlist=["User"]).User).filter_by(email="gateadmin@example.com").first()
+    row = CRUDService(Surgery).create(db_session, {"procedure": "Old"}, created_by=admin.id)
+    db_session.commit()
+
+    # request 1: model stages an edit
+    def fake_stage(base_url, model, messages, tools):
+        # one tool round: stage_edit, then a text answer reading the summary back
+        if not any(m.get("role") == "tool" for m in messages):
+            return {"message": {"role": "assistant", "content": None, "tool_calls": [
+                {"id": "c1", "type": "function", "function": {"name": "stage_edit",
+                 "arguments": json.dumps({"section": "surgeries", "record_id": str(row.id),
+                                          "fields": {"procedure": "New"}})}}]}}
+        return {"message": {"role": "assistant", "content": "Change procedure Old -> New. Confirm?", "tool_calls": None}}
+    monkeypatch.setattr(ai_provider, "chat_completion", fake_stage)
+    r1 = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},
+                     json={"messages": [{"role": "user", "content": "change the surgery procedure to New"}]})
+    assert r1.status_code == 200
+    assert len(r1.json()["proposals"]) == 1
+    # the model knows the token from the tool result in request 1's loop; capture it for request 2.
+    # Since the token isn't exposed to the client, the SECOND request's model must call commit_edit
+    # with the token it saw. We simulate that by having the model echo the staged token.
+    # Grab the token from the singleton store for THIS admin to drive the commit call deterministically.
+    from app.services import ai_write
+    # find the staged token for this admin
+    staged_tokens = [t for t, (_, owner, act) in ai_write.get_token_store()._staged.items() if owner == str(admin.id)]
+    assert len(staged_tokens) == 1
+    tok = staged_tokens[0]
+
+    # request 2: user says yes -> model calls commit_edit with the token
+    def fake_commit(base_url, model, messages, tools):
+        if not any(m.get("role") == "tool" for m in messages):
+            return {"message": {"role": "assistant", "content": None, "tool_calls": [
+                {"id": "c2", "type": "function", "function": {"name": "commit_edit",
+                 "arguments": json.dumps({"token": tok})}}]}}
+        return {"message": {"role": "assistant", "content": "Done — updated.", "tool_calls": None}}
+    monkeypatch.setattr(ai_provider, "chat_completion", fake_commit)
+    r2 = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},
+                     json={"messages": [{"role": "user", "content": "yes"}]})
+    assert r2.status_code == 200
+    db_session.expire_all()
+    assert db_session.get(Surgery, row.id).procedure == "New"      # the cross-request write happened

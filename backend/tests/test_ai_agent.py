@@ -118,3 +118,53 @@ def test_agent_dedupes_repeated_tool_in_used_list(monkeypatch, db_session):
     monkeypatch.setattr(ai_provider, "chat_completion", fake_completion)
     res = ai_agent.run_chat(db_session, _FakeSettings(), [{"role": "user", "content": "x"}])
     assert res.tools_used == ["list_sections"]
+
+
+def test_run_chat_collects_create_proposal(monkeypatch, db_session):
+    from app.services import ai_agent, ai_provider
+    import json
+    calls = {"n": 0}
+    def fake(base_url, model, messages, tools):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return {"message": {"role": "assistant", "content": None, "tool_calls": [
+                {"id": "c1", "type": "function", "function": {
+                    "name": "propose_record",
+                    "arguments": json.dumps({"section": "surgeries", "fields": {"procedure": "Appendectomy"}})}}]}}
+        return {"message": {"role": "assistant", "content": "I'll add an appendectomy. Confirm?", "tool_calls": None}}
+    monkeypatch.setattr(ai_provider, "chat_completion", fake)
+    res = ai_agent.run_chat(db_session, _FakeSettings(), [{"role": "user", "content": "she had an appendectomy"}])
+    assert len(res.proposals) == 1
+    assert res.proposals[0].action == "create"
+    assert res.proposals[0].section == "surgeries"
+    assert res.proposals[0].fields["procedure"] == "Appendectomy"
+
+
+def test_run_chat_plain_qa_has_no_proposals(monkeypatch, db_session):
+    from app.services import ai_agent, ai_provider
+    def fake(base_url, model, messages, tools):
+        return {"message": {"role": "assistant", "content": "You have 3 medications.", "tool_calls": None}}
+    monkeypatch.setattr(ai_provider, "chat_completion", fake)
+    res = ai_agent.run_chat(db_session, _FakeSettings(), [{"role": "user", "content": "how many meds?"}])
+    assert res.proposals == []
+
+
+def test_run_chat_collects_multiple_proposals(monkeypatch, db_session):
+    from app.services import ai_agent, ai_provider
+    import json
+    calls = {"n": 0}
+    def fake(base_url, model, messages, tools):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return {"message": {"role": "assistant", "content": None, "tool_calls": [
+                {"id": "c1", "type": "function", "function": {
+                    "name": "propose_record",
+                    "arguments": json.dumps({"section": "visit_logs", "fields": {"reason": "follow-up"}})}},
+                {"id": "c2", "type": "function", "function": {
+                    "name": "propose_record",
+                    "arguments": json.dumps({"section": "medications", "fields": {"name": "lisinopril"}})}}]}}
+        return {"message": {"role": "assistant", "content": "Two records. Confirm?", "tool_calls": None}}
+    monkeypatch.setattr(ai_provider, "chat_completion", fake)
+    res = ai_agent.run_chat(db_session, _FakeSettings(), [{"role": "user", "content": "follow-up, prescribed lisinopril"}])
+    sections = {p.section for p in res.proposals}
+    assert sections == {"visit_logs", "medications"}

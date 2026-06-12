@@ -1,18 +1,40 @@
-"""Read-only tools the agent loop may call. Each runs a SELECT via the existing
-15-section map. There is NO write/delete/mutate path here by design."""
+"""Tools the agent loop may call. Read tools run a SELECT via the existing
+15-section map; draft tools (propose_record) stage values without writing; and
+explicitly-allowlisted write tools (commit_create) persist via CRUDService after
+the user has confirmed conversationally."""
+import uuid as _uuid
 from datetime import date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy.orm import Session
 
-from app.services import summary_service
+from app.models.audit_log import ActorType, AuditAction
+from app.services import ai_write, summary_service
+from app.services.audit_service import log_event
+from app.services.crud_service import CRUDService
 
 _TITLES = summary_service.SECTION_TITLES
 
 
 def _section_names() -> list[str]:
     return list(summary_service.get_section_map().keys())
+
+
+def _load_writable_row(db, section, record_id):
+    """Return (model, row, None) or (None, None, error_str). No write."""
+    entry = ai_write.WRITE_SECTION_MAP.get(section)
+    if entry is None:
+        return None, None, f"Section '{section}' is not writable by the assistant."
+    model = entry[0]
+    try:
+        rid = _uuid.UUID(str(record_id))
+    except (ValueError, TypeError):
+        return None, None, "Invalid record id."
+    row = db.get(model, rid)
+    if row is None:
+        return None, None, "Record not found."
+    return model, row, None
 
 
 TOOL_DEFS: list[dict] = [
@@ -41,6 +63,113 @@ TOOL_DEFS: list[dict] = [
                     "date_to": {"type": "string", "description": "YYYY-MM-DD inclusive upper bound"},
                 },
                 "required": ["section"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "propose_record",
+            "description": (
+                "Draft a NEW record for the user to confirm. Does NOT save. Use after "
+                "gathering the fields conversationally. Fill doctor names into the "
+                "*_other free-text field (never an id)."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "section": {"type": "string", "enum": ai_write.write_section_names()},
+                    "fields": {"type": "object", "description": "Proposed field values."},
+                },
+                "required": ["section", "fields"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "commit_create",
+            "description": (
+                "Create a new record. Only call after the user has confirmed they "
+                "want it added."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "section": {"type": "string", "enum": ai_write.write_section_names()},
+                    "fields": {"type": "object", "description": "Field values for the new record."},
+                },
+                "required": ["section", "fields"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "stage_delete",
+            "description": (
+                "Prepare to DELETE a record. Does NOT delete. Returns a summary to "
+                "read back to the user and a confirmation token; call commit_delete "
+                "only after the user confirms."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "section": {"type": "string", "enum": ai_write.write_section_names()},
+                    "record_id": {"type": "string"},
+                },
+                "required": ["section", "record_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "stage_edit",
+            "description": (
+                "Prepare to EDIT a record. Does NOT save. Returns before/after and a "
+                "confirmation token; call commit_edit only after the user confirms."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "section": {"type": "string", "enum": ai_write.write_section_names()},
+                    "record_id": {"type": "string"},
+                    "fields": {"type": "object", "description": "Field values to change."},
+                },
+                "required": ["section", "record_id", "fields"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "commit_delete",
+            "description": (
+                "Permanently delete the record that was just staged. Only call after "
+                "the user confirmed the deletion you read back to them. Requires the "
+                "token from stage_delete."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"token": {"type": "string"}},
+                "required": ["token"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "commit_edit",
+            "description": (
+                "Apply the edit that was just staged. Only call after the user "
+                "confirmed the changes you read back to them. Requires the token from "
+                "stage_edit."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"token": {"type": "string"}},
+                "required": ["token"],
             },
         },
     },
@@ -86,11 +215,24 @@ def _localize_datetimes(rows: list[dict], tz: str) -> list[dict]:
     return [{k: convert(v) for k, v in row.items()} for row in rows]
 
 
-def dispatch(db: Session, name: str, args: dict, tz: str | None = None) -> dict:
-    """Execute a read-only tool. Always returns a dict; never raises.
+def dispatch(
+    db: Session,
+    name: str,
+    args: dict,
+    tz: str | None = None,
+    actor_id=None,
+    token_store=None,
+) -> dict:
+    """Execute an agent tool. Read tools and draft tools never write; create/commit
+    tools write via CRUDService. Always returns a dict; never raises.
 
     `tz` is the IANA timezone (e.g. "America/Chicago") that datetime values should
-    be presented in. When None, datetimes are left as stored (UTC)."""
+    be presented in. When None, datetimes are left as stored (UTC).
+    `actor_id` is the acting admin's user id, threaded through so writes record the
+    right `created_by` and audit actor; write tools refuse if it is missing.
+    `token_store` is the process-wide confirmation-token store used by later
+    edit/delete tools; tokens are namespaced to `actor_id` so an admin can only
+    consume their own staged action, in this or a subsequent request."""
     try:
         if name == "list_sections":
             return {"sections": [{"name": n, "title": _TITLES.get(n, n)} for n in _section_names()]}
@@ -104,6 +246,86 @@ def dispatch(db: Session, name: str, args: dict, tz: str | None = None) -> dict:
             if tz:
                 rows = _localize_datetimes(rows, tz)
             return {"section": section, "count": len(rows), "records": rows}
+        if name == "propose_record":
+            section = args.get("section")
+            fields = args.get("fields") or {}
+            if section not in ai_write.WRITE_SECTION_MAP:
+                return {"error": f"Section '{section}' is not writable by the assistant."}
+            cleaned, warnings = ai_write.validate_fields(section, fields, mode="create")
+            return {"action": "create", "section": section, "fields": cleaned, "warnings": warnings}
+        if name == "commit_create":
+            section = args.get("section")
+            entry = ai_write.WRITE_SECTION_MAP.get(section)
+            if entry is None:
+                return {"error": f"Section '{section}' is not writable by the assistant."}
+            if actor_id is None:
+                return {"error": "Cannot create a record without an authenticated user."}
+            model, create_schema, _ = entry
+            cleaned, warnings = ai_write.validate_fields(section, args.get("fields") or {}, mode="create")
+            try:
+                validated = create_schema(**cleaned)   # enforces required fields / full-schema rules
+            except Exception as exc:
+                return {"error": f"Cannot create record: {exc}", "warnings": warnings}
+            row = CRUDService(model).create(db, validated.model_dump(), created_by=actor_id)
+            log_event(db, action=AuditAction.create, actor_type=ActorType.user,
+                      actor_user_id=actor_id, section=section, record_id=str(row.id),
+                      detail=f"AI created record in {section}")
+            return {"created": True, "record_id": str(row.id), "section": section, "warnings": warnings}
+        if name == "stage_delete":
+            if token_store is None:
+                return {"error": "No confirmation channel available."}
+            _, row, err = _load_writable_row(db, args.get("section"), args.get("record_id"))
+            if err:
+                return {"error": err}
+            summary = ai_write.row_summary(row)
+            token = token_store.stage({"action": "delete", "section": args["section"], "record_id": str(row.id)}, owner_id=actor_id)
+            return {"action": "delete", "section": args["section"], "record_id": str(row.id),
+                    "summary": summary, "token": token}
+        if name == "stage_edit":
+            if token_store is None:
+                return {"error": "No confirmation channel available."}
+            _, row, err = _load_writable_row(db, args.get("section"), args.get("record_id"))
+            if err:
+                return {"error": err}
+            cleaned, warnings = ai_write.validate_fields(args["section"], args.get("fields") or {}, mode="update")
+            if not cleaned:
+                return {"error": "No valid fields to edit.", "warnings": warnings}
+            before = ai_write.row_summary(row, keys=cleaned.keys())
+            after = ai_write.row_summary_values(cleaned)
+            token = token_store.stage({"action": "edit", "section": args["section"],
+                                       "record_id": str(row.id), "fields": cleaned}, owner_id=actor_id)
+            return {"action": "edit", "section": args["section"], "record_id": str(row.id),
+                    "before": before, "after": after, "warnings": warnings, "token": token}
+        if name in ("commit_delete", "commit_edit"):
+            if token_store is None:
+                return {"error": "No confirmation channel available."}
+            # Consume the token FIRST (single-use, fail-closed): for the matching
+            # owner the gate burns the token before any write is attempted, so no
+            # token can survive a commit call. consume() returns None if the token
+            # is missing, reused, expired, or owned by a different admin — every
+            # refusal path below thus performs no write. (A wrong-owner attempt is
+            # the one case that intentionally does NOT burn the token, so the real
+            # owner can still confirm their own staged action.)
+            staged = token_store.consume(args.get("token", ""), owner_id=actor_id)
+            expected = "delete" if name == "commit_delete" else "edit"
+            if staged is None or staged.get("action") != expected:
+                return {"error": "No matching confirmation. Ask the user to confirm, then stage again."}
+            entry = ai_write.WRITE_SECTION_MAP.get(staged["section"])
+            if entry is None or actor_id is None:
+                return {"error": "Cannot complete this action."}
+            model = entry[0]
+            rid = _uuid.UUID(staged["record_id"])
+            service = CRUDService(model)
+            if expected == "delete":
+                service.delete(db, rid)
+                audit_action = AuditAction.delete
+            else:
+                service.update(db, rid, staged["fields"])
+                audit_action = AuditAction.update
+            log_event(db, action=audit_action, actor_type=ActorType.user, actor_user_id=actor_id,
+                      section=staged["section"], record_id=staged["record_id"],
+                      detail=f"AI {expected} record in {staged['section']}")
+            return {("deleted" if expected == "delete" else "updated"): True, "section": staged["section"]}
         return {"error": f"Unknown tool '{name}'."}
     except Exception as exc:  # never leak an exception back into the loop
         return {"error": f"Tool execution failed: {exc}"}
