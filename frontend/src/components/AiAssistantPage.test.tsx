@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import AiAssistantPage from "./AiAssistantPage"
 
@@ -17,5 +17,15 @@ describe("AiAssistantPage", () => {
     ;(getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" })
     render(<MemoryRouter><AiAssistantPage /></MemoryRouter>)
     expect(await screen.findByPlaceholderText(/ask/i)).toBeInTheDocument()
+  })
+
+  it("shows the menu button, AI model name, and privacy note", async () => {
+    ;(getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "gemma-4-e4b" })
+    render(<MemoryRouter><AiAssistantPage /></MemoryRouter>)
+    expect(await screen.findByRole("button", { name: /navigation menu/i })).toBeInTheDocument()
+    expect(screen.getByText("AI Model")).toBeInTheDocument()
+    expect(screen.getByText("gemma-4-e4b")).toBeInTheDocument()
+    expect(screen.getByText(/Privacy Note/i)).toBeInTheDocument()
+    expect(screen.getByText(/locally-hosted language model/i)).toBeInTheDocument()
   })
 })

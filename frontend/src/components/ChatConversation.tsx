@@ -16,12 +16,21 @@ interface DisplayMessage {
   proposals?: Proposal[]
 }
 
+interface ChatConversationProps {
+  /**
+   * When true, the empty state also shows a "Privacy Note" explaining the
+   * local-only model and model-capability caveats. Used on the full-screen
+   * mobile page, which has the room for it; the compact desktop sheet omits it.
+   */
+  showPrivacyNote?: boolean
+}
+
 /**
  * The shared conversation body used by both the desktop Sheet (AiChatPanel) and
  * the mobile full-screen page (AiAssistantPage). Owns its own message/input/loading
  * state. Fills its parent — wrap it in a flex column with a constrained height.
  */
-export default function ChatConversation() {
+export default function ChatConversation({ showPrivacyNote = false }: ChatConversationProps) {
   const [messages, setMessages] = React.useState<DisplayMessage[]>([])
   const [input, setInput] = React.useState("")
   const [loading, setLoading] = React.useState(false)
@@ -96,6 +105,21 @@ export default function ChatConversation() {
             <p className="mt-1 text-xs text-muted-foreground">
               e.g. “What are the current medications?” or “List upcoming appointments.”
             </p>
+
+            {showPrivacyNote && (
+              <div className="mt-8 border-t border-border/60 pt-4">
+                <p className="text-xs font-medium text-foreground">Privacy Note</p>
+                <p className="mt-1.5 text-[0.7rem] leading-relaxed text-muted-foreground">
+                  The assistant runs on a private, locally-hosted language model,
+                  so your records stay on your network and are never shared with
+                  any outside service.
+                </p>
+                <p className="mt-2 text-[0.7rem] leading-relaxed text-muted-foreground">
+                  Models differ in capability. To add records or read documents,
+                  pick a model that supports Tool Use (and Vision for documents).
+                </p>
+              </div>
+            )}
           </div>
         )}
         {messages.map((msg, i) => (
