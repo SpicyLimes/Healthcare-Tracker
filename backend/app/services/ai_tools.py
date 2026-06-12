@@ -8,7 +8,10 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy.orm import Session
 
+from app.models.audit_log import ActorType, AuditAction
 from app.services import ai_write, summary_service
+from app.services.audit_service import log_event
+from app.services.crud_service import CRUDService
 
 _TITLES = summary_service.SECTION_TITLES
 
@@ -163,22 +166,22 @@ def dispatch(
             cleaned, warnings = ai_write.validate_fields(section, fields, mode="create")
             return {"action": "create", "section": section, "fields": cleaned, "warnings": warnings}
         if name == "commit_create":
-            from app.services.crud_service import CRUDService
-            from app.models.audit_log import AuditAction, ActorType
-            from app.services.audit_service import log_event
             section = args.get("section")
             entry = ai_write.WRITE_SECTION_MAP.get(section)
-            if entry is None or actor_id is None:
-                return {"error": f"Cannot create in section '{section}'."}
-            model = entry[0]
+            if entry is None:
+                return {"error": f"Section '{section}' is not writable by the assistant."}
+            if actor_id is None:
+                return {"error": "Cannot create a record without an authenticated user."}
+            model, create_schema, _ = entry
             cleaned, warnings = ai_write.validate_fields(section, args.get("fields") or {}, mode="create")
-            row = CRUDService(model).create(db, cleaned, created_by=actor_id)
             try:
-                log_event(db, action=AuditAction.create, actor_type=ActorType.user,
-                          actor_user_id=actor_id, section=section, record_id=str(row.id),
-                          detail=f"AI created record in {section}")
-            except Exception:
-                pass
+                validated = create_schema(**cleaned)   # enforces required fields / full-schema rules
+            except Exception as exc:
+                return {"error": f"Cannot create record: {exc}", "warnings": warnings}
+            row = CRUDService(model).create(db, validated.model_dump(), created_by=actor_id)
+            log_event(db, action=AuditAction.create, actor_type=ActorType.user,
+                      actor_user_id=actor_id, section=section, record_id=str(row.id),
+                      detail=f"AI created record in {section}")
             return {"created": True, "record_id": str(row.id), "section": section, "warnings": warnings}
         return {"error": f"Unknown tool '{name}'."}
     except Exception as exc:  # never leak an exception back into the loop

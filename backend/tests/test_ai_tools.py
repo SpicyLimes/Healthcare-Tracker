@@ -168,6 +168,27 @@ def test_commit_create_writes_and_audits(db_session):
     assert "record_id" in result
     assert db_session.query(Surgery).count() == before + 1
 
+    from app.models.audit_log import AuditLog, AuditAction
+    audit = db_session.query(AuditLog).filter_by(
+        record_id=result["record_id"], action=AuditAction.create
+    ).all()
+    assert len(audit) == 1
+    assert audit[0].actor_user_id == admin.id
+
+
+def test_commit_create_missing_required_field_no_write(db_session):
+    from app.services import ai_tools, user_service
+    from app.models.user import Role
+    from app.models.extended_records import Surgery
+    admin = user_service.create_user(db_session, "reqadmin@example.com", "a-strong-passphrase-123", Role.admin)
+    db_session.flush()
+    before = db_session.query(Surgery).count()
+    # Surgery requires `procedure`; omit it
+    result = ai_tools.dispatch(db_session, "commit_create",
+        {"section": "surgeries", "fields": {"hospital": "General"}}, actor_id=admin.id)
+    assert "error" in result
+    assert db_session.query(Surgery).count() == before
+
 
 def test_commit_create_unknown_section_no_write(db_session):
     from app.services import ai_tools, user_service
