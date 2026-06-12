@@ -8,7 +8,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { getAiSettings } from "@/api/settings"
-import { sendChat, AiUnavailableError, type ChatMessage } from "@/api/ai"
+import { sendChat, AiUnavailableError, type ChatMessage, type Proposal } from "@/api/ai"
 import { cn } from "@/lib/utils"
 
 /**
@@ -20,6 +20,7 @@ interface DisplayMessage {
   role: "user" | "assistant" | "error"
   content: string
   tools_used?: string[]
+  proposals?: Proposal[]
 }
 
 export default function AiChatPanel() {
@@ -70,6 +71,7 @@ export default function AiChatPanel() {
           role: "assistant",
           content: response.answer,
           tools_used: response.tools_used,
+          proposals: response.proposals,
         },
       ])
     } catch (err) {
@@ -158,6 +160,37 @@ export default function AiChatPanel() {
                     <p className="mt-1.5 border-t border-border/60 pt-1.5 text-xs text-muted-foreground">
                       Looked up: {msg.tools_used.join(", ")}
                     </p>
+                  )}
+                {msg.role === "assistant" &&
+                  msg.proposals &&
+                  msg.proposals.length > 0 && (
+                    <div className="mt-2 flex flex-col gap-1.5">
+                      {msg.proposals.map((p, j) => (
+                        <div
+                          key={j}
+                          className="rounded-lg border border-border bg-background/60 px-2.5 py-1.5 text-xs"
+                        >
+                          <span className="font-medium capitalize">{p.action}</span>
+                          {" · "}
+                          <span className="text-muted-foreground">
+                            {p.section.replace(/_/g, " ")}
+                          </span>
+                          {p.fields && Object.keys(p.fields).length > 0 && (
+                            <div className="mt-0.5 text-muted-foreground">
+                              {Object.entries(p.fields)
+                                .map(([k, v]) => `${k.replace(/_/g, " ")}: ${String(v)}`)
+                                .join(" · ")}
+                            </div>
+                          )}
+                          {p.warnings &&
+                            p.warnings.map((w, k) => (
+                              <div key={k} className="mt-0.5 text-amber-600">
+                                ⚠ {w}
+                              </div>
+                            ))}
+                        </div>
+                      ))}
+                    </div>
                   )}
               </div>
             ))}
