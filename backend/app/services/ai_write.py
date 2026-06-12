@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import secrets
 import time
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, TypeAdapter
 
@@ -46,10 +46,11 @@ WRITE_SECTION_MAP: dict[str, tuple[type, type[BaseModel], type[BaseModel]]] = {
 
 
 def write_section_names() -> list[str]:
+    """The section names the AI may write to (used to enum-constrain tool args)."""
     return list(WRITE_SECTION_MAP.keys())
 
 
-def validate_fields(section: str, fields: dict, mode: str) -> tuple[dict[str, Any], list[str]]:
+def validate_fields(section: str, fields: dict, mode: Literal["create", "update"]) -> tuple[dict[str, Any], list[str]]:
     """Validate `fields` against the section's create/update schema WITHOUT raising.
     Returns (cleaned_fields, warnings). Valid values coerce through; invalid or
     unknown ones are dropped and described in warnings. Never raises."""
