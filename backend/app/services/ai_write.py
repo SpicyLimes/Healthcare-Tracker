@@ -76,3 +76,27 @@ def validate_fields(section: str, fields: dict, mode: Literal["create", "update"
         except Exception:
             warnings.append(f"Could not use value for '{key}' ({value!r}); left blank.")
     return cleaned, warnings
+
+
+class TokenStore:
+    """In-process, single-use, TTL-bounded store of staged edit/delete actions.
+    One instance is created per chat request, so tokens are inherently scoped to
+    the conversation and never persist or leave the server."""
+
+    def __init__(self, ttl_seconds: int = 300):
+        self._ttl = ttl_seconds
+        self._staged: dict[str, tuple[float, dict]] = {}
+
+    def stage(self, action: dict) -> str:
+        token = secrets.token_urlsafe(16)
+        self._staged[token] = (time.monotonic(), action)
+        return token
+
+    def consume(self, token: str) -> dict | None:
+        entry = self._staged.pop(token, None)   # pop = single use
+        if entry is None:
+            return None
+        staged_at, action = entry
+        if time.monotonic() - staged_at > self._ttl:
+            return None
+        return action

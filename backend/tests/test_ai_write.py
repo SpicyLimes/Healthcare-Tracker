@@ -58,3 +58,30 @@ def test_write_section_map_full_tuple_shape():
 def test_profile_and_nutrition_excluded():
     assert "profile" not in ai_write.WRITE_SECTION_MAP
     assert "nutrition_plan" not in ai_write.WRITE_SECTION_MAP
+
+
+def test_token_store_round_trip():
+    store = ai_write.TokenStore()
+    token = store.stage({"action": "delete", "section": "surgeries", "record_id": "abc"})
+    assert isinstance(token, str) and token
+    staged = store.consume(token)
+    assert staged["section"] == "surgeries"
+
+
+def test_token_is_single_use():
+    store = ai_write.TokenStore()
+    token = store.stage({"action": "delete"})
+    store.consume(token)
+    assert store.consume(token) is None        # second use refused
+
+
+def test_unknown_token_returns_none():
+    store = ai_write.TokenStore()
+    assert store.consume("not-a-real-token") is None
+
+
+def test_expired_token_returns_none(monkeypatch):
+    store = ai_write.TokenStore(ttl_seconds=10)
+    token = store.stage({"action": "delete"})
+    monkeypatch.setattr(ai_write.time, "monotonic", lambda: 1_000_000.0)
+    assert store.consume(token) is None
