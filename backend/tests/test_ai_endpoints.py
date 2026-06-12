@@ -138,3 +138,16 @@ def test_get_ai_settings_unauthenticated(client, db_session):
 def test_chat_unauthenticated(client, db_session):
     res = client.post("/api/ai/chat", json={"messages": [{"role": "user", "content": "hi"}]})
     assert res.status_code == 401
+
+
+def test_chat_response_defaults_proposals_empty():
+    from app.schemas.ai import ChatResponse
+    r = ChatResponse(answer="hi", tools_used=[])
+    assert r.proposals == []
+
+
+def test_proposal_model_shape():
+    from app.schemas.ai import Proposal
+    p = Proposal(action="create", section="surgeries", fields={"procedure": "X"}, warnings=[])
+    assert p.action == "create"
+    assert p.record_id is None
