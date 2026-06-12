@@ -381,3 +381,35 @@ def test_commit_edit_no_token_store_refused(db_session):
     from app.services import ai_tools
     result = ai_tools.dispatch(db_session, "commit_edit", {"token": "x"}, token_store=None, actor_id=None)
     assert "error" in result
+
+
+def test_commit_delete_expired_token_refused_no_write(db_session):
+    from app.services import ai_tools
+    from app.services.ai_write import TokenStore
+    from app.models.extended_records import Surgery
+    admin, row = _make_surgery_for_stage(db_session)
+    store = TokenStore(ttl_seconds=0)          # token expires immediately
+    staged = ai_tools.dispatch(db_session, "stage_delete",
+        {"section": "surgeries", "record_id": str(row.id)}, token_store=store, actor_id=admin.id)
+    result = ai_tools.dispatch(db_session, "commit_delete",
+        {"token": staged["token"]}, token_store=store, actor_id=admin.id)
+    assert "error" in result
+    assert db_session.get(Surgery, row.id) is not None     # expired → NO delete
+
+
+def test_commit_edit_on_deleted_row_errors_no_crash(db_session):
+    from app.services import ai_tools
+    from app.services.ai_write import TokenStore
+    from app.services.crud_service import CRUDService
+    from app.models.extended_records import Surgery
+    admin, row = _make_surgery_for_stage(db_session)
+    store = TokenStore()
+    staged = ai_tools.dispatch(db_session, "stage_edit",
+        {"section": "surgeries", "record_id": str(row.id), "fields": {"procedure": "New"}},
+        token_store=store, actor_id=admin.id)
+    # delete the row out-of-band AFTER staging
+    CRUDService(Surgery).delete(db_session, row.id)
+    db_session.flush()
+    result = ai_tools.dispatch(db_session, "commit_edit",
+        {"token": staged["token"]}, token_store=store, actor_id=admin.id)
+    assert "error" in result                   # graceful, no crash

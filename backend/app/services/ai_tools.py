@@ -298,6 +298,11 @@ def dispatch(
         if name in ("commit_delete", "commit_edit"):
             if token_store is None:
                 return {"error": "No confirmation channel available."}
+            # Consume the token FIRST (single-use, fail-closed): the gate must burn
+            # the token before any write is attempted, so no token can survive a
+            # commit call. consume() pops the entry and returns None if it is
+            # missing, reused, or expired — every refusal path below thus leaves the
+            # token already destroyed and performs no write.
             staged = token_store.consume(args.get("token", ""))
             expected = "delete" if name == "commit_delete" else "edit"
             if staged is None or staged.get("action") != expected:
