@@ -35,7 +35,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-primary">
-            <Activity className="size-6 text-primary-foreground" />
+            <img src="/logo.png" alt="Healthcare Tracker" className="size-10 shrink-0 rounded-lg" />
           </div>
           <p className="text-sm font-medium text-muted-foreground">Healthcare Tracker</p>
           <h1 className="mt-1 text-xl font-semibold text-foreground">Sign in</h1>

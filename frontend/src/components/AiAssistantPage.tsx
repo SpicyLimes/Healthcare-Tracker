@@ -30,7 +30,7 @@ export default function AiAssistantPage() {
   if (!settings?.enabled) return <Navigate to="/" replace />
 
   return (
-    <div className="flex h-[100dvh] flex-col bg-background">
+    <div className="flex h-dvh flex-col bg-background">
       <header className="flex items-start gap-3 border-b border-border px-4 py-3">
         {/* Hamburger → shared nav sidebar in a left sheet */}
         <Sheet open={navOpen} onOpenChange={setNavOpen}>
