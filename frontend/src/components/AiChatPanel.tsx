@@ -91,8 +91,8 @@ export default function AiChatPanel() {
                 AI Assistant
               </SheetTitle>
 
-              {/* Width preset buttons */}
-              <div className="flex items-center gap-1">
+              {/* Width preset buttons — pr-8 keeps the L button clear of the absolute close X */}
+              <div className="flex items-center gap-1 pr-8">
                 {(["standard", "medium", "large"] as PanelWidth[]).map((w) => (
                   <button
                     key={w}
