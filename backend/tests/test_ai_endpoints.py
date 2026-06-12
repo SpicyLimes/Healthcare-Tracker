@@ -151,3 +151,43 @@ def test_proposal_model_shape():
     p = Proposal(action="create", section="surgeries", fields={"procedure": "X"}, warnings=[])
     assert p.action == "create"
     assert p.record_id is None
+
+
+def test_chat_endpoint_surfaces_proposals(client, db_session, monkeypatch):
+    import json
+    from app.services import ai_provider
+    csrf = _login_admin(client, db_session, email="chatprop@example.com")
+    client.put("/api/settings/ai", headers={"X-CSRF-Token": csrf},
+               json={"enabled": True, "base_url": "http://x/v1", "model": "m"})
+    calls = {"n": 0}
+    def fake(base_url, model, messages, tools):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return {"message": {"role": "assistant", "content": None, "tool_calls": [
+                {"id": "c1", "type": "function", "function": {
+                    "name": "propose_record",
+                    "arguments": json.dumps({"section": "surgeries", "fields": {"procedure": "Appendectomy"}})}}]}}
+        return {"message": {"role": "assistant", "content": "I'll add it. Confirm?", "tool_calls": None}}
+    monkeypatch.setattr(ai_provider, "chat_completion", fake)
+    res = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},
+                      json={"messages": [{"role": "user", "content": "she had an appendectomy"}]})
+    assert res.status_code == 200
+    body = res.json()
+    assert "proposals" in body
+    assert len(body["proposals"]) == 1
+    assert body["proposals"][0]["section"] == "surgeries"
+    assert body["proposals"][0]["action"] == "create"
+    assert body["proposals"][0]["fields"]["procedure"] == "Appendectomy"
+
+
+def test_chat_endpoint_plain_qa_empty_proposals(client, db_session, monkeypatch):
+    from app.services import ai_provider
+    csrf = _login_admin(client, db_session, email="chatqa@example.com")
+    client.put("/api/settings/ai", headers={"X-CSRF-Token": csrf},
+               json={"enabled": True, "base_url": "http://x/v1", "model": "m"})
+    monkeypatch.setattr(ai_provider, "chat_completion",
+        lambda *a, **k: {"message": {"role": "assistant", "content": "You have 2 meds.", "tool_calls": None}})
+    res = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},
+                      json={"messages": [{"role": "user", "content": "how many meds?"}]})
+    assert res.status_code == 200
+    assert res.json()["proposals"] == []
