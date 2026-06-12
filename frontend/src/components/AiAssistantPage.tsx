@@ -56,26 +56,14 @@ export default function AiAssistantPage() {
             </span>
             AI Assistant
           </h1>
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <p className="flex items-center gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="size-3" />
             Answers come only from your records.
           </p>
         </div>
-
-        {/* AI model indicator */}
-        {settings.model && (
-          <div className="shrink-0 text-right leading-tight">
-            <p className="text-[0.65rem] font-medium uppercase tracking-wide text-primary">
-              AI Model
-            </p>
-            <p className="max-w-32 truncate text-[0.7rem] text-muted-foreground">
-              {settings.model}
-            </p>
-          </div>
-        )}
       </header>
 
-      <ChatConversation showPrivacyNote />
+      <ChatConversation showPrivacyNote modelName={settings.model} />
     </div>
   )
 }

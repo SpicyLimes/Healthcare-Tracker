@@ -23,6 +23,11 @@ interface ChatConversationProps {
    * mobile page, which has the room for it; the compact desktop sheet omits it.
    */
   showPrivacyNote?: boolean
+  /**
+   * The configured model name. When set, the empty state shows an
+   * "AI MODEL: <name>" line above the Privacy Note (mobile page only).
+   */
+  modelName?: string | null
 }
 
 /**
@@ -30,7 +35,7 @@ interface ChatConversationProps {
  * the mobile full-screen page (AiAssistantPage). Owns its own message/input/loading
  * state. Fills its parent — wrap it in a flex column with a constrained height.
  */
-export default function ChatConversation({ showPrivacyNote = false }: ChatConversationProps) {
+export default function ChatConversation({ showPrivacyNote = false, modelName }: ChatConversationProps) {
   const [messages, setMessages] = React.useState<DisplayMessage[]>([])
   const [input, setInput] = React.useState("")
   const [loading, setLoading] = React.useState(false)
@@ -100,17 +105,26 @@ export default function ChatConversation({ showPrivacyNote = false }: ChatConver
               <Sparkles className="size-5" />
             </span>
             <p className="text-sm font-medium text-foreground">
-              Ask about your health records
+              Ask about your Health Records
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               e.g. “What are the current medications?” or “List upcoming appointments.”
             </p>
 
+            {modelName && (
+              <p className="mt-5 text-xs">
+                <span className="font-semibold uppercase tracking-wide text-primary">
+                  AI Model:
+                </span>{" "}
+                <span className="text-sky-600 dark:text-sky-400">{modelName}</span>
+              </p>
+            )}
+
             {showPrivacyNote && (
-              <div className="mt-8 border-t border-border/60 pt-4">
+              <div className="mt-5 border-t border-border/60 pt-4">
                 <p className="text-xs font-medium text-foreground">Privacy Note</p>
                 <p className="mt-1.5 text-[0.7rem] leading-relaxed text-muted-foreground">
-                  The assistant runs on a private, locally-hosted language model,
+                  The assistant runs a private, locally-hosted language model,
                   so your records stay on your network and are never shared with
                   any outside service.
                 </p>

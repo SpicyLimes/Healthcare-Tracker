@@ -23,7 +23,7 @@ describe("AiAssistantPage", () => {
     ;(getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "gemma-4-e4b" })
     render(<MemoryRouter><AiAssistantPage /></MemoryRouter>)
     expect(await screen.findByRole("button", { name: /navigation menu/i })).toBeInTheDocument()
-    expect(screen.getByText("AI Model")).toBeInTheDocument()
+    expect(screen.getByText(/AI Model:/i)).toBeInTheDocument()
     expect(screen.getByText("gemma-4-e4b")).toBeInTheDocument()
     expect(screen.getByText(/Privacy Note/i)).toBeInTheDocument()
     expect(screen.getByText(/locally-hosted language model/i)).toBeInTheDocument()
