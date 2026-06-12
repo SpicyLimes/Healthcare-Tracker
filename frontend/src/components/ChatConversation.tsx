@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Send, Sparkles } from "lucide-react"
+import { Send, Sparkles, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { sendChat, AiUnavailableError, type ChatMessage, type Proposal } from "@/api/ai"
 import { cn } from "@/lib/utils"
@@ -122,6 +122,9 @@ export default function ChatConversation({ showPrivacyNote = false, modelName }:
 
             {showPrivacyNote && (
               <div className="mt-5 border-t border-border/60 pt-4">
+                <p className="mb-2 flex justify-center">
+                  <ShieldCheck className="size-7 text-primary/60" />
+                </p>
                 <p className="text-xs font-medium text-foreground">Privacy Note</p>
                 <p className="mt-1.5 text-[0.7rem] leading-relaxed text-muted-foreground">
                   The assistant runs a private, locally-hosted language model,

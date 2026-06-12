@@ -83,4 +83,70 @@ describe("AiChatPanel", () => {
     await waitFor(() => expect(sendChat).toHaveBeenCalled());
     expect(await screen.findByText(/surgery_date/)).toBeInTheDocument();
   });
+
+  it("shows AI model name and privacy note in the desktop panel empty state", async () => {
+    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "gemma-4-e4b" });
+    render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole("button", { name: /assistant/i }));
+    expect(await screen.findByText(/AI Model:/i)).toBeInTheDocument();
+    expect(screen.getByText("gemma-4-e4b")).toBeInTheDocument();
+    expect(screen.getByText(/Privacy Note/i)).toBeInTheDocument();
+    expect(screen.getByText(/locally-hosted language model/i)).toBeInTheDocument();
+  });
+
+  it("does not show the redundant shield subtitle in the panel header", async () => {
+    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" });
+    render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole("button", { name: /assistant/i }));
+    await screen.findByPlaceholderText(/ask/i);
+    expect(screen.queryByText(/Answers come only from your records/i)).toBeNull();
+  });
+
+  it("shows Standard, Medium, and Large width preset buttons in the panel header", async () => {
+    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" });
+    render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole("button", { name: /assistant/i }));
+    await screen.findByPlaceholderText(/ask/i);
+    expect(screen.getByRole("button", { name: /standard/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /medium/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /large/i })).toBeInTheDocument();
+  });
+
+  it("applies sm:max-w-lg class when Medium preset is selected", async () => {
+    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" });
+    render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole("button", { name: /assistant/i }));
+    const mediumBtn = await screen.findByRole("button", { name: /medium/i });
+    fireEvent.click(mediumBtn);
+    const sheetContent = document.querySelector("[data-slot='sheet-content']");
+    expect(sheetContent?.className).toMatch(/max-w-lg/);
+  });
+
+  it("applies sm:max-w-xl class when Large preset is selected", async () => {
+    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" });
+    render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole("button", { name: /assistant/i }));
+    const largeBtn = await screen.findByRole("button", { name: /large/i });
+    fireEvent.click(largeBtn);
+    const sheetContent = document.querySelector("[data-slot='sheet-content']");
+    expect(sheetContent?.className).toMatch(/max-w-xl/);
+  });
+
+  it("persists the selected width preset to localStorage", async () => {
+    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" });
+    render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole("button", { name: /assistant/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /large/i }));
+    expect(localStorage.getItem("ai-panel-width")).toBe("large");
+  });
+
+  it("restores the saved width preset from localStorage on mount", async () => {
+    localStorage.setItem("ai-panel-width", "medium");
+    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" });
+    render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole("button", { name: /assistant/i }));
+    await screen.findByPlaceholderText(/ask/i);
+    const sheetContent = document.querySelector("[data-slot='sheet-content']");
+    expect(sheetContent?.className).toMatch(/max-w-lg/);
+  });
 });
