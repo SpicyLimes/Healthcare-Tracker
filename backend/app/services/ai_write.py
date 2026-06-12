@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import secrets
 import time
+import uuid
 from typing import Any, Literal
 
 from pydantic import BaseModel, TypeAdapter
@@ -112,11 +113,17 @@ def row_summary(row, keys=None) -> dict:
     return {c: _jsonable(getattr(row, c)) for c in cols}
 
 
+def row_summary_values(values: dict) -> dict:
+    """JSON-safe coercion of a plain dict of field values (mirror of row_summary
+    for proposed/after values), so before/after read back consistently."""
+    return {k: _jsonable(v) for k, v in values.items()}
+
+
 def _jsonable(v):
     if v is None:
         return None
     if hasattr(v, "isoformat"):      # date / datetime
         return v.isoformat()
-    if hasattr(v, "hex"):            # UUID
+    if isinstance(v, uuid.UUID):
         return str(v)
     return v

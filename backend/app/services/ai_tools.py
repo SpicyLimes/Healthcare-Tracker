@@ -255,8 +255,10 @@ def dispatch(
             if err:
                 return {"error": err}
             cleaned, warnings = ai_write.validate_fields(args["section"], args.get("fields") or {}, mode="update")
+            if not cleaned:
+                return {"error": "No valid fields to edit.", "warnings": warnings}
             before = ai_write.row_summary(row, keys=cleaned.keys())
-            after = {k: cleaned[k] for k in cleaned}
+            after = ai_write.row_summary_values(cleaned)
             token = token_store.stage({"action": "edit", "section": args["section"],
                                        "record_id": str(row.id), "fields": cleaned})
             return {"action": "edit", "section": args["section"], "record_id": str(row.id),

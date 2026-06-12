@@ -273,3 +273,36 @@ def test_stage_edit_invalid_record_id(db_session):
         {"section": "surgeries", "record_id": "not-a-uuid", "fields": {"procedure": "New"}},
         token_store=TokenStore(), actor_id=None)
     assert "error" in result
+
+
+def test_stage_edit_empty_fields_no_token(db_session):
+    from app.services import ai_tools
+    from app.services.ai_write import TokenStore
+    admin, row = _make_surgery_for_stage(db_session)
+    store = TokenStore()
+    # only an unknown field → cleaned is empty → must NOT stage a token
+    result = ai_tools.dispatch(db_session, "stage_edit",
+        {"section": "surgeries", "record_id": str(row.id), "fields": {"bogus_field": "x"}},
+        token_store=store, actor_id=admin.id)
+    assert "error" in result
+    assert "token" not in result
+
+
+def test_stage_delete_requires_token_store(db_session):
+    from app.services import ai_tools
+    admin, row = _make_surgery_for_stage(db_session)
+    result = ai_tools.dispatch(db_session, "stage_delete",
+        {"section": "surgeries", "record_id": str(row.id)},
+        token_store=None, actor_id=admin.id)
+    assert "error" in result
+
+
+def test_stage_edit_read_only_section_rejected(db_session):
+    from app.services import ai_tools
+    from app.services.ai_write import TokenStore
+    # 'profile' is intentionally NOT writable by the AI
+    result = ai_tools.dispatch(db_session, "stage_edit",
+        {"section": "profile", "record_id": "00000000-0000-0000-0000-000000000000", "fields": {"x": 1}},
+        token_store=TokenStore(), actor_id=None)
+    assert "error" in result
+    assert "token" not in result
