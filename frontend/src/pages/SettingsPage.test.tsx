@@ -14,7 +14,7 @@ describe("SettingsPage", () => {
 
   it("loads current settings", async () => {
     render(<SettingsPage />);
-    await waitFor(() => expect(screen.getByText(/AI Assistant/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: /AI Assistant/i })).toBeInTheDocument());
     expect(getAiSettings).toHaveBeenCalledOnce();
   });
 
@@ -33,5 +33,15 @@ describe("SettingsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /test connection/i }));
     await waitFor(() => expect(testAiConnection).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByText(/reachable/i)).toBeInTheDocument());
+  });
+
+  it("shows a provider setup guide card with Ollama and LM Studio examples", async () => {
+    render(<SettingsPage />);
+    await waitFor(() => screen.getByRole("heading", { name: /AI Assistant/i }));
+    expect(screen.getByText(/Provider Setup Guide/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/LM Studio/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Ollama/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/same stack/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/separate container/i).length).toBeGreaterThan(0);
   });
 });

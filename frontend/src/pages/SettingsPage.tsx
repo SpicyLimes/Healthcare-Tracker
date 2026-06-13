@@ -58,6 +58,7 @@ export default function SettingsPage() {
         title="AI Settings"
         description="Configure the provider for the AI chat feature. The endpoint must be a self-hosted, OpenAI-compatible server on your local network. Patient records never leave the local network."
       >
+        <div className="flex flex-col gap-4">
         <Card>
           <CardContent className="py-6">
             <h2 className="mb-4 text-base font-semibold text-foreground">AI Assistant</h2>
@@ -118,6 +119,140 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Provider Setup Guide */}
+        <Card>
+          <CardContent className="py-6">
+            <h2 className="mb-1 text-base font-semibold text-foreground">Provider Setup Guide</h2>
+            <p className="mb-4 text-xs text-muted-foreground">
+              The AI assistant works with any OpenAI-compatible endpoint. Choose whichever option fits your setup.
+            </p>
+
+            <div className="flex flex-col gap-5 text-sm">
+
+              {/* Provider table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                      <th className="pb-2 pr-4 font-medium">Provider</th>
+                      <th className="pb-2 pr-4 font-medium">Best for</th>
+                      <th className="pb-2 font-medium">Example Base URL</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50">
+                    <tr>
+                      <td className="py-2 pr-4 font-medium">LM Studio</td>
+                      <td className="py-2 pr-4 text-muted-foreground">Local, GUI-based model management</td>
+                      <td className="py-2 font-mono text-[0.7rem]">http://host.docker.internal:1234/v1</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 pr-4 font-medium">Ollama (same stack)</td>
+                      <td className="py-2 pr-4 text-muted-foreground">Bundled with this app's Compose stack</td>
+                      <td className="py-2 font-mono text-[0.7rem]">http://ollama:11434/v1</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 pr-4 font-medium">Ollama (separate container)</td>
+                      <td className="py-2 pr-4 text-muted-foreground">Ollama running on the same host, separate stack</td>
+                      <td className="py-2 font-mono text-[0.7rem]">http://host.docker.internal:11434/v1</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 pr-4 font-medium">OpenRouter</td>
+                      <td className="py-2 pr-4 text-muted-foreground">Cloud, no local hardware needed</td>
+                      <td className="py-2 font-mono text-[0.7rem]">https://openrouter.ai/api/v1</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 pr-4 font-medium">OpenAI</td>
+                      <td className="py-2 pr-4 text-muted-foreground">Cloud (records leave your network)</td>
+                      <td className="py-2 font-mono text-[0.7rem]">https://api.openai.com/v1</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Linux note */}
+              <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
+                <strong>Linux hosts:</strong> <code className="font-mono">host.docker.internal</code> does not resolve by default on Linux Docker.
+                Add <code className="font-mono">extra_hosts: ["host.docker.internal:host-gateway"]</code> to the <code className="font-mono">backend</code> service
+                in your Compose file, or use your host's LAN IP directly.
+              </p>
+
+              {/* Ollama same-stack snippet */}
+              <div>
+                <p className="mb-1.5 text-xs font-medium text-foreground">
+                  Adding Ollama to this app's Compose stack
+                </p>
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Append the following to your <code className="font-mono text-[0.7rem]">docker-compose.yml</code> (or Portainer stack YAML), then set Base URL above to{" "}
+                  <code className="font-mono text-[0.7rem]">http://ollama:11434/v1</code>.
+                  Verify image names and options against the{" "}
+                  <a
+                    href="https://hub.docker.com/r/ollama/ollama"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2 hover:text-foreground"
+                  >
+                    Ollama Docker documentation
+                  </a>.
+                </p>
+                <pre className="overflow-x-auto rounded-md bg-muted px-4 py-3 text-[0.7rem] leading-relaxed text-foreground">{`  ollama:
+    image: ollama/ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=10m   # unload model after 10 min idle
+    # GPU (NVIDIA) — remove this block for CPU-only:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+volumes:
+  ollama_data:`}</pre>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  After starting the stack, pull a model once:{" "}
+                  <code className="font-mono text-[0.7rem]">docker exec -it &lt;ollama-container&gt; ollama pull llama3.2:3b</code>
+                </p>
+              </div>
+
+              {/* Ollama separate-container snippet */}
+              <div>
+                <p className="mb-1.5 text-xs font-medium text-foreground">
+                  Running Ollama in a separate container on the same host
+                </p>
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Run Ollama independently, then point Base URL at your host's LAN IP or use{" "}
+                  <code className="font-mono text-[0.7rem]">host.docker.internal</code> (Linux: requires the extra_hosts note above).
+                </p>
+                <pre className="overflow-x-auto rounded-md bg-muted px-4 py-3 text-[0.7rem] leading-relaxed text-foreground">{`docker run -d \\
+  --name ollama \\
+  -p 11434:11434 \\
+  -v ollama_data:/root/.ollama \\
+  ollama/ollama
+
+# Then pull a model:
+docker exec ollama ollama pull llama3.2:3b`}</pre>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Set Base URL to <code className="font-mono text-[0.7rem]">http://&lt;your-host-ip&gt;:11434/v1</code> or{" "}
+                  <code className="font-mono text-[0.7rem]">http://host.docker.internal:11434/v1</code>.
+                </p>
+              </div>
+
+              {/* Model requirements note */}
+              <p className="text-xs text-muted-foreground">
+                <strong className="text-foreground">Model requirements:</strong> Any model works for Q&amp;A. Record creation, editing, and deletion require a model with <strong>tool/function calling</strong> support. Document parsing (future) will additionally require <strong>vision</strong> support.
+                Good small options: <code className="font-mono text-[0.7rem]">llama3.2:3b</code>, <code className="font-mono text-[0.7rem]">qwen2.5:3b</code>, <code className="font-mono text-[0.7rem]">phi3:mini</code>.
+              </p>
+
+            </div>
+          </CardContent>
+        </Card>
+
+        </div>
       </PageLayout>
     </AppShell>
   );

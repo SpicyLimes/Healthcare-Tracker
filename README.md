@@ -111,6 +111,70 @@ docker compose -f docker-compose.prod.yml run --rm backup restore YYYY-MM-DD
 docker compose -f docker-compose.prod.yml up -d
 ```
 
+### AI Assistant Setup
+
+The AI assistant works with any **OpenAI-compatible endpoint**. Configure it in **Settings → AI Settings** after first login. The assistant is disabled by default.
+
+| Provider | Best for | Example Base URL |
+|---|---|---|
+| LM Studio | Local, GUI-based model management | `http://host.docker.internal:1234/v1` |
+| Ollama (same stack) | Bundled with this app's Compose stack | `http://ollama:11434/v1` |
+| Ollama (separate container) | Ollama running on the same host, separate stack | `http://host.docker.internal:11434/v1` |
+| OpenRouter | Cloud, no local hardware needed | `https://openrouter.ai/api/v1` |
+| OpenAI | Cloud (records leave your network) | `https://api.openai.com/v1` |
+
+> **Linux hosts:** `host.docker.internal` does not resolve by default on Linux Docker. Add `extra_hosts: ["host.docker.internal:host-gateway"]` to the `backend` service in your Compose file, or use your host's LAN IP directly.
+
+**Model requirements:** Any model works for Q&A. Record creation, editing, and deletion require a model with **tool/function calling** support. Good small options: `llama3.2:3b`, `qwen2.5:3b`, `phi3:mini`.
+
+#### Option A — Ollama bundled in this app's Compose stack
+
+Append to your `docker-compose.yml` (or Portainer stack YAML), then set **Base URL** in AI Settings to `http://ollama:11434/v1`. Verify current image names and options against the [Ollama Docker documentation](https://hub.docker.com/r/ollama/ollama).
+
+```yaml
+  ollama:
+    image: ollama/ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=10m   # unload model after 10 min idle
+    # GPU (NVIDIA) — remove this block for CPU-only:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+volumes:
+  ollama_data:
+```
+
+After starting the stack, pull a model once:
+
+```bash
+docker exec -it <ollama-container-name> ollama pull llama3.2:3b
+```
+
+#### Option B — Ollama in a separate container on the same host
+
+```bash
+docker run -d \
+  --name ollama \
+  -p 11434:11434 \
+  -v ollama_data:/root/.ollama \
+  ollama/ollama
+
+# Pull a model:
+docker exec ollama ollama pull llama3.2:3b
+```
+
+Set **Base URL** in AI Settings to `http://<your-host-ip>:11434/v1` or `http://host.docker.internal:11434/v1` (Linux: requires the `extra_hosts` note above).
+
+---
+
 ### CI / Building from source
 
 Images are published to GHCR automatically on every push to `main`:
