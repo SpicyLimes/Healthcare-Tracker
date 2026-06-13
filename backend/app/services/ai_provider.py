@@ -8,7 +8,7 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-_TIMEOUT = httpx.Timeout(120.0, connect=5.0)
+_TIMEOUT = httpx.Timeout(600.0, connect=5.0)
 
 
 class ProviderUnavailable(Exception):
