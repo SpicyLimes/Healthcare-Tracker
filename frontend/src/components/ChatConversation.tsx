@@ -75,10 +75,12 @@ export default function ChatConversation({ showPrivacyNote = false, modelName }:
         },
       ])
     } catch (err) {
-      const errorContent =
-        err instanceof AiUnavailableError
-          ? "AI is unavailable — check Settings."
-          : "Something went wrong. Please try again."
+      let errorContent = "Something went wrong. Please try again."
+      if (err instanceof AiUnavailableError) {
+        errorContent = "AI is unavailable — check Settings."
+      } else if (err instanceof DOMException && err.name === "AbortError") {
+        errorContent = "Request timed out — the model is taking longer than expected. Try again in a moment."
+      }
       setMessages((prev) => [
         ...prev,
         { role: "error", content: errorContent },
