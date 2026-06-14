@@ -1,5 +1,7 @@
 import * as React from "react"
 import { Send, Sparkles, ShieldCheck } from "lucide-react"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { Button } from "@/components/ui/button"
 import { sendChat, AiUnavailableError, type ChatMessage, type Proposal } from "@/api/ai"
 import { cn } from "@/lib/utils"
@@ -154,7 +156,15 @@ export default function ChatConversation({ showPrivacyNote = false, modelName }:
                 "mr-auto rounded-bl-md border border-destructive/20 bg-destructive/10 text-destructive"
             )}
           >
-            <p className="whitespace-pre-wrap">{msg.content}</p>
+            {msg.role === "assistant" ? (
+              <div className="prose prose-sm dark:prose-invert max-w-none
+                prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0
+                prose-headings:mt-2 prose-headings:mb-1">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+              </div>
+            ) : (
+              <p className="whitespace-pre-wrap">{msg.content}</p>
+            )}
             {msg.role === "assistant" &&
               msg.tools_used &&
               msg.tools_used.length > 0 && (
