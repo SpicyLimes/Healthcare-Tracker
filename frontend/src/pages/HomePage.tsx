@@ -156,7 +156,7 @@ export default function HomePage() {
                 <Link to="/notes" className="font-medium underline underline-offset-2 hover:opacity-80">
                   Notes / To-Do's
                 </Link>{" "}
-                page to add personal notes, flag corrections, or track follow-up items.
+                page to add personal notes, flag corrections, or track follow-up items. To search, please use the 'AI Assistant' located in the bottom right corner of your screen.
               </p>
             </div>
           </div>
