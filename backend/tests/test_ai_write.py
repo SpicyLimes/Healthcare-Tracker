@@ -107,6 +107,23 @@ def test_token_wrong_owner_does_not_burn_token():
     assert store.consume(token, owner_id="admin-1") is not None     # still usable by real owner
 
 
+def test_stage_rejects_none_owner():
+    # A viewer (actor_id=None) must never be able to mint a token.
+    import pytest
+    store = ai_write.TokenStore()
+    with pytest.raises(ValueError):
+        store.stage({"action": "delete"}, owner_id=None)
+
+
+def test_consume_with_none_owner_returns_none():
+    # Even if a token somehow existed, a None-owner consume must fail closed —
+    # str(None) == str(None) must NOT be treated as a valid ownership match.
+    store = ai_write.TokenStore()
+    token = store.stage({"action": "delete"}, owner_id="admin-1")
+    assert store.consume(token, owner_id=None) is None
+    assert store.consume(token, owner_id="admin-1") is not None    # real owner still works
+
+
 def test_get_token_store_returns_singleton():
     a = ai_write.get_token_store()
     b = ai_write.get_token_store()

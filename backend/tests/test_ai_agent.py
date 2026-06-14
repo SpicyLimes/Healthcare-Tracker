@@ -1,5 +1,11 @@
 """ai_agent loop: tool round-trips, bounded rounds, grounding."""
+import uuid as _uuid
+
 from app.services import ai_agent, ai_provider
+
+# A stand-in admin actor for tests that exercise the write/draft tools, which
+# refuse when actor_id is None (the viewer read-only path).
+_ADMIN_ACTOR = _uuid.uuid4()
 
 
 class _FakeSettings:
@@ -133,7 +139,7 @@ def test_run_chat_collects_create_proposal(monkeypatch, db_session):
                     "arguments": json.dumps({"section": "surgeries", "fields": {"procedure": "Appendectomy"}})}}]}}
         return {"message": {"role": "assistant", "content": "I'll add an appendectomy. Confirm?", "tool_calls": None}}
     monkeypatch.setattr(ai_provider, "chat_completion", fake)
-    res = ai_agent.run_chat(db_session, _FakeSettings(), [{"role": "user", "content": "she had an appendectomy"}])
+    res = ai_agent.run_chat(db_session, _FakeSettings(), [{"role": "user", "content": "she had an appendectomy"}], actor_id=_ADMIN_ACTOR)
     assert len(res.proposals) == 1
     assert res.proposals[0].action == "create"
     assert res.proposals[0].section == "surgeries"
@@ -165,6 +171,6 @@ def test_run_chat_collects_multiple_proposals(monkeypatch, db_session):
                     "arguments": json.dumps({"section": "medications", "fields": {"name": "lisinopril"}})}}]}}
         return {"message": {"role": "assistant", "content": "Two records. Confirm?", "tool_calls": None}}
     monkeypatch.setattr(ai_provider, "chat_completion", fake)
-    res = ai_agent.run_chat(db_session, _FakeSettings(), [{"role": "user", "content": "follow-up, prescribed lisinopril"}])
+    res = ai_agent.run_chat(db_session, _FakeSettings(), [{"role": "user", "content": "follow-up, prescribed lisinopril"}], actor_id=_ADMIN_ACTOR)
     sections = {p.section for p in res.proposals}
     assert sections == {"visit_logs", "medications"}

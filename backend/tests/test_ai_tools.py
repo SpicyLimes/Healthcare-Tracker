@@ -1,4 +1,6 @@
 """ai_tools: read-only tool defs + dispatch over the section map."""
+import uuid as _uuid
+
 from app.models.user import Role
 from app.services import ai_tools, user_service
 
@@ -13,7 +15,7 @@ def test_tool_defs_are_read_only_and_well_formed():
     defs = ai_tools.TOOL_DEFS
     names = {d["function"]["name"] for d in defs}
     assert names == {
-        "list_sections", "get_section_records", "propose_record",
+        "list_sections", "get_section_records", "get_notes", "propose_record",
         "commit_create", "stage_edit", "stage_delete",
         "commit_edit", "commit_delete",
     }
@@ -40,7 +42,8 @@ def test_dispatch_list_sections(db_session):
     result = ai_tools.dispatch(db_session, "list_sections", {})
     names = {s["name"] for s in result["sections"]}
     assert "doctors" in names
-    assert len(names) == 15
+    assert "notes" in names                    # Notes & To-Dos surfaced for the AI
+    assert len(names) == 16                     # 15 record sections + notes
     # every section entry carries a non-empty human title
     assert all("title" in s and s["title"] for s in result["sections"])
 
@@ -135,6 +138,7 @@ def test_propose_record_returns_draft_no_write(db_session):
     result = ai_tools.dispatch(
         db_session, "propose_record",
         {"section": "surgeries", "fields": {"procedure": "Appendectomy", "surgery_date": "2026-06-04"}},
+        actor_id=_uuid.uuid4(),
     )
     assert result["action"] == "create"
     assert result["section"] == "surgeries"
@@ -147,14 +151,28 @@ def test_propose_record_bad_date_warns(db_session):
     result = ai_tools.dispatch(
         db_session, "propose_record",
         {"section": "surgeries", "fields": {"procedure": "X", "surgery_date": "nope"}},
+        actor_id=_uuid.uuid4(),
     )
     assert any("surgery_date" in w for w in result["warnings"])
 
 
 def test_propose_record_unknown_section(db_session):
     from app.services import ai_tools
-    result = ai_tools.dispatch(db_session, "propose_record", {"section": "profile", "fields": {}})
+    result = ai_tools.dispatch(db_session, "propose_record", {"section": "profile", "fields": {}},
+                               actor_id=_uuid.uuid4())
     assert "error" in result
+
+
+def test_propose_record_refuses_viewer(db_session):
+    # actor_id=None (a viewer) must not even draft a create.
+    from app.services import ai_tools
+    result = ai_tools.dispatch(
+        db_session, "propose_record",
+        {"section": "surgeries", "fields": {"procedure": "X"}},
+        actor_id=None,
+    )
+    assert "error" in result
+    assert "read-only" in result["error"].lower()
 
 
 def test_commit_create_writes_and_audits(db_session):

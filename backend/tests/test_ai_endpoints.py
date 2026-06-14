@@ -110,12 +110,11 @@ def test_chat_viewer_gets_503_when_disabled(client, db_session):
 
 def test_chat_viewer_read_only_succeeds(client, db_session, monkeypatch):
     from app.services import ai_provider
-    csrf = _login_viewer(client, db_session, email="chatviewerok@example.com")
     # Viewers can't access settings, so enable AI via admin first.
     admin_csrf = _login_admin(client, db_session, email="chatvieweradmin@example.com")
     client.put("/api/settings/ai", headers={"X-CSRF-Token": admin_csrf},
                json={"enabled": True, "base_url": "http://x/v1", "model": "m"})
-    # Re-login as viewer (put clobbers session).
+    # Now log in as the viewer (replaces the admin session).
     _login_viewer(client, db_session, email="chatviewerok@example.com")
     csrf = client.cookies.get("csrf_token")
     monkeypatch.setattr(ai_provider, "chat_completion",
@@ -126,15 +125,18 @@ def test_chat_viewer_read_only_succeeds(client, db_session, monkeypatch):
     assert res.json()["answer"] == "I can read records."
 
 
-def test_chat_viewer_write_tool_refused(client, db_session, monkeypatch):
-    """Viewer calling a write tool gets an error result, not a commit."""
+def test_chat_viewer_commit_create_writes_no_row(client, db_session, monkeypatch):
+    """A viewer driving commit_create must NOT create a row — assert at the DB level,
+    not just that the request returned 200 (a successful write also returns 200)."""
     import json as _json
     from app.services import ai_provider
-    admin_csrf = _login_admin(client, db_session, email="chatviewerwradmin@example.com")
+    from app.models.extended_records import Surgery
+    admin_csrf = _login_admin(client, db_session, email="vcreateadmin@example.com")
     client.put("/api/settings/ai", headers={"X-CSRF-Token": admin_csrf},
                json={"enabled": True, "base_url": "http://x/v1", "model": "m"})
-    _login_viewer(client, db_session, email="chatviewerwr@example.com")
+    _login_viewer(client, db_session, email="vcreate@example.com")
     csrf = client.cookies.get("csrf_token")
+    before = db_session.query(Surgery).count()
     calls = {"n": 0}
     def fake(base_url, model, messages, tools):
         calls["n"] += 1
@@ -143,16 +145,56 @@ def test_chat_viewer_write_tool_refused(client, db_session, monkeypatch):
                 {"id": "c1", "type": "function", "function": {
                     "name": "commit_create",
                     "arguments": _json.dumps({"section": "surgeries", "fields": {"procedure": "X"}})}}]}}
-        # After getting the error back, model responds in plain text.
         last_tool = next((m for m in reversed(messages) if m.get("role") == "tool"), None)
-        assert last_tool is not None
-        content = _json.loads(last_tool["content"])
-        assert "error" in content
+        assert last_tool is not None and "error" in _json.loads(last_tool["content"])
         return {"message": {"role": "assistant", "content": "Cannot write.", "tool_calls": None}}
     monkeypatch.setattr(ai_provider, "chat_completion", fake)
     res = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},
                       json={"messages": [{"role": "user", "content": "add a surgery"}]})
     assert res.status_code == 200
+    db_session.expire_all()
+    assert db_session.query(Surgery).count() == before     # no row created
+
+
+def test_chat_viewer_delete_flow_deletes_nothing(client, db_session, monkeypatch):
+    """A viewer driving stage_delete -> commit_delete must NOT delete the row.
+    Covers the token path the create-only test missed."""
+    import json as _json
+    from app.services import ai_provider
+    from app.services.crud_service import CRUDService
+    from app.models.extended_records import Surgery
+    from app.models.user import User
+    admin_csrf = _login_admin(client, db_session, email="vdeladmin@example.com")
+    client.put("/api/settings/ai", headers={"X-CSRF-Token": admin_csrf},
+               json={"enabled": True, "base_url": "http://x/v1", "model": "m"})
+    admin = db_session.query(User).filter_by(email="vdeladmin@example.com").first()
+    row = CRUDService(Surgery).create(db_session, {"procedure": "KeepMe"}, created_by=admin.id)
+    db_session.commit()
+    rid = row.id
+
+    _login_viewer(client, db_session, email="vdel@example.com")
+    csrf = client.cookies.get("csrf_token")
+    def fake(base_url, model, messages, tools):
+        # If stage_delete is (incorrectly) allowed, it would return a token; the model
+        # would then call commit_delete. We always try to stage+commit so a regression
+        # that re-opens either step would actually delete the row.
+        if not any(m.get("role") == "tool" for m in messages):
+            return {"message": {"role": "assistant", "content": None, "tool_calls": [
+                {"id": "c1", "type": "function", "function": {"name": "stage_delete",
+                 "arguments": _json.dumps({"section": "surgeries", "record_id": str(rid)})}}]}}
+        last_tool = next((m for m in reversed(messages) if m.get("role") == "tool"), None)
+        payload = _json.loads(last_tool["content"])
+        if "token" in payload:   # only reachable if stage_delete wrongly succeeded
+            return {"message": {"role": "assistant", "content": None, "tool_calls": [
+                {"id": "c2", "type": "function", "function": {"name": "commit_delete",
+                 "arguments": _json.dumps({"token": payload["token"]})}}]}}
+        return {"message": {"role": "assistant", "content": "Cannot delete.", "tool_calls": None}}
+    monkeypatch.setattr(ai_provider, "chat_completion", fake)
+    res = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},
+                      json={"messages": [{"role": "user", "content": "delete the surgery"}]})
+    assert res.status_code == 200
+    db_session.expire_all()
+    assert db_session.get(Surgery, rid) is not None        # row survived
 
 
 def test_chat_requires_csrf(client, db_session):

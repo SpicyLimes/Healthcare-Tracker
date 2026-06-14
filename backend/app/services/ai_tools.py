@@ -293,6 +293,8 @@ def dispatch(
                 rows = _localize_datetimes(rows, tz)
             return {"section": "notes", "count": len(rows), "records": rows}
         if name == "propose_record":
+            if actor_id is None:
+                return {"error": "You have read-only access and cannot add records."}
             section = args.get("section")
             fields = args.get("fields") or {}
             if section not in ai_write.WRITE_SECTION_MAP:
@@ -320,6 +322,8 @@ def dispatch(
         if name == "stage_delete":
             if token_store is None:
                 return {"error": "No confirmation channel available."}
+            if actor_id is None:
+                return {"error": "Cannot delete a record without an authenticated user."}
             _, row, err = _load_writable_row(db, args.get("section"), args.get("record_id"))
             if err:
                 return {"error": err}
@@ -330,6 +334,8 @@ def dispatch(
         if name == "stage_edit":
             if token_store is None:
                 return {"error": "No confirmation channel available."}
+            if actor_id is None:
+                return {"error": "Cannot edit a record without an authenticated user."}
             _, row, err = _load_writable_row(db, args.get("section"), args.get("record_id"))
             if err:
                 return {"error": err}

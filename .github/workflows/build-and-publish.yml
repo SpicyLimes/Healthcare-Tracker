@@ -15,6 +15,10 @@ jobs:
       contents: read
       packages: write
     strategy:
+      # Never let one image's build failure cancel the others. With the default
+      # fail-fast, a broken frontend `npm ci` once cancelled the backend leg before
+      # it pushed :latest, silently shipping a stale backend image to production.
+      fail-fast: false
       matrix:
         include:
           - name: backend

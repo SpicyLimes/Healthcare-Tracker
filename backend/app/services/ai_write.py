@@ -91,11 +91,18 @@ class TokenStore:
         self._staged: dict[str, tuple[float, str, dict]] = {}   # token -> (staged_at, owner_id, action)
 
     def stage(self, action: dict, owner_id) -> str:
+        # A staged write must belong to a real authenticated owner. Refuse to mint
+        # a token for owner_id=None (a viewer) so an unauthenticated actor can never
+        # own — and therefore never consume — a staged edit/delete.
+        if owner_id is None:
+            raise ValueError("Cannot stage a write without an authenticated owner.")
         token = secrets.token_urlsafe(16)
         self._staged[token] = (time.monotonic(), str(owner_id), action)
         return token
 
     def consume(self, token: str, owner_id) -> dict | None:
+        if owner_id is None:
+            return None                      # unauthenticated actor owns nothing
         entry = self._staged.get(token)
         if entry is None:
             return None
