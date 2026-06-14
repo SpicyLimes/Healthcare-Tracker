@@ -7,9 +7,12 @@ from datetime import date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.audit_log import ActorType, AuditAction
+from app.models.notes import Note
+from app.schemas.notes import NoteResponse
 from app.services import ai_write, summary_service
 from app.services.audit_service import log_event
 from app.services.crud_service import CRUDService
@@ -63,6 +66,28 @@ TOOL_DEFS: list[dict] = [
                     "date_to": {"type": "string", "description": "YYYY-MM-DD inclusive upper bound"},
                 },
                 "required": ["section"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_notes",
+            "description": (
+                "Return all notes and to-do items, optionally filtered by "
+                "created-date range (YYYY-MM-DD) or completion status. "
+                "Use this to answer questions about the patient's notes, reminders, "
+                "and to-do list. Never invent values."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "date_from": {"type": "string", "description": "YYYY-MM-DD inclusive lower bound on created_at"},
+                    "date_to": {"type": "string", "description": "YYYY-MM-DD inclusive upper bound on created_at"},
+                    "done": {"type": "boolean", "description": "If true return only completed items; if false return only incomplete items; omit to return all"},
+                    "pinned_only": {"type": "boolean", "description": "If true return only pinned notes"},
+                },
+                "required": [],
             },
         },
     },
@@ -235,7 +260,9 @@ def dispatch(
     consume their own staged action, in this or a subsequent request."""
     try:
         if name == "list_sections":
-            return {"sections": [{"name": n, "title": _TITLES.get(n, n)} for n in _section_names()]}
+            sections = [{"name": n, "title": _TITLES.get(n, n)} for n in _section_names()]
+            sections.append({"name": "notes", "title": "Notes & To-Dos"})
+            return {"sections": sections}
         if name == "get_section_records":
             section = args.get("section")
             if section not in summary_service.get_section_map():
@@ -246,6 +273,25 @@ def dispatch(
             if tz:
                 rows = _localize_datetimes(rows, tz)
             return {"section": section, "count": len(rows), "records": rows}
+        if name == "get_notes":
+            date_from = _parse_date(args.get("date_from"))
+            date_to = _parse_date(args.get("date_to"))
+            stmt = select(Note).order_by(Note.pinned.desc(), Note.created_at.desc())
+            if args.get("pinned_only"):
+                stmt = stmt.where(Note.pinned.is_(True))
+            if "done" in args and args["done"] is not None:
+                stmt = stmt.where(Note.done.is_(args["done"]))
+            all_notes = db.execute(stmt).scalars().all()
+            rows = []
+            for n in all_notes:
+                if date_from and n.created_at.date() < date_from:
+                    continue
+                if date_to and n.created_at.date() > date_to:
+                    continue
+                rows.append(NoteResponse.model_validate(n).model_dump(mode="json"))
+            if tz:
+                rows = _localize_datetimes(rows, tz)
+            return {"section": "notes", "count": len(rows), "records": rows}
         if name == "propose_record":
             section = args.get("section")
             fields = args.get("fields") or {}
