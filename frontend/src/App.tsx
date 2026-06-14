@@ -63,7 +63,7 @@ export default function App() {
             <Route path="/share-links" element={<RequireAdmin><ShareLinksPage /></RequireAdmin>} />
             <Route path="/audit-log" element={<RequireAdmin><AuditLogPage /></RequireAdmin>} />
             <Route path="/settings" element={<RequireAdmin><SettingsPage /></RequireAdmin>} />
-            <Route path="/assistant" element={<RequireAdmin><AiAssistantPage /></RequireAdmin>} />
+            <Route path="/assistant" element={<ProtectedRoute><AiAssistantPage /></ProtectedRoute>} />
             <Route path="/guest" element={<GuestEntryPage />} />
             <Route path="/guest/sections/:section" element={<GuestSectionPage />} />
             <Route path="/guest/sections/:section/:recordId" element={<GuestRecordPage />} />

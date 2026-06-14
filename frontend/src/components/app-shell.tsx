@@ -106,8 +106,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
 
-        {/* Admin-only floating AI chat panel */}
-        {user?.role === "admin" && <AiChatPanel />}
+        {/* Floating AI chat panel — available to all authenticated users */}
+        {user && <AiChatPanel />}
 
         {/* Footer */}
         <footer className="shrink-0 border-t border-border bg-card px-6 py-3">

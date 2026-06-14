@@ -49,6 +49,11 @@ def require_admin(current: User = Depends(get_current_user)) -> User:
     return current
 
 
+def require_viewer_or_admin(current: User = Depends(get_current_user)) -> User:
+    """Allow any authenticated user (admin or viewer); 403 for unauthenticated."""
+    return current
+
+
 def verify_csrf(
     request: Request,
     x_csrf_token: str | None = Header(default=None),

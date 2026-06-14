@@ -82,11 +82,59 @@ def test_chat_503_when_disabled(client, db_session):
     assert res.status_code == 503
 
 
-def test_chat_viewer_forbidden(client, db_session):
+def test_chat_viewer_gets_503_when_disabled(client, db_session):
     csrf = _login_viewer(client, db_session, email="chatviewer@example.com")
     res = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},
                       json={"messages": [{"role": "user", "content": "hi"}]})
-    assert res.status_code == 403
+    # Viewers are now allowed; unconfigured AI returns 503, not 403.
+    assert res.status_code == 503
+
+
+def test_chat_viewer_read_only_succeeds(client, db_session, monkeypatch):
+    from app.services import ai_provider
+    csrf = _login_viewer(client, db_session, email="chatviewerok@example.com")
+    # Viewers can't access settings, so enable AI via admin first.
+    admin_csrf = _login_admin(client, db_session, email="chatvieweradmin@example.com")
+    client.put("/api/settings/ai", headers={"X-CSRF-Token": admin_csrf},
+               json={"enabled": True, "base_url": "http://x/v1", "model": "m"})
+    # Re-login as viewer (put clobbers session).
+    _login_viewer(client, db_session, email="chatviewerok@example.com")
+    csrf = client.cookies.get("csrf_token")
+    monkeypatch.setattr(ai_provider, "chat_completion",
+        lambda *a, **k: {"message": {"role": "assistant", "content": "I can read records.", "tool_calls": None}})
+    res = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},
+                      json={"messages": [{"role": "user", "content": "what meds do I take?"}]})
+    assert res.status_code == 200
+    assert res.json()["answer"] == "I can read records."
+
+
+def test_chat_viewer_write_tool_refused(client, db_session, monkeypatch):
+    """Viewer calling a write tool gets an error result, not a commit."""
+    import json as _json
+    from app.services import ai_provider
+    admin_csrf = _login_admin(client, db_session, email="chatviewerwradmin@example.com")
+    client.put("/api/settings/ai", headers={"X-CSRF-Token": admin_csrf},
+               json={"enabled": True, "base_url": "http://x/v1", "model": "m"})
+    _login_viewer(client, db_session, email="chatviewerwr@example.com")
+    csrf = client.cookies.get("csrf_token")
+    calls = {"n": 0}
+    def fake(base_url, model, messages, tools):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return {"message": {"role": "assistant", "content": None, "tool_calls": [
+                {"id": "c1", "type": "function", "function": {
+                    "name": "commit_create",
+                    "arguments": _json.dumps({"section": "surgeries", "fields": {"procedure": "X"}})}}]}}
+        # After getting the error back, model responds in plain text.
+        last_tool = next((m for m in reversed(messages) if m.get("role") == "tool"), None)
+        assert last_tool is not None
+        content = _json.loads(last_tool["content"])
+        assert "error" in content
+        return {"message": {"role": "assistant", "content": "Cannot write.", "tool_calls": None}}
+    monkeypatch.setattr(ai_provider, "chat_completion", fake)
+    res = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},
+                      json={"messages": [{"role": "user", "content": "add a surgery"}]})
+    assert res.status_code == 200
 
 
 def test_chat_requires_csrf(client, db_session):

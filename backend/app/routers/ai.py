@@ -8,7 +8,8 @@ from app.limiter import limiter
 from app.models.audit_log import AuditAction, ActorType
 from app.models.user import User
 from app.schemas.ai import ChatRequest, ChatResponse
-from app.security.dependencies import require_admin, verify_csrf
+from app.models.user import Role
+from app.security.dependencies import require_admin, require_viewer_or_admin, verify_csrf
 from app.services import ai_agent, ai_provider, ai_settings_service
 from app.services.audit_service import log_event
 
@@ -23,22 +24,24 @@ _UNAVAILABLE = HTTPException(
 
 
 @router.post("/chat", response_model=ChatResponse,
-             dependencies=[Depends(require_admin), Depends(verify_csrf)])
+             dependencies=[Depends(require_viewer_or_admin), Depends(verify_csrf)])
 @limiter.limit("20/minute")
 def chat(
     request: Request,
     response: Response,
     payload: ChatRequest,
     db: Session = Depends(get_db),
-    current: User = Depends(require_admin),
+    current: User = Depends(require_viewer_or_admin),
 ):
     s = ai_settings_service.get_settings(db)
     if not s.enabled or not s.base_url or not s.model:
         raise _UNAVAILABLE
 
     messages = [{"role": m.role, "content": m.content} for m in payload.messages]
+    # Viewers get read-only access — pass actor_id=None so write tools self-refuse.
+    actor_id = current.id if current.role == Role.admin else None
     try:
-        result = ai_agent.run_chat(db, s, messages, tz=current.timezone, actor_id=current.id)
+        result = ai_agent.run_chat(db, s, messages, tz=current.timezone, actor_id=actor_id)
     except ai_provider.ProviderUnavailable:
         raise _UNAVAILABLE
 
