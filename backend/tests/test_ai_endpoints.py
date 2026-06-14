@@ -82,6 +82,24 @@ def test_chat_503_when_disabled(client, db_session):
     assert res.status_code == 503
 
 
+def test_ai_status_viewer_allowed_no_base_url(client, db_session):
+    """Viewers can read AI status; it must expose enabled+model but never base_url."""
+    admin_csrf = _login_admin(client, db_session, email="statusadmin@example.com")
+    client.put("/api/settings/ai", headers={"X-CSRF-Token": admin_csrf},
+               json={"enabled": True, "base_url": "http://secret-host/v1", "model": "m"})
+    _login_viewer(client, db_session, email="statusviewer@example.com")
+    res = client.get("/api/ai/status")
+    assert res.status_code == 200
+    body = res.json()
+    assert body == {"enabled": True, "model": "m"}
+    assert "base_url" not in body
+
+
+def test_ai_status_unauthenticated(client, db_session):
+    res = client.get("/api/ai/status")
+    assert res.status_code == 401
+
+
 def test_chat_viewer_gets_503_when_disabled(client, db_session):
     csrf = _login_viewer(client, db_session, email="chatviewer@example.com")
     res = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},

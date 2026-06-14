@@ -7,9 +7,9 @@ from app.database import get_db
 from app.limiter import limiter
 from app.models.audit_log import AuditAction, ActorType
 from app.models.user import User
-from app.schemas.ai import ChatRequest, ChatResponse
+from app.schemas.ai import AiStatus, ChatRequest, ChatResponse
 from app.models.user import Role
-from app.security.dependencies import require_admin, require_viewer_or_admin, verify_csrf
+from app.security.dependencies import require_viewer_or_admin, verify_csrf
 from app.services import ai_agent, ai_provider, ai_settings_service
 from app.services.audit_service import log_event
 
@@ -21,6 +21,16 @@ _UNAVAILABLE = HTTPException(
     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
     detail="AI assistant is not available. Configure and enable it in Settings.",
 )
+
+
+@router.get("/status", response_model=AiStatus,
+            dependencies=[Depends(require_viewer_or_admin)])
+def status_(db: Session = Depends(get_db)):
+    """Viewer-safe AI status for the chat panel. Returns only enabled+model so
+    any authenticated user can tell whether to show the assistant; the local
+    LLM base_url stays admin-only (see /api/settings/ai)."""
+    s = ai_settings_service.get_settings(db)
+    return AiStatus(enabled=s.enabled, model=s.model)
 
 
 @router.post("/chat", response_model=ChatResponse,

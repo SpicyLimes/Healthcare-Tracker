@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Navigate } from "react-router-dom"
 import { Menu, Sparkles, ShieldCheck } from "lucide-react"
-import { getAiSettings, type AiSettings } from "@/api/settings"
+import { getAiStatus, type AiStatus } from "@/api/ai"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { NavSidebar } from "@/components/nav-sidebar"
 import ChatConversation from "./ChatConversation"
@@ -14,20 +14,20 @@ import ChatConversation from "./ChatConversation"
  * still navigate the rest of the app.
  */
 export default function AiAssistantPage() {
-  const [settings, setSettings] = React.useState<AiSettings | null | undefined>(undefined)
+  const [status, setStatus] = React.useState<AiStatus | null | undefined>(undefined)
   const [navOpen, setNavOpen] = React.useState(false)
 
   React.useEffect(() => {
-    getAiSettings()
-      .then(setSettings)
-      .catch(() => setSettings(null))
+    getAiStatus()
+      .then(setStatus)
+      .catch(() => setStatus(null))
   }, [])
 
-  // Still loading settings → render nothing yet
-  if (settings === undefined) return null
+  // Still loading status → render nothing yet
+  if (status === undefined) return null
 
-  // AI disabled (or settings failed to load) → bounce back home
-  if (!settings?.enabled) return <Navigate to="/" replace />
+  // AI disabled (or status failed to load) → bounce back home
+  if (!status?.enabled) return <Navigate to="/" replace />
 
   return (
     <div className="flex h-dvh flex-col bg-background">
@@ -63,7 +63,7 @@ export default function AiAssistantPage() {
         </div>
       </header>
 
-      <ChatConversation showPrivacyNote modelName={settings.model} />
+      <ChatConversation showPrivacyNote modelName={status.model} />
     </div>
   )
 }

@@ -20,7 +20,19 @@ export interface ChatResponse {
   proposals?: Proposal[];
 }
 
+export interface AiStatus {
+  enabled: boolean;
+  model: string | null;
+}
+
 export class AiUnavailableError extends Error {}
+
+// Viewer-safe AI status for the chat panel: enabled + model only, no base_url.
+export async function getAiStatus(): Promise<AiStatus> {
+  const res = await fetch("/api/ai/status");
+  if (!res.ok) throw new Error("Failed to load AI status");
+  return res.json();
+}
 
 // 10-minute timeout matches the backend's httpx timeout — needed for CPU-only
 // Ollama cold starts which can take several minutes to load the model.

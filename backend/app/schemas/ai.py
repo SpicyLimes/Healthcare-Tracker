@@ -26,3 +26,10 @@ class ChatResponse(BaseModel):
     answer: str
     tools_used: list[str]
     proposals: list[Proposal] = Field(default_factory=list)
+
+
+class AiStatus(BaseModel):
+    """Minimal, viewer-safe AI status for the chat panel. Deliberately omits
+    base_url so the local LLM endpoint is never exposed to non-admins."""
+    enabled: bool
+    model: str | None

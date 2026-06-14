@@ -8,7 +8,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { getAiSettings, type AiSettings } from "@/api/settings"
+import { getAiStatus, type AiStatus } from "@/api/ai"
 import ChatConversation from "./ChatConversation"
 
 type PanelWidth = "standard" | "medium" | "large"
@@ -32,18 +32,18 @@ function savedWidth(): PanelWidth {
 }
 
 export default function AiChatPanel() {
-  const [settings, setSettings] = React.useState<AiSettings | null>(null)
+  const [status, setStatus] = React.useState<AiStatus | null>(null)
   const [open, setOpen] = React.useState(false)
   const [width, setWidth] = React.useState<PanelWidth>(savedWidth)
   const navigate = useNavigate()
 
   React.useEffect(() => {
-    getAiSettings()
-      .then(setSettings)
-      .catch(() => setSettings(null))
+    getAiStatus()
+      .then(setStatus)
+      .catch(() => setStatus(null))
   }, [])
 
-  if (!settings?.enabled) return null
+  if (!status?.enabled) return null
 
   function selectWidth(w: PanelWidth) {
     setWidth(w)
@@ -112,7 +112,7 @@ export default function AiChatPanel() {
             </div>
           </SheetHeader>
 
-          <ChatConversation showPrivacyNote modelName={settings.model} />
+          <ChatConversation showPrivacyNote modelName={status.model} />
         </SheetContent>
       </Sheet>
     </>

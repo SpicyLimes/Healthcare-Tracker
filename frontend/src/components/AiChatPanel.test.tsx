@@ -3,29 +3,26 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import AiChatPanel from "./AiChatPanel";
 
-vi.mock("../api/settings", () => ({
-  getAiSettings: vi.fn(),
-}));
 vi.mock("../api/ai", () => ({
+  getAiStatus: vi.fn(),
   sendChat: vi.fn(),
   AiUnavailableError: class AiUnavailableError extends Error {},
 }));
 
-import { getAiSettings } from "../api/settings";
-import { sendChat, AiUnavailableError } from "../api/ai";
+import { getAiStatus, sendChat, AiUnavailableError } from "../api/ai";
 
 describe("AiChatPanel", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("renders no launcher when AI is disabled", async () => {
-    (getAiSettings as any).mockResolvedValue({ enabled: false, base_url: null, model: null });
+    (getAiStatus as any).mockResolvedValue({ enabled: false, model: null });
     render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
-    await waitFor(() => expect(getAiSettings).toHaveBeenCalled());
+    await waitFor(() => expect(getAiStatus).toHaveBeenCalled());
     expect(screen.queryByRole("button", { name: /assistant/i })).toBeNull();
   });
 
   it("shows launcher and sends a message when enabled", async () => {
-    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" });
+    (getAiStatus as any).mockResolvedValue({ enabled: true, model: "m" });
     (sendChat as any).mockResolvedValue({ answer: "Hi there.", tools_used: [] });
     render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
     const launcher = await screen.findByRole("button", { name: /assistant/i });
@@ -37,7 +34,7 @@ describe("AiChatPanel", () => {
   });
 
   it("shows an unavailable message on 503", async () => {
-    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" });
+    (getAiStatus as any).mockResolvedValue({ enabled: true, model: "m" });
     (sendChat as any).mockRejectedValue(new AiUnavailableError("down"));
     render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
     const launcher = await screen.findByRole("button", { name: /assistant/i });
@@ -48,7 +45,7 @@ describe("AiChatPanel", () => {
   });
 
   it("renders create proposals inline under the assistant answer", async () => {
-    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" });
+    (getAiStatus as any).mockResolvedValue({ enabled: true, model: "m" });
     (sendChat as any).mockResolvedValue({
       answer: "I'll add these. Confirm?",
       tools_used: ["propose_record"],
@@ -68,7 +65,7 @@ describe("AiChatPanel", () => {
   });
 
   it("shows a warning note on a proposal", async () => {
-    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" });
+    (getAiStatus as any).mockResolvedValue({ enabled: true, model: "m" });
     (sendChat as any).mockResolvedValue({
       answer: "Drafted, but note:",
       tools_used: ["propose_record"],
@@ -85,7 +82,7 @@ describe("AiChatPanel", () => {
   });
 
   it("shows AI model name and privacy note in the desktop panel empty state", async () => {
-    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "gemma-4-e4b" });
+    (getAiStatus as any).mockResolvedValue({ enabled: true, model: "gemma-4-e4b" });
     render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
     fireEvent.click(await screen.findByRole("button", { name: /assistant/i }));
     expect(await screen.findByText(/AI Model:/i)).toBeInTheDocument();
@@ -95,7 +92,7 @@ describe("AiChatPanel", () => {
   });
 
   it("does not show the redundant shield subtitle in the panel header", async () => {
-    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" });
+    (getAiStatus as any).mockResolvedValue({ enabled: true, model: "m" });
     render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
     fireEvent.click(await screen.findByRole("button", { name: /assistant/i }));
     await screen.findByPlaceholderText(/ask/i);
@@ -103,7 +100,7 @@ describe("AiChatPanel", () => {
   });
 
   it("shows Standard, Medium, and Large width preset buttons in the panel header", async () => {
-    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" });
+    (getAiStatus as any).mockResolvedValue({ enabled: true, model: "m" });
     render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
     fireEvent.click(await screen.findByRole("button", { name: /assistant/i }));
     await screen.findByPlaceholderText(/ask/i);
@@ -113,7 +110,7 @@ describe("AiChatPanel", () => {
   });
 
   it("applies sm:max-w-lg class when Medium preset is selected", async () => {
-    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" });
+    (getAiStatus as any).mockResolvedValue({ enabled: true, model: "m" });
     render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
     fireEvent.click(await screen.findByRole("button", { name: /assistant/i }));
     const mediumBtn = await screen.findByRole("button", { name: /medium/i });
@@ -123,7 +120,7 @@ describe("AiChatPanel", () => {
   });
 
   it("applies sm:max-w-xl class when Large preset is selected", async () => {
-    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" });
+    (getAiStatus as any).mockResolvedValue({ enabled: true, model: "m" });
     render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
     fireEvent.click(await screen.findByRole("button", { name: /assistant/i }));
     const largeBtn = await screen.findByRole("button", { name: /large/i });
@@ -133,7 +130,7 @@ describe("AiChatPanel", () => {
   });
 
   it("persists the selected width preset to localStorage", async () => {
-    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" });
+    (getAiStatus as any).mockResolvedValue({ enabled: true, model: "m" });
     render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
     fireEvent.click(await screen.findByRole("button", { name: /assistant/i }));
     fireEvent.click(await screen.findByRole("button", { name: /large/i }));
@@ -142,7 +139,7 @@ describe("AiChatPanel", () => {
 
   it("restores the saved width preset from localStorage on mount", async () => {
     localStorage.setItem("ai-panel-width", "medium");
-    (getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" });
+    (getAiStatus as any).mockResolvedValue({ enabled: true, model: "m" });
     render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
     fireEvent.click(await screen.findByRole("button", { name: /assistant/i }));
     await screen.findByPlaceholderText(/ask/i);

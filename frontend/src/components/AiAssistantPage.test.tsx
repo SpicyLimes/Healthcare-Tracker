@@ -3,24 +3,24 @@ import { render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import AiAssistantPage from "./AiAssistantPage"
 
-vi.mock("../api/settings", () => ({ getAiSettings: vi.fn() }))
 vi.mock("../api/ai", () => ({
+  getAiStatus: vi.fn(),
   sendChat: vi.fn(),
   AiUnavailableError: class extends Error {},
 }))
-import { getAiSettings } from "../api/settings"
+import { getAiStatus } from "../api/ai"
 
 describe("AiAssistantPage", () => {
   beforeEach(() => vi.clearAllMocks())
 
   it("renders a full-height assistant conversation when enabled", async () => {
-    ;(getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "m" })
+    ;(getAiStatus as any).mockResolvedValue({ enabled: true, model: "m" })
     render(<MemoryRouter><AiAssistantPage /></MemoryRouter>)
     expect(await screen.findByPlaceholderText(/ask/i)).toBeInTheDocument()
   })
 
   it("shows the menu button, AI model name, and privacy note", async () => {
-    ;(getAiSettings as any).mockResolvedValue({ enabled: true, base_url: "http://x/v1", model: "gemma-4-e4b" })
+    ;(getAiStatus as any).mockResolvedValue({ enabled: true, model: "gemma-4-e4b" })
     render(<MemoryRouter><AiAssistantPage /></MemoryRouter>)
     expect(await screen.findByRole("button", { name: /navigation menu/i })).toBeInTheDocument()
     expect(screen.getByText(/AI Model:/i)).toBeInTheDocument()
