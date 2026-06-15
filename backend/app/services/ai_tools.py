@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models.audit_log import ActorType, AuditAction
 from app.models.notes import Note
-from app.schemas.notes import NoteResponse
+from app.schemas.notes import NoteCreate, NoteResponse
 from app.services import ai_write, summary_service
 from app.services.audit_service import log_event
 from app.services.crud_service import CRUDService
@@ -388,6 +388,30 @@ def dispatch(
             if tz:
                 rows = _localize_datetimes(rows, tz)
             return {"section": "notes", "count": len(rows), "records": rows}
+        if name == "propose_note":
+            if actor_id is None:
+                return {"error": "You have read-only access and cannot add notes."}
+            fields = {k: v for k, v in args.items() if k in ("title", "body", "pinned", "done") and v is not None}
+            try:
+                validated = NoteCreate(**fields)
+            except Exception as exc:
+                return {"error": f"Cannot draft note: {exc}"}
+            return {"action": "create_note", "fields": validated.model_dump()}
+        if name == "commit_create_note":
+            if actor_id is None:
+                return {"error": "Cannot create a note without an authenticated user."}
+            fields = {k: v for k, v in args.items() if k in ("title", "body", "pinned", "done") and v is not None}
+            try:
+                validated = NoteCreate(**fields)
+            except Exception as exc:
+                return {"error": f"Cannot create note: {exc}"}
+            note = Note(id=_uuid.uuid4(), author_user_id=actor_id, **validated.model_dump())
+            db.add(note)
+            db.flush()
+            log_event(db, action=AuditAction.create, actor_type=ActorType.user,
+                      actor_user_id=actor_id, section="notes", record_id=str(note.id),
+                      detail="AI created note")
+            return {"created": True, "note_id": str(note.id)}
         if name == "propose_record":
             if actor_id is None:
                 return {"error": "You have read-only access and cannot add records."}
