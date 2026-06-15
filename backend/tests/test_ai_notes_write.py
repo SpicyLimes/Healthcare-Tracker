@@ -159,3 +159,55 @@ def test_commit_edit_note_wrong_action_token_refused(db_session):
     assert "error" in result
     db_session.expire_all()
     assert db_session.get(Note, note.id).title == "Old title"
+
+
+def test_stage_delete_note_returns_token_no_write(db_session):
+    admin, note = _make_note(db_session, "notedel1@example.com", title="Doomed note")
+    store = TokenStore()
+    before = db_session.query(Note).count()
+    result = ai_tools.dispatch(db_session, "stage_delete_note",
+                               {"note_id": str(note.id)}, token_store=store, actor_id=admin.id)
+    assert result["action"] == "delete_note"
+    assert result["token"]
+    assert "Doomed note" in str(result["summary"])
+    assert db_session.query(Note).count() == before   # NO write
+
+
+def test_commit_delete_note_with_token_deletes(db_session):
+    admin, note = _make_note(db_session, "notedel2@example.com")
+    store = TokenStore()
+    staged = ai_tools.dispatch(db_session, "stage_delete_note",
+                               {"note_id": str(note.id)}, token_store=store, actor_id=admin.id)
+    result = ai_tools.dispatch(db_session, "commit_delete_note",
+                               {"token": staged["token"]}, token_store=store, actor_id=admin.id)
+    assert result["deleted"] is True
+    db_session.expire_all()
+    assert db_session.get(Note, note.id) is None
+
+
+def test_stage_delete_note_refuses_viewer_no_write(db_session):
+    admin, note = _make_note(db_session, "notedel3@example.com")
+    result = ai_tools.dispatch(db_session, "stage_delete_note",
+                               {"note_id": str(note.id)}, token_store=TokenStore(), actor_id=None)
+    assert "error" in result
+    db_session.expire_all()
+    assert db_session.get(Note, note.id) is not None
+
+
+def test_commit_delete_note_fabricated_token_refused_no_write(db_session):
+    admin, note = _make_note(db_session, "notedel4@example.com")
+    result = ai_tools.dispatch(db_session, "commit_delete_note",
+                               {"token": "fabricated"}, token_store=TokenStore(), actor_id=admin.id)
+    assert "error" in result
+    db_session.expire_all()
+    assert db_session.get(Note, note.id) is not None
+
+
+def test_commit_delete_note_reused_token_refused(db_session):
+    admin, note = _make_note(db_session, "notedel5@example.com")
+    store = TokenStore()
+    staged = ai_tools.dispatch(db_session, "stage_delete_note",
+                               {"note_id": str(note.id)}, token_store=store, actor_id=admin.id)
+    ai_tools.dispatch(db_session, "commit_delete_note", {"token": staged["token"]}, token_store=store, actor_id=admin.id)
+    second = ai_tools.dispatch(db_session, "commit_delete_note", {"token": staged["token"]}, token_store=store, actor_id=admin.id)
+    assert "error" in second

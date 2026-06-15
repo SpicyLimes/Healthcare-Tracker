@@ -449,6 +449,20 @@ def dispatch(
             )
             return {"action": "edit_note", "note_id": str(row.id),
                     "before": before, "after": cleaned, "token": token}
+        if name == "stage_delete_note":
+            if token_store is None:
+                return {"error": "No confirmation channel available."}
+            if actor_id is None:
+                return {"error": "Cannot delete a note without an authenticated user."}
+            row, err = _load_note(db, args.get("note_id"))
+            if err:
+                return {"error": err}
+            summary = {"title": row.title, "body": row.body, "done": row.done, "pinned": row.pinned}
+            token = token_store.stage(
+                {"action": "note_delete", "note_id": str(row.id)}, owner_id=actor_id
+            )
+            return {"action": "delete_note", "note_id": str(row.id),
+                    "summary": summary, "token": token}
         if name == "propose_record":
             if actor_id is None:
                 return {"error": "You have read-only access and cannot add records."}
