@@ -66,3 +66,96 @@ def test_commit_create_note_refuses_viewer_no_write(db_session):
     result = ai_tools.dispatch(db_session, "commit_create_note", {"title": "x"}, actor_id=None)
     assert "error" in result
     assert db_session.query(Note).count() == before
+
+
+def _make_note(db_session, email, title="Old title"):
+    admin = _admin(db_session, email)
+    note = Note(id=_uuid.uuid4(), author_user_id=admin.id, title=title)
+    db_session.add(note)
+    db_session.flush()
+    return admin, note
+
+
+def test_stage_edit_note_returns_before_after_and_token_no_write(db_session):
+    admin, note = _make_note(db_session, "noteedit1@example.com")
+    store = TokenStore()
+    result = ai_tools.dispatch(
+        db_session, "stage_edit_note",
+        {"note_id": str(note.id), "fields": {"title": "New title"}},
+        token_store=store, actor_id=admin.id,
+    )
+    assert result["before"]["title"] == "Old title"
+    assert result["after"]["title"] == "New title"
+    assert result["token"]
+    db_session.expire_all()
+    assert db_session.get(Note, note.id).title == "Old title"   # NO write
+
+
+def test_commit_edit_note_with_token_writes(db_session):
+    admin, note = _make_note(db_session, "noteedit2@example.com")
+    store = TokenStore()
+    staged = ai_tools.dispatch(
+        db_session, "stage_edit_note",
+        {"note_id": str(note.id), "fields": {"title": "Renamed", "done": True}},
+        token_store=store, actor_id=admin.id,
+    )
+    result = ai_tools.dispatch(db_session, "commit_edit_note",
+                               {"token": staged["token"]}, token_store=store, actor_id=admin.id)
+    assert result["updated"] is True
+    db_session.expire_all()
+    row = db_session.get(Note, note.id)
+    assert row.title == "Renamed"
+    assert row.done is True
+
+
+def test_commit_edit_note_can_set_done_false(db_session):
+    # Boolean gotcha: explicitly setting done=False must persist (mark to-do not done).
+    admin, note = _make_note(db_session, "noteedit_bool@example.com")
+    note.done = True
+    db_session.flush()
+    store = TokenStore()
+    staged = ai_tools.dispatch(
+        db_session, "stage_edit_note",
+        {"note_id": str(note.id), "fields": {"done": False}},
+        token_store=store, actor_id=admin.id,
+    )
+    assert staged["after"]["done"] is False
+    ai_tools.dispatch(db_session, "commit_edit_note",
+                      {"token": staged["token"]}, token_store=store, actor_id=admin.id)
+    db_session.expire_all()
+    assert db_session.get(Note, note.id).done is False
+
+
+def test_stage_edit_note_refuses_viewer(db_session):
+    admin, note = _make_note(db_session, "noteedit3@example.com")
+    result = ai_tools.dispatch(
+        db_session, "stage_edit_note",
+        {"note_id": str(note.id), "fields": {"title": "x"}},
+        token_store=TokenStore(), actor_id=None,
+    )
+    assert "error" in result
+    assert "token" not in result
+
+
+def test_stage_edit_note_empty_fields_no_token(db_session):
+    admin, note = _make_note(db_session, "noteedit4@example.com")
+    result = ai_tools.dispatch(
+        db_session, "stage_edit_note",
+        {"note_id": str(note.id), "fields": {"bogus": "x"}},
+        token_store=TokenStore(), actor_id=admin.id,
+    )
+    assert "error" in result
+    assert "token" not in result
+
+
+def test_commit_edit_note_wrong_action_token_refused(db_session):
+    # a note-DELETE token must not drive a note edit
+    admin, note = _make_note(db_session, "noteedit5@example.com")
+    store = TokenStore()
+    staged = ai_tools.dispatch(db_session, "stage_delete_note",
+                               {"note_id": str(note.id)}, token_store=store, actor_id=admin.id)
+    result = ai_tools.dispatch(db_session, "commit_edit_note",
+                               {"token": staged["token"]}, token_store=store, actor_id=admin.id)
+    assert "error" in result
+    db_session.expire_all()
+    assert db_session.get(Note, note.id).title == "Old title"

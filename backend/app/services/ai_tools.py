@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models.audit_log import ActorType, AuditAction
 from app.models.notes import Note
-from app.schemas.notes import NoteCreate, NoteResponse
+from app.schemas.notes import NoteCreate, NotePatch, NoteResponse
 from app.services import ai_write, summary_service
 from app.services.audit_service import log_event
 from app.services.crud_service import CRUDService
@@ -38,6 +38,18 @@ def _load_writable_row(db, section, record_id):
     if row is None:
         return None, None, "Record not found."
     return model, row, None
+
+
+def _load_note(db, note_id):
+    """Return (note_row, None) or (None, error_str). No write."""
+    try:
+        nid = _uuid.UUID(str(note_id))
+    except (ValueError, TypeError):
+        return None, "Invalid note id."
+    row = db.get(Note, nid)
+    if row is None:
+        return None, "Note not found."
+    return row, None
 
 
 TOOL_DEFS: list[dict] = [
@@ -412,6 +424,31 @@ def dispatch(
                       actor_user_id=actor_id, section="notes", record_id=str(note.id),
                       detail="AI created note")
             return {"created": True, "note_id": str(note.id)}
+        if name == "stage_edit_note":
+            if token_store is None:
+                return {"error": "No confirmation channel available."}
+            if actor_id is None:
+                return {"error": "Cannot edit a note without an authenticated user."}
+            row, err = _load_note(db, args.get("note_id"))
+            if err:
+                return {"error": err}
+            raw = {k: v for k, v in (args.get("fields") or {}).items()
+                   if k in ("title", "body", "pinned", "done")}
+            if not raw:
+                return {"error": "No valid fields to edit."}
+            try:
+                cleaned = NotePatch(**raw).model_dump(exclude_unset=True)
+            except Exception as exc:
+                return {"error": f"Cannot stage note edit: {exc}"}
+            if not cleaned:
+                return {"error": "No valid fields to edit."}
+            before = {k: getattr(row, k) for k in cleaned}
+            token = token_store.stage(
+                {"action": "note_edit", "note_id": str(row.id), "fields": cleaned},
+                owner_id=actor_id,
+            )
+            return {"action": "edit_note", "note_id": str(row.id),
+                    "before": before, "after": cleaned, "token": token}
         if name == "propose_record":
             if actor_id is None:
                 return {"error": "You have read-only access and cannot add records."}
@@ -498,6 +535,32 @@ def dispatch(
                       section=staged["section"], record_id=staged["record_id"],
                       detail=f"AI {expected} record in {staged['section']}")
             return {("deleted" if expected == "delete" else "updated"): True, "section": staged["section"]}
+        if name in ("commit_edit_note", "commit_delete_note"):
+            if token_store is None:
+                return {"error": "No confirmation channel available."}
+            staged = token_store.consume(args.get("token", ""), owner_id=actor_id)
+            expected = "note_delete" if name == "commit_delete_note" else "note_edit"
+            if staged is None or staged.get("action") != expected:
+                return {"error": "No matching confirmation. Ask the user to confirm, then stage again."}
+            if actor_id is None:
+                return {"error": "Cannot complete this action."}
+            note = db.get(Note, _uuid.UUID(staged["note_id"]))
+            if note is None:
+                return {"error": "Note no longer exists."}
+            if expected == "note_delete":
+                db.delete(note)
+                db.flush()
+                log_event(db, action=AuditAction.delete, actor_type=ActorType.user,
+                          actor_user_id=actor_id, section="notes", record_id=staged["note_id"],
+                          detail="AI deleted note")
+                return {"deleted": True, "section": "notes"}
+            for k, v in staged["fields"].items():
+                setattr(note, k, v)
+            db.flush()
+            log_event(db, action=AuditAction.update, actor_type=ActorType.user,
+                      actor_user_id=actor_id, section="notes", record_id=staged["note_id"],
+                      detail="AI updated note")
+            return {"updated": True, "section": "notes"}
         return {"error": f"Unknown tool '{name}'."}
     except Exception as exc:  # never leak an exception back into the loop
         return {"error": f"Tool execution failed: {exc}"}
