@@ -198,6 +198,102 @@ TOOL_DEFS: list[dict] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "propose_note",
+            "description": (
+                "Draft a NEW note or to-do for the user to confirm. Does NOT save. "
+                "Use after gathering the title (required) and optional body."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "body": {"type": "string"},
+                    "pinned": {"type": "boolean"},
+                    "done": {"type": "boolean", "description": "true marks a to-do complete"},
+                },
+                "required": ["title"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "commit_create_note",
+            "description": "Create a new note/to-do. Only call after the user confirmed they want it added.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "body": {"type": "string"},
+                    "pinned": {"type": "boolean"},
+                    "done": {"type": "boolean"},
+                },
+                "required": ["title"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "stage_edit_note",
+            "description": (
+                "Prepare to EDIT a note/to-do. Does NOT save. Returns before/after and a "
+                "confirmation token; call commit_edit_note only after the user confirms. "
+                "Find the note id first with get_notes."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "note_id": {"type": "string"},
+                    "fields": {"type": "object", "description": "Fields to change: title, body, pinned, done."},
+                },
+                "required": ["note_id", "fields"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "commit_edit_note",
+            "description": "Apply the staged note edit. Requires the token from stage_edit_note.",
+            "parameters": {
+                "type": "object",
+                "properties": {"token": {"type": "string"}},
+                "required": ["token"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "stage_delete_note",
+            "description": (
+                "Prepare to DELETE a note/to-do. Does NOT delete. Returns a summary and a "
+                "confirmation token; call commit_delete_note only after the user confirms. "
+                "Find the note id first with get_notes."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"note_id": {"type": "string"}},
+                "required": ["note_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "commit_delete_note",
+            "description": "Permanently delete the staged note. Requires the token from stage_delete_note.",
+            "parameters": {
+                "type": "object",
+                "properties": {"token": {"type": "string"}},
+                "required": ["token"],
+            },
+        },
+    },
 ]
 
 
