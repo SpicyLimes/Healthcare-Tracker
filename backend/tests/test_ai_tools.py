@@ -18,12 +18,17 @@ def test_tool_defs_are_read_only_and_well_formed():
         "list_sections", "get_section_records", "get_notes", "propose_record",
         "commit_create", "stage_edit", "stage_delete",
         "commit_edit", "commit_delete",
+        "propose_note", "commit_create_note",
+        "stage_edit_note", "commit_edit_note",
+        "stage_delete_note", "commit_delete_note",
     }
     # Invariant: the ONLY tools that may carry a mutate-keyword in their name are
     # the explicit record-management flow tools. Of those, stage_/propose_ tools
     # DRAFT (no DB write); only commit_ tools write, and they are confirmation-gated.
-    _DRAFT_TOOLS = {"propose_record", "stage_edit", "stage_delete"}   # no DB write
-    _WRITE_TOOLS = {"commit_create", "commit_edit", "commit_delete"}
+    _DRAFT_TOOLS = {"propose_record", "stage_edit", "stage_delete",
+                    "propose_note", "stage_edit_note", "stage_delete_note"}   # no DB write
+    _WRITE_TOOLS = {"commit_create", "commit_edit", "commit_delete",
+                    "commit_create_note", "commit_edit_note", "commit_delete_note"}
     _ALLOWED_MUTATING_NAMES = _DRAFT_TOOLS | _WRITE_TOOLS
     _MUTATE_KEYWORDS = ("create", "update", "delete", "write", "add", "remove",
                         "insert", "patch", "put", "set", "upsert", "edit")

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models.audit_log import ActorType, AuditAction
 from app.models.notes import Note
-from app.schemas.notes import NoteResponse
+from app.schemas.notes import NoteCreate, NotePatch, NoteResponse
 from app.services import ai_write, summary_service
 from app.services.audit_service import log_event
 from app.services.crud_service import CRUDService
@@ -38,6 +38,18 @@ def _load_writable_row(db, section, record_id):
     if row is None:
         return None, None, "Record not found."
     return model, row, None
+
+
+def _load_note(db, note_id):
+    """Return (note_row, None) or (None, error_str). No write."""
+    try:
+        nid = _uuid.UUID(str(note_id))
+    except (ValueError, TypeError):
+        return None, "Invalid note id."
+    row = db.get(Note, nid)
+    if row is None:
+        return None, "Note not found."
+    return row, None
 
 
 TOOL_DEFS: list[dict] = [
@@ -198,6 +210,102 @@ TOOL_DEFS: list[dict] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "propose_note",
+            "description": (
+                "Draft a NEW note or to-do for the user to confirm. Does NOT save. "
+                "Use after gathering the title (required) and optional body."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "body": {"type": "string"},
+                    "pinned": {"type": "boolean"},
+                    "done": {"type": "boolean", "description": "true marks a to-do complete"},
+                },
+                "required": ["title"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "commit_create_note",
+            "description": "Create a new note/to-do. Only call after the user confirmed they want it added.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string"},
+                    "body": {"type": "string"},
+                    "pinned": {"type": "boolean"},
+                    "done": {"type": "boolean"},
+                },
+                "required": ["title"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "stage_edit_note",
+            "description": (
+                "Prepare to EDIT a note/to-do. Does NOT save. Returns before/after and a "
+                "confirmation token; call commit_edit_note only after the user confirms. "
+                "Find the note id first with get_notes."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "note_id": {"type": "string"},
+                    "fields": {"type": "object", "description": "Fields to change: title, body, pinned, done."},
+                },
+                "required": ["note_id", "fields"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "commit_edit_note",
+            "description": "Apply the staged note edit. Requires the token from stage_edit_note.",
+            "parameters": {
+                "type": "object",
+                "properties": {"token": {"type": "string"}},
+                "required": ["token"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "stage_delete_note",
+            "description": (
+                "Prepare to DELETE a note/to-do. Does NOT delete. Returns a summary and a "
+                "confirmation token; call commit_delete_note only after the user confirms. "
+                "Find the note id first with get_notes."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"note_id": {"type": "string"}},
+                "required": ["note_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "commit_delete_note",
+            "description": "Permanently delete the staged note. Requires the token from stage_delete_note.",
+            "parameters": {
+                "type": "object",
+                "properties": {"token": {"type": "string"}},
+                "required": ["token"],
+            },
+        },
+    },
 ]
 
 
@@ -292,6 +400,69 @@ def dispatch(
             if tz:
                 rows = _localize_datetimes(rows, tz)
             return {"section": "notes", "count": len(rows), "records": rows}
+        if name == "propose_note":
+            if actor_id is None:
+                return {"error": "You have read-only access and cannot add notes."}
+            fields = {k: v for k, v in args.items() if k in ("title", "body", "pinned", "done") and v is not None}
+            try:
+                validated = NoteCreate(**fields)
+            except Exception as exc:
+                return {"error": f"Cannot draft note: {exc}"}
+            return {"action": "create_note", "fields": validated.model_dump()}
+        if name == "commit_create_note":
+            if actor_id is None:
+                return {"error": "Cannot create a note without an authenticated user."}
+            fields = {k: v for k, v in args.items() if k in ("title", "body", "pinned", "done") and v is not None}
+            try:
+                validated = NoteCreate(**fields)
+            except Exception as exc:
+                return {"error": f"Cannot create note: {exc}"}
+            note = Note(id=_uuid.uuid4(), author_user_id=actor_id, **validated.model_dump())
+            db.add(note)
+            db.flush()
+            log_event(db, action=AuditAction.create, actor_type=ActorType.user,
+                      actor_user_id=actor_id, section="notes", record_id=str(note.id),
+                      detail="AI created note")
+            return {"created": True, "note_id": str(note.id)}
+        if name == "stage_edit_note":
+            if token_store is None:
+                return {"error": "No confirmation channel available."}
+            if actor_id is None:
+                return {"error": "Cannot edit a note without an authenticated user."}
+            row, err = _load_note(db, args.get("note_id"))
+            if err:
+                return {"error": err}
+            raw = {k: v for k, v in (args.get("fields") or {}).items()
+                   if k in ("title", "body", "pinned", "done")}
+            if not raw:
+                return {"error": "No valid fields to edit."}
+            try:
+                cleaned = NotePatch(**raw).model_dump(exclude_unset=True)
+            except Exception as exc:
+                return {"error": f"Cannot stage note edit: {exc}"}
+            if not cleaned:
+                return {"error": "No valid fields to edit."}
+            before = {k: getattr(row, k) for k in cleaned}
+            token = token_store.stage(
+                {"action": "note_edit", "note_id": str(row.id), "fields": cleaned},
+                owner_id=actor_id,
+            )
+            return {"action": "edit_note", "note_id": str(row.id),
+                    "before": before, "after": cleaned, "token": token}
+        if name == "stage_delete_note":
+            if token_store is None:
+                return {"error": "No confirmation channel available."}
+            if actor_id is None:
+                return {"error": "Cannot delete a note without an authenticated user."}
+            row, err = _load_note(db, args.get("note_id"))
+            if err:
+                return {"error": err}
+            summary = {"title": row.title, "body": row.body, "done": row.done, "pinned": row.pinned}
+            token = token_store.stage(
+                {"action": "note_delete", "note_id": str(row.id)}, owner_id=actor_id
+            )
+            return {"action": "delete_note", "note_id": str(row.id),
+                    "summary": summary, "token": token}
         if name == "propose_record":
             if actor_id is None:
                 return {"error": "You have read-only access and cannot add records."}
@@ -378,6 +549,32 @@ def dispatch(
                       section=staged["section"], record_id=staged["record_id"],
                       detail=f"AI {expected} record in {staged['section']}")
             return {("deleted" if expected == "delete" else "updated"): True, "section": staged["section"]}
+        if name in ("commit_edit_note", "commit_delete_note"):
+            if token_store is None:
+                return {"error": "No confirmation channel available."}
+            staged = token_store.consume(args.get("token", ""), owner_id=actor_id)
+            expected = "note_delete" if name == "commit_delete_note" else "note_edit"
+            if staged is None or staged.get("action") != expected:
+                return {"error": "No matching confirmation. Ask the user to confirm, then stage again."}
+            if actor_id is None:
+                return {"error": "Cannot complete this action."}
+            note = db.get(Note, _uuid.UUID(staged["note_id"]))
+            if note is None:
+                return {"error": "Note no longer exists."}
+            if expected == "note_delete":
+                db.delete(note)
+                db.flush()
+                log_event(db, action=AuditAction.delete, actor_type=ActorType.user,
+                          actor_user_id=actor_id, section="notes", record_id=staged["note_id"],
+                          detail="AI deleted note")
+                return {"deleted": True, "section": "notes"}
+            for k, v in staged["fields"].items():
+                setattr(note, k, v)
+            db.flush()
+            log_event(db, action=AuditAction.update, actor_type=ActorType.user,
+                      actor_user_id=actor_id, section="notes", record_id=staged["note_id"],
+                      detail="AI updated note")
+            return {"updated": True, "section": "notes"}
         return {"error": f"Unknown tool '{name}'."}
     except Exception as exc:  # never leak an exception back into the loop
         return {"error": f"Tool execution failed: {exc}"}

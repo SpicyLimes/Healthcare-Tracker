@@ -25,7 +25,11 @@ _SYSTEM_PROMPT = (
     "id. Call stage_edit or stage_delete, then READ THE RETURNED SUMMARY BACK to "
     "the user and ask them to confirm. Only after a clear yes, call commit_edit / "
     "commit_delete with the token from the stage step. Never edit or delete "
-    "without explicit confirmation.\n\n"
+    "without explicit confirmation.\n"
+    "- NOTES & TO-DOS use a parallel set of tools: get_notes to read, propose_note "
+    "+ commit_create_note to add, stage_edit_note + commit_edit_note to edit, and "
+    "stage_delete_note + commit_delete_note to delete. Find a note's id with "
+    "get_notes first, and confirm before every commit, exactly as with records.\n\n"
     "Be concise and factual."
 )
 
