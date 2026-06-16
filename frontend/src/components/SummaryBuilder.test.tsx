@@ -98,13 +98,13 @@ describe("AppShell summary trigger", () => {
     );
   }
 
-  it("shows Generate Summary for admins", () => {
+  it("shows Patient Summary Report for admins", () => {
     renderShell("admin");
     expect(screen.getByRole("button", { name: /patient summary report/i })).toBeInTheDocument();
   });
 
-  it("hides Generate Summary for non-admins", () => {
+  it("shows Patient Summary Report for viewers too", () => {
     renderShell("viewer");
-    expect(screen.queryByRole("button", { name: /patient summary report/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /patient summary report/i })).toBeInTheDocument();
   });
 });
