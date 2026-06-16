@@ -54,8 +54,8 @@ export function RecordDetailModal({
         </div>
 
         <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-          {fields.map((f) => (
-            <div key={f.label}>
+          {fields.map((f, i) => (
+            <div key={`${f.label}-${i}`}>
               <dt className="text-xs text-muted-foreground">{f.label}</dt>
               <dd className="text-sm text-foreground whitespace-pre-wrap">
                 {isEmpty(f.value) ? "—" : f.value}
