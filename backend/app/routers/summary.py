@@ -16,7 +16,7 @@ from app.schemas.summary import SummaryRequest
 from app.security.dependencies import (
     GuestContext,
     get_guest_access,
-    require_admin,
+    require_viewer_or_admin,
     verify_csrf,
 )
 from app.services import summary_service
@@ -32,14 +32,14 @@ def _get_patient(db: Session) -> dict | None:
     return ProfileResponse.model_validate(row).model_dump(mode="json") if row else None
 
 
-@router.post("", dependencies=[Depends(require_admin), Depends(verify_csrf)])
+@router.post("", dependencies=[Depends(require_viewer_or_admin), Depends(verify_csrf)])
 @limiter.limit("20/minute")
 def generate_summary(
     request: Request,
     response: Response,
     payload: SummaryRequest,
     db: Session = Depends(get_db),
-    current: User = Depends(require_admin),
+    current: User = Depends(require_viewer_or_admin),
 ):
     section_data = {
         s: summary_service.gather_section_rows(db, s, payload.date_from, payload.date_to)
