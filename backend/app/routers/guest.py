@@ -103,7 +103,13 @@ def get_patient_name(
     ctx: GuestContext = Depends(get_guest_access),
     db: Session = Depends(get_db),
 ):
-    """Return only the patient's display name for the guest header."""
+    """Return only the patient's display name for the guest header.
+
+    By design, the name is shown to anyone holding a valid link regardless of the
+    link's allowed_sections (it is the recipient's context for whose records these
+    are). Only full_name is exposed — no other Profile field. See the permissions
+    design: "Always show patient name" was the agreed decision.
+    """
     from app.models.profile import Profile
     row = db.scalars(select(Profile)).first()
     return {"full_name": row.full_name if row else None}
