@@ -396,3 +396,32 @@ def test_appointment_type_round_trip(client, db_session):
     )
     assert r.status_code == 201
     assert r.json()["appointment_type"] == "specialist"
+
+
+def _login_admin(client, db_session, email="vltime@example.com"):
+    user_service.create_user(db_session, email, "a-strong-passphrase-123", Role.admin)
+    client.post("/api/auth/login", json={"email": email, "password": "a-strong-passphrase-123"})
+    return client.cookies.get("csrf_token")
+
+
+def test_visit_log_accepts_and_returns_visit_time(client, db_session):
+    csrf = _login_admin(client, db_session, email="vltime@example.com")
+    r = client.post(
+        "/api/visit-logs",
+        headers={"X-CSRF-Token": csrf},
+        json={"visit_date": "2026-06-10", "visit_time": "14:30", "reason": "Checkup"},
+    )
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["visit_time"] == "14:30:00"
+
+
+def test_visit_log_visit_time_optional(client, db_session):
+    csrf = _login_admin(client, db_session, email="vltime2@example.com")
+    r = client.post(
+        "/api/visit-logs",
+        headers={"X-CSRF-Token": csrf},
+        json={"visit_date": "2026-06-10", "reason": "No time"},
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["visit_time"] is None
