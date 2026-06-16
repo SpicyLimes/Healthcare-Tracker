@@ -34,7 +34,7 @@ export default function DocumentsPage() {
   const [loading, setLoading] = useState(true);
   const { sorted: sortedDocs, sort, toggleSort } = useSort(docs, "filename", "asc");
   const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn } = useColumnResize(tableRef);
+  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [section, setSection] = useState("");
   const [error, setError] = useState("");
 
@@ -45,6 +45,17 @@ export default function DocumentsPage() {
       .catch(() => { setError("Failed to load documents"); setDocs([]); })
       .finally(() => setLoading(false));
   }, [section]);
+
+  useEffect(() => {
+    if (sortedDocs.length === 0) return;
+    autoFitAll([
+      { sortKey: "filename", colIndex: 1 },
+      { sortKey: "section", colIndex: 2 },
+      { sortKey: "file_size", colIndex: 3 },
+      { sortKey: "uploaded_at", colIndex: 4 },
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedDocs.length]);
 
   return (
     <AppShell>
@@ -72,10 +83,10 @@ export default function DocumentsPage() {
               <table ref={tableRef} className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/40">
-                    <SortableTh label="Filename" sortKey="filename" sort={sort} onSort={toggleSort} colIndex={1} width={colWidths["filename"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Section" sortKey="section" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["section"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Size" sortKey="file_size" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["file_size"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Uploaded" sortKey="uploaded_at" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["uploaded_at"]} onAutoFit={autoFitColumn} />
+                    <SortableTh label="Filename" sortKey="filename" sort={sort} onSort={toggleSort} colIndex={1} width={colWidths["filename"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Section" sortKey="section" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["section"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Size" sortKey="file_size" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["file_size"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Uploaded" sortKey="uploaded_at" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["uploaded_at"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>

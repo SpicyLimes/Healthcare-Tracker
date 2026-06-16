@@ -19,7 +19,7 @@ export default function FamilyHistoryPage() {
   const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "condition", "asc");
   const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn } = useColumnResize(tableRef);
+  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -40,6 +40,16 @@ export default function FamilyHistoryPage() {
     setLoading(true);
     reload().catch(() => { setError("Failed to load family history"); setRows([]); }).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (sortedRows.length === 0) return;
+    autoFitAll([
+      { sortKey: "relative", colIndex: 2 },
+      { sortKey: "condition", colIndex: 3 },
+      { sortKey: "age_of_onset", colIndex: 4 },
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedRows.length]);
 
   function set(key: keyof typeof form, value: string) {
     setForm((s) => ({ ...s, [key]: value }));
@@ -123,9 +133,9 @@ export default function FamilyHistoryPage() {
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="w-8" />
-                <SortableTh label="Relative" sortKey="relative" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["relative"]} onAutoFit={autoFitColumn} />
-                <SortableTh label="Condition" sortKey="condition" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["condition"]} onAutoFit={autoFitColumn} />
-                <SortableTh label="Age of Onset" sortKey="age_of_onset" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["age_of_onset"]} onAutoFit={autoFitColumn} />
+                <SortableTh label="Relative" sortKey="relative" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["relative"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                <SortableTh label="Condition" sortKey="condition" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["condition"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                <SortableTh label="Age of Onset" sortKey="age_of_onset" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["age_of_onset"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
                 {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
               </tr>
             </thead>

@@ -1,6 +1,6 @@
 # backend/app/schemas/extended_records.py
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from pydantic import BaseModel, ConfigDict
 
@@ -250,6 +250,7 @@ class VaccinationResponse(BaseModel):
 # ---- Visit Log ----
 class VisitLogCreate(BaseModel):
     visit_date: date | None = None
+    visit_time: time | None = None
     doctor_id: uuid.UUID | None = None
     doctor_other: str | None = None
     reason: str | None = None
@@ -260,6 +261,7 @@ class VisitLogCreate(BaseModel):
 
 class VisitLogUpdate(BaseModel):
     visit_date: date | None = None
+    visit_time: time | None = None
     doctor_id: uuid.UUID | None = None
     doctor_other: str | None = None
     reason: str | None = None
@@ -272,6 +274,7 @@ class VisitLogResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     visit_date: date | None
+    visit_time: time | None
     doctor_id: uuid.UUID | None
     doctor_other: str | None
     reason: str | None

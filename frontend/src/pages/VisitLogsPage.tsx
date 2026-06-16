@@ -16,8 +16,21 @@ import { useColumnResize } from "@/hooks/useColumnResize";
 import { SortableTh } from "@/components/SortableTh";
 import { MobileRecordList } from "@/components/MobileRecordList";
 
+function formatDateWithTime(dateStr: string | null, timeStr: string | null): string {
+  if (!dateStr) return "—";
+  const datePart = formatDate(dateStr);
+  if (!timeStr) return datePart;
+  // timeStr is "HH:MM" or "HH:MM:SS" — render as 12-hour
+  const [h, m] = timeStr.split(":");
+  const hour = Number(h);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${datePart} · ${h12}:${m} ${ampm}`;
+}
+
 const EMPTY: VisitLogInput = {
   visit_date: null,
+  visit_time: null,
   doctor_id: null,
   doctor_other: null,
   reason: null,
@@ -34,7 +47,7 @@ export default function VisitLogsPage() {
   const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "visit_date", "asc");
   const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn } = useColumnResize(tableRef);
+  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<VisitLogInput>(EMPTY);
   const [error, setError] = useState("");
@@ -50,6 +63,18 @@ export default function VisitLogsPage() {
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (sortedRows.length === 0) return;
+    autoFitAll([
+      { sortKey: "visit_date", colIndex: 2 },
+      { sortKey: "doctor_id", colIndex: 3 },
+      { sortKey: "reason", colIndex: 4 },
+      { sortKey: "summary", colIndex: 5 },
+      { sortKey: "follow_up_date", colIndex: 6 },
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedRows.length]);
+
   async function onAdd(e: FormEvent) {
     e.preventDefault();
     setError("");
@@ -64,7 +89,7 @@ export default function VisitLogsPage() {
 
   function openEdit(r: VisitLog) {
     setEditingRow(r);
-    setEditForm({ visit_date: r.visit_date, doctor_id: r.doctor_id, doctor_other: r.doctor_other, reason: r.reason, summary: r.summary, follow_up: r.follow_up, follow_up_date: r.follow_up_date, notes: r.notes });
+    setEditForm({ visit_date: r.visit_date, visit_time: r.visit_time, doctor_id: r.doctor_id, doctor_other: r.doctor_other, reason: r.reason, summary: r.summary, follow_up: r.follow_up, follow_up_date: r.follow_up_date, notes: r.notes });
     setEditError("");
   }
   function closeEdit() { setEditingRow(null); }
@@ -95,10 +120,10 @@ export default function VisitLogsPage() {
             <div className="md:hidden">
               <MobileRecordList
                 records={sortedRows}
-                getHeadline={(r) => r.visit_date ?? "Visit"}
+                getHeadline={(r) => (r.visit_date ? formatDateWithTime(r.visit_date, r.visit_time) : "Visit")}
                 getSubtitle={(r) => resolveDoctorName(r.doctor_id, r.doctor_other) || null}
                 getFields={(r) => [
-                  { key: "Date", value: r.visit_date ?? null },
+                  { key: "Date", value: r.visit_date ? formatDateWithTime(r.visit_date, r.visit_time) : null },
                   { key: "Doctor", value: resolveDoctorName(r.doctor_id, r.doctor_other) || null },
                   { key: "Reason", value: r.reason ?? null },
                   { key: "Summary", value: r.summary ?? null },
@@ -119,11 +144,11 @@ export default function VisitLogsPage() {
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
                     <th className="w-8" />
-                    <SortableTh label="Date" sortKey="visit_date" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["visit_date"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Doctor" sortKey="doctor_id" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["doctor_id"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Reason" sortKey="reason" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["reason"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Summary" sortKey="summary" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["summary"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Follow-up Date" sortKey="follow_up_date" sort={sort} onSort={toggleSort} colIndex={6} width={colWidths["follow_up_date"]} onAutoFit={autoFitColumn} />
+                    <SortableTh label="Date" sortKey="visit_date" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["visit_date"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Doctor" sortKey="doctor_id" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["doctor_id"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Reason" sortKey="reason" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["reason"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Summary" sortKey="summary" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["summary"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Follow-up Date" sortKey="follow_up_date" sort={sort} onSort={toggleSort} colIndex={6} width={colWidths["follow_up_date"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
                     {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
                   </tr>
                 </thead>
@@ -149,7 +174,7 @@ export default function VisitLogsPage() {
                               : <ChevronRight className="size-4" />}
                           </button>
                         </td>
-                        <td className="px-4 py-3 font-medium text-foreground">{formatDate(r.visit_date)}</td>
+                        <td className="px-4 py-3 font-medium text-foreground">{formatDateWithTime(r.visit_date, r.visit_time)}</td>
                         <td className="px-4 py-3 text-muted-foreground">{resolveDoctorName(r.doctor_id, r.doctor_other)}</td>
                         <td className="px-4 py-3 text-muted-foreground">{r.reason ?? "—"}</td>
                         <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">
@@ -225,6 +250,16 @@ export default function VisitLogsPage() {
                       required
                       value={form.visit_date ?? ""}
                       onChange={(e) => setForm((s) => ({ ...s, visit_date: e.target.value || null }))}
+                    />
+                  </FormField>
+
+                  {/* Visit Time */}
+                  <FormField label="Visit Time" htmlFor="visit_time">
+                    <Input
+                      id="visit_time"
+                      type="time"
+                      value={form.visit_time ?? ""}
+                      onChange={(e) => setForm((s) => ({ ...s, visit_time: e.target.value || null }))}
                     />
                   </FormField>
 
@@ -318,6 +353,10 @@ export default function VisitLogsPage() {
                 <FormField label="Visit Date" htmlFor="edit-vl-date">
                   <Input id="edit-vl-date" type="date" value={editForm.visit_date ?? ""}
                     onChange={(e) => setEditForm((s) => ({ ...s, visit_date: e.target.value || null }))} />
+                </FormField>
+                <FormField label="Visit Time" htmlFor="edit-vl-time">
+                  <Input id="edit-vl-time" type="time" value={editForm.visit_time ?? ""}
+                    onChange={(e) => setEditForm((s) => ({ ...s, visit_time: e.target.value || null }))} />
                 </FormField>
                 <FormField label="Reason" htmlFor="edit-vl-reason">
                   <Input id="edit-vl-reason" value={editForm.reason ?? ""}

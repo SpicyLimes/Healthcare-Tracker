@@ -12,6 +12,10 @@ vi.mock("../api/summary", () => ({
   openSummaryInNewTab: vi.fn(),
 }));
 
+vi.mock("../api/guest", () => ({
+  getGuestPatientName: vi.fn().mockResolvedValue("Test Patient"),
+}));
+
 function SeedGuest({ sections }: { sections: string[] }) {
   const { setGuest } = useGuest();
   useEffect(() => {
@@ -36,7 +40,7 @@ describe("GuestLayout", () => {
 
   it("shows read-only header when not expired", () => {
     renderWithGuest(<GuestLayout>{<p>content</p>}</GuestLayout>);
-    expect(screen.getByText(/read only access/i)).toBeInTheDocument();
+    expect(screen.getByText(/read-only access/i)).toBeInTheDocument();
   });
 
   it("renders children when not expired", () => {
@@ -44,7 +48,7 @@ describe("GuestLayout", () => {
     expect(screen.getByText("Hello guest")).toBeInTheDocument();
   });
 
-  it("offers a Generate Summary button scoped to allowed sections", () => {
+  it("offers a Patient Summary Report button scoped to allowed sections", () => {
     render(
       <GuestProvider>
         <MemoryRouter>
@@ -53,6 +57,6 @@ describe("GuestLayout", () => {
         </MemoryRouter>
       </GuestProvider>
     );
-    expect(screen.getByRole("button", { name: /generate summary/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /patient summary report/i })).toBeInTheDocument();
   });
 });

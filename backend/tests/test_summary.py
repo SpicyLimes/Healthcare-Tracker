@@ -107,6 +107,29 @@ def _login_admin(client, db_session, email="endpadmin@example.com"):
     return client.cookies.get("csrf_token")
 
 
+def _login_viewer(client, db_session, email="viewersum@example.com"):
+    from app.models.user import Role
+    from app.services import user_service
+    user_service.create_user(db_session, email, "a-strong-passphrase-123", Role.viewer)
+    client.post("/api/auth/login", json={"email": email, "password": "a-strong-passphrase-123"})
+    return client.cookies.get("csrf_token")
+
+
+def test_viewer_can_generate_summary(client, db_session):
+    admin_csrf = _login_admin(client, db_session, email="seedadmin@example.com")
+    client.post("/api/doctors", headers={"X-CSRF-Token": admin_csrf}, json={"name": "Dr. ViewerSees"})
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": admin_csrf})
+
+    csrf = _login_viewer(client, db_session)
+    r = client.post(
+        "/api/summary",
+        headers={"X-CSRF-Token": csrf},
+        json={"sections": ["doctors"]},
+    )
+    assert r.status_code == 200, r.text
+    assert "Dr. ViewerSees" in r.text
+
+
 def test_admin_summary_renders_html(client, db_session):
     csrf = _login_admin(client, db_session)
     client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Dr. Endpoint"})
@@ -231,3 +254,21 @@ def test_guest_summary_rejects_revoked_token(client, db_session):
 
     r = client.post(f"/api/summary/guest?token={token}", json={"sections": ["doctors"]})
     assert r.status_code == 403  # get_guest_access raises 403 for revoked links
+
+
+def test_guest_summary_empty_link_grants_all_sections(client, db_session):
+    """Empty allowed_sections in share link grants guest access to ALL sections."""
+    csrf = _login_admin(client, db_session, email="emptylinkadmin@example.com")
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "AllAccessDoc"})
+    client.post("/api/medications", headers={"X-CSRF-Token": csrf}, json={"name": "AllAccessMed"})
+    token = _make_link(client, csrf, [])  # empty == all sections
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+
+    # Guest requests both doctors and medications; both should be granted
+    r = client.post(
+        f"/api/summary/guest?token={token}",
+        json={"sections": ["doctors", "medications"]},
+    )
+    assert r.status_code == 200, r.text
+    assert "AllAccessDoc" in r.text
+    assert "AllAccessMed" in r.text

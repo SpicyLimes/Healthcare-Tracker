@@ -20,9 +20,10 @@ interface Props {
   mode: "admin" | "guest";
   availableSections: string[];
   token?: string;
+  description?: string;
 }
 
-export default function SummaryBuilder({ mode, availableSections, token }: Props) {
+export default function SummaryBuilder({ mode, availableSections, token, description }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
   const [preparedFor, setPreparedFor] = useState("");
   const [includeHeader, setIncludeHeader] = useState(true);
@@ -69,9 +70,14 @@ export default function SummaryBuilder({ mode, availableSections, token }: Props
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">Generate Summary</Button>
-      </DialogTrigger>
+      <div className="flex flex-col items-end gap-1">
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">Patient Summary Report</Button>
+        </DialogTrigger>
+        {description && (
+          <p className="max-w-xs text-right text-xs text-muted-foreground">{description}</p>
+        )}
+      </div>
       <DialogContent>
         <DialogTitle>Build a Summary</DialogTitle>
         <DialogDescription>

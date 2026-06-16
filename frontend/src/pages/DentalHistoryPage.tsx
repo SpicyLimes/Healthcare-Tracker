@@ -22,7 +22,7 @@ export default function DentalHistoryPage() {
   const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "visit_date", "asc");
   const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn } = useColumnResize(tableRef);
+  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<DentalHistoryInput>({});
   const [error, setError] = useState("");
@@ -37,6 +37,16 @@ export default function DentalHistoryPage() {
     reload().catch(() => { setError("Failed to load dental history"); setRows([]); }).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (sortedRows.length === 0) return;
+    autoFitAll([
+      { sortKey: "visit_date", colIndex: 2 },
+      { sortKey: "provider_other", colIndex: 3 },
+      { sortKey: "procedure", colIndex: 4 },
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedRows.length]);
 
   function resolveDoctorName(id: string | null, other: string | null): string {
     if (id) return doctors.find((d) => d.id === id)?.name ?? other ?? "";
@@ -101,9 +111,9 @@ export default function DentalHistoryPage() {
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
                     <th className="w-8" />
-                    <SortableTh label="Date" sortKey="visit_date" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["visit_date"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Provider" sortKey="provider_other" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["provider_other"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Procedure" sortKey="procedure" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["procedure"]} onAutoFit={autoFitColumn} />
+                    <SortableTh label="Date" sortKey="visit_date" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["visit_date"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Provider" sortKey="provider_other" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["provider_other"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Procedure" sortKey="procedure" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["procedure"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
                     {isAdmin && <th className="px-4 py-3" />}
                   </tr>
                 </thead>

@@ -20,7 +20,7 @@ export default function InsurancePage() {
   const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "insurer_name", "asc");
   const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn } = useColumnResize(tableRef);
+  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -42,6 +42,17 @@ export default function InsurancePage() {
     setLoading(true);
     reload().catch(() => { setError("Failed to load insurance records"); setRows([]); }).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (sortedRows.length === 0) return;
+    autoFitAll([
+      { sortKey: "insurer_name", colIndex: 2 },
+      { sortKey: "policy_number", colIndex: 3 },
+      { sortKey: "group_number", colIndex: 4 },
+      { sortKey: "contact_phone", colIndex: 5 },
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedRows.length]);
 
   function set(key: keyof typeof form, value: string) {
     setForm((s) => ({ ...s, [key]: value }));
@@ -127,10 +138,10 @@ export default function InsurancePage() {
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="w-8" />
-                <SortableTh label="Insurer" sortKey="insurer_name" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["insurer_name"]} onAutoFit={autoFitColumn} />
-                <SortableTh label="Policy #" sortKey="policy_number" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["policy_number"]} onAutoFit={autoFitColumn} />
-                <SortableTh label="Group #" sortKey="group_number" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["group_number"]} onAutoFit={autoFitColumn} />
-                <SortableTh label="Phone" sortKey="contact_phone" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["contact_phone"]} onAutoFit={autoFitColumn} />
+                <SortableTh label="Insurer" sortKey="insurer_name" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["insurer_name"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                <SortableTh label="Policy #" sortKey="policy_number" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["policy_number"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                <SortableTh label="Group #" sortKey="group_number" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["group_number"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                <SortableTh label="Phone" sortKey="contact_phone" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["contact_phone"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
                 {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
               </tr>
             </thead>

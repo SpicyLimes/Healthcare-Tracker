@@ -19,7 +19,7 @@ export default function PharmaciesPage() {
   const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "name", "asc");
   const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn } = useColumnResize(tableRef);
+  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -40,6 +40,16 @@ export default function PharmaciesPage() {
     setLoading(true);
     reload().catch(() => { setError("Failed to load pharmacies"); setRows([]); }).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (sortedRows.length === 0) return;
+    autoFitAll([
+      { sortKey: "name", colIndex: 2 },
+      { sortKey: "phone", colIndex: 3 },
+      { sortKey: "address", colIndex: 4 },
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedRows.length]);
 
   function set(key: keyof typeof form, value: string) {
     setForm((s) => ({ ...s, [key]: value }));
@@ -122,9 +132,9 @@ export default function PharmaciesPage() {
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="w-8" />
-                <SortableTh label="Name" sortKey="name" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["name"]} onAutoFit={autoFitColumn} />
-                <SortableTh label="Phone" sortKey="phone" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["phone"]} onAutoFit={autoFitColumn} />
-                <SortableTh label="Address" sortKey="address" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["address"]} onAutoFit={autoFitColumn} />
+                <SortableTh label="Name" sortKey="name" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["name"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                <SortableTh label="Phone" sortKey="phone" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["phone"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                <SortableTh label="Address" sortKey="address" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["address"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
                 {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
               </tr>
             </thead>

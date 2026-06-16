@@ -32,7 +32,7 @@ export default function AilmentsPage() {
   const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "condition", "asc");
   const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn } = useColumnResize(tableRef);
+  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [form, setForm] = useState<AilmentInput>(EMPTY);
   const [error, setError] = useState("");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -49,6 +49,17 @@ export default function AilmentsPage() {
     reload().catch(() => { setError("Failed to load ailments"); setRows([]); }).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (sortedRows.length === 0) return;
+    autoFitAll([
+      { sortKey: "condition", colIndex: 2 },
+      { sortKey: "status", colIndex: 3 },
+      { sortKey: "onset_date", colIndex: 4 },
+      { sortKey: "treating_doctor", colIndex: 5 },
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedRows.length]);
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -125,10 +136,10 @@ export default function AilmentsPage() {
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="w-8" />
-                <SortableTh label="Condition" sortKey="condition" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["condition"]} onAutoFit={autoFitColumn} />
-                <SortableTh label="Status" sortKey="status" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["status"]} onAutoFit={autoFitColumn} />
-                <SortableTh label="Onset Date" sortKey="onset_date" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["onset_date"]} onAutoFit={autoFitColumn} />
-                <SortableTh label="Treating Doctor" sortKey="treating_doctor" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["treating_doctor"]} onAutoFit={autoFitColumn} />
+                <SortableTh label="Condition" sortKey="condition" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["condition"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                <SortableTh label="Status" sortKey="status" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["status"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                <SortableTh label="Onset Date" sortKey="onset_date" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["onset_date"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                <SortableTh label="Treating Doctor" sortKey="treating_doctor" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["treating_doctor"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
                 {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
               </tr>
             </thead>
