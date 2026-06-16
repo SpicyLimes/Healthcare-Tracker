@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { medicationsApi, type Medication, type MedicationInput, type MedicationKind } from "../api/medications";
 import { doctorsApi, type Doctor } from "../api/doctors";
 import DoctorPicker from "../components/DoctorPicker";
@@ -9,11 +9,7 @@ import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Select, Textarea } from "@/components/ui/form-field";
-import { ChevronRight, ChevronDown } from "lucide-react";
-import { useSort } from "@/hooks/useSort";
-import { useColumnResize } from "@/hooks/useColumnResize";
-import { SortableTh } from "@/components/SortableTh";
-import { MobileRecordList } from "@/components/MobileRecordList";
+import { RecordTable } from "@/components/RecordTable";
 
 const EMPTY: MedicationInput = {
   name: "",
@@ -34,13 +30,9 @@ export default function MedicationsPage() {
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Medication[]>([]);
   const [loading, setLoading] = useState(true);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "name", "asc");
-  const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<MedicationInput>(EMPTY);
   const [error, setError] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingRow, setEditingRow] = useState<Medication | null>(null);
   const [editForm, setEditForm] = useState<MedicationInput>(EMPTY);
   const [editError, setEditError] = useState("");
@@ -53,20 +45,6 @@ export default function MedicationsPage() {
     reload().catch(() => { setError("Failed to load medications"); setRows([]); }).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    if (sortedRows.length === 0) return;
-    autoFitAll([
-      { sortKey: "name", colIndex: 2 },
-      { sortKey: "kind", colIndex: 3 },
-      { sortKey: "dose", colIndex: 4 },
-      { sortKey: "frequency", colIndex: 5 },
-      { sortKey: "route", colIndex: 6 },
-      { sortKey: "prescribing_doctor", colIndex: 7 },
-      { sortKey: "is_active", colIndex: 8 },
-    ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedRows.length]);
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -125,114 +103,36 @@ export default function MedicationsPage() {
       >
         <Card>
           <CardContent className="p-0">
-            <div className="md:hidden">
-              <MobileRecordList
-                records={sortedRows}
-                getHeadline={(r) => r.name}
-                getSubtitle={(r) => [r.dose, r.route, r.frequency].filter(Boolean).join(" · ") || null}
-                getBadge={(r) => ({
-                  label: r.is_active ? "Active" : "Inactive",
-                  variant: r.is_active ? "default" : "secondary",
-                })}
-                getFields={(r) => [
-                  { key: "Kind", value: r.kind ?? null },
-                  { key: "Dose", value: r.dose ?? null },
-                  { key: "Frequency", value: r.frequency ?? null },
-                  { key: "Route", value: r.route ? r.route.charAt(0).toUpperCase() + r.route.slice(1) : null },
-                  { key: "Doctor", value: resolveDoctorName(r.prescribing_doctor_id, r.prescribing_doctor) || null },
-                  { key: "Start", value: r.start_date ?? null },
-                  { key: "End", value: r.end_date ?? null },
-                  { key: "Active", value: r.is_active ? "Yes" : "No" },
-                  { key: "Notes", value: r.notes ?? null },
-                ]}
-                expandedContent={(r) => <DocumentsPanel section="medications" recordId={r.id} isAdmin={isAdmin} />}
-                isAdmin={isAdmin}
-                onEdit={(r) => openEdit(r)}
-                onDelete={(r) => onDelete(r.id)}
-                emptyMessage="No medication records yet."
-              />
-            </div>
-            <div className="hidden md:block">
-            <div className="overflow-x-auto">
-              <table ref={tableRef} className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="w-8" />
-                <SortableTh label="Name" sortKey="name" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["name"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Kind" sortKey="kind" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["kind"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Dose" sortKey="dose" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["dose"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Frequency" sortKey="frequency" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["frequency"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Route" sortKey="route" sort={sort} onSort={toggleSort} colIndex={6} width={colWidths["route"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Prescribing Doctor" sortKey="prescribing_doctor" sort={sort} onSort={toggleSort} colIndex={7} width={colWidths["prescribing_doctor"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Active" sortKey="is_active" sort={sort} onSort={toggleSort} colIndex={8} width={colWidths["is_active"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={isAdmin ? 9 : 8} className="text-center py-6 text-muted-foreground">
-                    Loading…
-                  </td>
-                </tr>
-              )}
-              {!loading && sortedRows.map((r) => (
-                <React.Fragment key={r.id}>
-                  <tr className="border-b border-border last:border-0 hover:bg-muted/20">
-                    <td className="px-2 py-3 w-8">
-                      <button
-                        onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                        aria-label={expandedId === r.id ? "Collapse" : "Expand"}
-                      >
-                        {expandedId === r.id
-                          ? <ChevronDown className="size-4" />
-                          : <ChevronRight className="size-4" />}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 font-medium text-foreground">{r.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground capitalize">{r.kind}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.dose ?? ""}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.frequency ?? ""}</td>
-                    <td className="px-4 py-3 text-muted-foreground capitalize">{r.route ?? ""}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {resolveDoctorName(r.prescribing_doctor_id, r.prescribing_doctor)}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.is_active ? "Yes" : "No"}</td>
-                    {isAdmin && (
-                      <td className="px-4 py-3 space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
-                        <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
-                      </td>
-                    )}
-                  </tr>
-                  {expandedId === r.id && (
-                    <tr className="bg-muted/20">
-                      <td colSpan={isAdmin ? 9 : 8} className="px-4 py-3 text-sm text-muted-foreground">
-                        <div className="flex flex-col gap-3">
-                          {r.notes && (
-                            <div className="whitespace-pre-wrap">
-                              <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
-                            </div>
-                          )}
-                          <DocumentsPanel section="medications" recordId={r.id} isAdmin={isAdmin} />
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-              {!loading && rows.length === 0 && (
-                <tr>
-                  <td colSpan={isAdmin ? 9 : 8} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                    No medication records yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-            </div>
-            </div>
+            <RecordTable
+              rows={rows}
+              loading={loading}
+              isAdmin={isAdmin}
+              getRowId={(r) => r.id}
+              defaultSortKey="name"
+              primaryColumns={[
+                { header: "Name", sortKey: "name", render: (r) => r.name, className: "px-4 py-3 font-medium text-foreground" },
+                { header: "Dose", sortKey: "dose", render: (r) => r.dose ?? "" },
+                { header: "Active", sortKey: "is_active", render: (r) => (r.is_active ? "Yes" : "No") },
+              ]}
+              detailTitle={(r) => r.name}
+              detailFields={(r) => [
+                { label: "Kind", value: r.kind ? r.kind.charAt(0).toUpperCase() + r.kind.slice(1) : null },
+                { label: "Dose", value: r.dose },
+                { label: "Frequency", value: r.frequency },
+                { label: "Route", value: r.route ? r.route.charAt(0).toUpperCase() + r.route.slice(1) : null },
+                { label: "Prescribing Doctor", value: resolveDoctorName(r.prescribing_doctor_id, r.prescribing_doctor) || null },
+                { label: "Start Date", value: r.start_date },
+                { label: "End Date", value: r.end_date },
+                { label: "Notes", value: r.notes },
+              ]}
+              renderDetailExtra={(r) => <DocumentsPanel section="medications" recordId={r.id} isAdmin={isAdmin} />}
+              getHeadline={(r) => r.name}
+              getSubtitle={(r) => [r.dose, r.route, r.frequency].filter(Boolean).join(" · ") || null}
+              getBadge={(r) => ({ label: r.is_active ? "Active" : "Inactive", variant: r.is_active ? "default" : "secondary" })}
+              onEdit={(r) => openEdit(r)}
+              onDelete={(r) => onDelete(r.id)}
+              emptyMessage="No medication records yet."
+            />
           </CardContent>
         </Card>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
