@@ -52,9 +52,18 @@ export default function GuestLayout({ children, expired }: Props) {
   if (expired) {
     return (
       <main className="min-h-screen flex items-center justify-center p-8">
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-2 max-w-md">
           <h1 className="text-2xl font-semibold text-foreground">Link Expired or Revoked</h1>
           <p className="text-muted-foreground">This share link is no longer valid. Please contact the person who shared it with you.</p>
+          <div className="mt-4 border-t border-border pt-4 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">Already have your link?</p>
+            <p className="mt-1">
+              If you don't believe this link has expired or been revoked, your session may simply
+              have ended (for your privacy, access isn't kept after closing or refreshing the page).
+              Re-enter the original link you were given in your browser's address bar to view the
+              records again.
+            </p>
+          </div>
         </div>
       </main>
     );
@@ -93,6 +102,10 @@ export default function GuestLayout({ children, expired }: Props) {
         ))}
       </nav>
       {children}
+      <footer className="mt-10 border-t border-border pt-4 text-center text-xs text-muted-foreground">
+        For your privacy, this link isn't saved in your browser. If you refresh or close this page,
+        you'll need to re-enter the original link you were given to access these records again.
+      </footer>
     </main>
   );
 }

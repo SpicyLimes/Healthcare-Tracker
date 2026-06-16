@@ -228,7 +228,6 @@ export default function ChatConversation({ showPrivacyNote = false, modelName }:
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          disabled={loading}
         />
         <Button
           variant="default"
