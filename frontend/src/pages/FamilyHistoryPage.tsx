@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { familyHistoryApi, type FamilyHistory, type FamilyHistoryInput } from "../api/familyHistory";
 import { useAuth } from "../auth/useAuth";
 import { AppShell } from "@/components/app-shell";
@@ -6,22 +6,14 @@ import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
-import { ChevronRight, ChevronDown } from "lucide-react";
-import { useSort } from "@/hooks/useSort";
-import { useColumnResize } from "@/hooks/useColumnResize";
-import { SortableTh } from "@/components/SortableTh";
-import { MobileRecordList } from "@/components/MobileRecordList";
+import { RecordTable } from "@/components/RecordTable";
 
 export default function FamilyHistoryPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<FamilyHistory[]>([]);
   const [loading, setLoading] = useState(true);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "condition", "asc");
-  const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [error, setError] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState({
     relative: "",
     condition: "",
@@ -40,16 +32,6 @@ export default function FamilyHistoryPage() {
     setLoading(true);
     reload().catch(() => { setError("Failed to load family history"); setRows([]); }).finally(() => setLoading(false));
   }, []);
-
-  useEffect(() => {
-    if (sortedRows.length === 0) return;
-    autoFitAll([
-      { sortKey: "relative", colIndex: 2 },
-      { sortKey: "condition", colIndex: 3 },
-      { sortKey: "age_of_onset", colIndex: 4 },
-    ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedRows.length]);
 
   function set(key: keyof typeof form, value: string) {
     setForm((s) => ({ ...s, [key]: value }));
@@ -110,87 +92,30 @@ export default function FamilyHistoryPage() {
       <PageLayout title="Family Health History" description="Hereditary conditions and family medical history.">
         <Card>
           <CardContent className="p-0">
-            <div className="md:hidden">
-              <MobileRecordList
-                records={sortedRows}
-                getHeadline={(r) => r.condition}
-                getSubtitle={(r) => r.relative}
-                getFields={(r) => [
-                  { key: "Relative", value: r.relative },
-                  { key: "Condition", value: r.condition },
-                  { key: "Age of Onset", value: r.age_of_onset ?? null },
-                  { key: "Notes", value: r.notes ?? null },
-                ]}
-                isAdmin={isAdmin}
-                onEdit={(r) => openEdit(r)}
-                onDelete={(r) => onDelete(r.id)}
-                emptyMessage="No family history records yet."
-              />
-            </div>
-            <div className="hidden md:block">
-            <div className="overflow-x-auto">
-              <table ref={tableRef} className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="w-8" />
-                <SortableTh label="Relative" sortKey="relative" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["relative"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Condition" sortKey="condition" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["condition"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Age of Onset" sortKey="age_of_onset" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["age_of_onset"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={isAdmin ? 5 : 4} className="text-center py-6 text-muted-foreground">
-                    Loading…
-                  </td>
-                </tr>
-              )}
-              {!loading && sortedRows.map((r) => (
-                <React.Fragment key={r.id}>
-                  <tr className="border-b border-border last:border-0">
-                    <td className="px-2 py-3 w-8">
-                      <button
-                        onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                        aria-label={expandedId === r.id ? "Collapse" : "Expand"}
-                      >
-                        {expandedId === r.id
-                          ? <ChevronDown className="size-4" />
-                          : <ChevronRight className="size-4" />}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 font-medium text-foreground">{r.relative}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.condition}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.age_of_onset ?? ""}</td>
-                    {isAdmin && (
-                      <td className="px-4 py-3 space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
-                        <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
-                      </td>
-                    )}
-                  </tr>
-                  {expandedId === r.id && r.notes && (
-                    <tr className="bg-muted/20">
-                      <td colSpan={isAdmin ? 5 : 4} className="px-4 py-3 text-sm text-muted-foreground whitespace-pre-wrap">
-                        <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-              {!loading && rows.length === 0 && (
-                <tr>
-                  <td colSpan={isAdmin ? 5 : 4} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                    No family history records yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-            </div>
-            </div>
+            <RecordTable
+              rows={rows}
+              loading={loading}
+              isAdmin={isAdmin}
+              getRowId={(r) => r.id}
+              defaultSortKey="relative"
+              primaryColumns={[
+                { header: "Relative", sortKey: "relative", render: (r) => r.relative, className: "px-4 py-3 font-medium text-foreground" },
+                { header: "Condition", sortKey: "condition", render: (r) => r.condition },
+                { header: "Age of Onset", sortKey: "age_of_onset", render: (r) => r.age_of_onset ?? "" },
+              ]}
+              detailTitle={(r) => `${r.relative} — ${r.condition}`}
+              detailFields={(r) => [
+                { label: "Relative", value: r.relative },
+                { label: "Condition", value: r.condition },
+                { label: "Age of Onset", value: r.age_of_onset },
+                { label: "Notes", value: r.notes },
+              ]}
+              getHeadline={(r) => `${r.relative} — ${r.condition}`}
+              getSubtitle={(r) => r.condition ?? null}
+              onEdit={(r) => openEdit(r)}
+              onDelete={(r) => onDelete(r.id)}
+              emptyMessage="No family history records yet."
+            />
           </CardContent>
         </Card>
 
