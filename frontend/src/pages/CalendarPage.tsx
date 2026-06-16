@@ -1,6 +1,6 @@
 // frontend/src/pages/CalendarPage.tsx
-import React, { useEffect, useRef, useState, type FormEvent } from "react";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronRight as ChevronRightIcon } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { calendarApi, type CalendarEvent, EVENT_TYPE_LABELS } from "../api/calendar";
 import {
   appointmentsApi,
@@ -20,11 +20,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Select, Textarea } from "@/components/ui/form-field";
 import { cn } from "@/lib/utils";
-import { MobileRecordList } from "@/components/MobileRecordList";
+import { RecordTable } from "@/components/RecordTable";
 import { localToUtcIso, formatInTimezone } from "@/lib/datetime";
-import { useSort } from "@/hooks/useSort";
-import { useColumnResize } from "@/hooks/useColumnResize";
-import { SortableTh } from "@/components/SortableTh";
 
 // ─── Appointment helpers ─────────────────────────────────────────────────────
 
@@ -325,35 +322,24 @@ interface AppointmentsSectionProps {
 
 function AppointmentsSection({ tz, isAdmin }: AppointmentsSectionProps) {
   const [rows, setRows] = useState<Appointment[]>([]);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "appointment_datetime", "asc");
-  const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
+  const [loading, setLoading] = useState(true);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<AppointmentInput>(EMPTY);
   const [error, setError] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingRow, setEditingRow] = useState<Appointment | null>(null);
   const [editForm, setEditForm] = useState<AppointmentInput>(EMPTY);
   const [editError, setEditError] = useState("");
 
   async function reload() { setRows(await appointmentsApi.list()); }
   useEffect(() => {
-    reload().catch(() => setError("Failed to load appointments"));
+    setLoading(true);
+    reload().catch(() => setError("Failed to load appointments")).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (sortedRows.length === 0) return;
-    autoFitAll([
-      { sortKey: "appointment_datetime", colIndex: 2 },
-      { sortKey: "appointment_type", colIndex: 3 },
-      { sortKey: "doctor_id", colIndex: 4 },
-      { sortKey: "location", colIndex: 5 },
-      { sortKey: "reason", colIndex: 6 },
-      { sortKey: "status", colIndex: 7 },
-    ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedRows.length]);
+  function appointmentTypeLabel(t: AppointmentType | null): string {
+    return APPOINTMENT_TYPES.find((x) => x.value === t)?.label ?? "";
+  }
 
   function resolveDoctorName(id: string | null, other: string | null): string {
     if (id) return doctors.find((d) => d.id === id)?.name ?? other ?? "";
@@ -405,117 +391,39 @@ function AppointmentsSection({ tz, isAdmin }: AppointmentsSectionProps) {
 
   return (
     <>
-      <div className="md:hidden">
-        <Card>
-          <CardContent className="p-0">
-            <MobileRecordList
-              records={sortedRows}
-              getHeadline={(r) => {
-                const typeLabel = APPOINTMENT_TYPES.find((t) => t.value === r.appointment_type)?.label ?? "Appointment"
-                return typeLabel
-              }}
-              getSubtitle={(r) => formatInTimezone(r.appointment_datetime, tz)}
-              getBadge={(r) => ({
-                label: r.status.charAt(0).toUpperCase() + r.status.slice(1),
-                variant: STATUS_VARIANT[r.status],
-              })}
-              getFields={(r) => [
-                { key: "Date / Time", value: formatInTimezone(r.appointment_datetime, tz) },
-                { key: "Doctor", value: resolveDoctorName(r.doctor_id, r.doctor_other) || null },
-                { key: "Location", value: r.location ?? null },
-                { key: "Reason", value: r.reason ?? null },
-                { key: "Status", value: r.status.charAt(0).toUpperCase() + r.status.slice(1) },
-                { key: "Notes", value: r.notes ?? null },
-              ]}
-              expandedContent={(r) => <DocumentsPanel section="appointments" recordId={r.id} isAdmin={isAdmin} />}
-              isAdmin={isAdmin}
-              onEdit={(r) => openEdit(r)}
-              onDelete={(r) => onDelete(r.id)}
-              emptyMessage="No appointment records yet."
-            />
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="hidden md:block">
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table ref={tableRef} className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  <th className="w-8" />
-                  <SortableTh label="Date / Time" sortKey="appointment_datetime" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["appointment_datetime"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                  <SortableTh label="Type" sortKey="appointment_type" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["appointment_type"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                  <SortableTh label="Doctor" sortKey="doctor_id" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["doctor_id"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                  <SortableTh label="Location" sortKey="location" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["location"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                  <SortableTh label="Reason" sortKey="reason" sort={sort} onSort={toggleSort} colIndex={6} width={colWidths["reason"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                  <SortableTh label="Status" sortKey="status" sort={sort} onSort={toggleSort} colIndex={7} width={colWidths["status"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                  {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRows.map((r) => {
-                  const typeLabel = APPOINTMENT_TYPES.find((t) => t.value === r.appointment_type)?.label ?? "—";
-                  return (
-                    <React.Fragment key={r.id}>
-                      <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="px-2 py-3 w-8">
-                          <button
-                            onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                            className="text-muted-foreground hover:text-foreground transition-colors"
-                            aria-label={expandedId === r.id ? "Collapse" : "Expand"}
-                          >
-                            {expandedId === r.id
-                              ? <ChevronDown className="size-4" />
-                              : <ChevronRightIcon className="size-4" />}
-                          </button>
-                        </td>
-                        <td className="px-4 py-3 font-medium text-foreground">{formatInTimezone(r.appointment_datetime, tz)}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{typeLabel}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{resolveDoctorName(r.doctor_id, r.doctor_other)}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{r.location ?? "—"}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{r.reason ?? "—"}</td>
-                        <td className="px-4 py-3">
-                          <Badge variant={STATUS_VARIANT[r.status]} className="capitalize">{r.status}</Badge>
-                        </td>
-                        {isAdmin && (
-                          <td className="px-4 py-3 space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
-                            <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
-                          </td>
-                        )}
-                      </tr>
-                      {expandedId === r.id && (
-                        <tr className="bg-muted/20">
-                          <td colSpan={isAdmin ? 8 : 7} className="px-4 py-3 text-sm text-muted-foreground">
-                            <div className="flex flex-col gap-3">
-                              {r.notes && (
-                                <div className="whitespace-pre-wrap">
-                                  <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
-                                </div>
-                              )}
-                              <DocumentsPanel section="appointments" recordId={r.id} isAdmin={isAdmin} />
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-                {rows.length === 0 && (
-                  <tr>
-                    <td colSpan={isAdmin ? 8 : 7} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                      No appointment records yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <RecordTable
+            rows={rows}
+            loading={loading}
+            isAdmin={isAdmin}
+            getRowId={(r) => r.id}
+            defaultSortKey="appointment_datetime"
+            defaultSortDir="desc"
+            primaryColumns={[
+              { header: "Date / Time", sortKey: "appointment_datetime", render: (r) => formatInTimezone(r.appointment_datetime, tz), className: "px-4 py-3 font-medium text-foreground" },
+              { header: "Doctor", sortKey: "doctor_other", render: (r) => resolveDoctorName(r.doctor_id, r.doctor_other) },
+              { header: "Status", sortKey: "status", render: (r) => <Badge variant={STATUS_VARIANT[r.status]} className="capitalize">{r.status}</Badge> },
+            ]}
+            detailTitle={(r) => formatInTimezone(r.appointment_datetime, tz)}
+            detailFields={(r) => [
+              { label: "Type", value: appointmentTypeLabel(r.appointment_type) || null },
+              { label: "Doctor", value: resolveDoctorName(r.doctor_id, r.doctor_other) || null },
+              { label: "Location", value: r.location },
+              { label: "Reason", value: r.reason },
+              { label: "Status", value: <span className="capitalize">{r.status}</span> },
+              { label: "Notes", value: r.notes },
+            ]}
+            renderDetailExtra={(r) => <DocumentsPanel section="appointments" recordId={r.id} isAdmin={isAdmin} />}
+            getHeadline={(r) => appointmentTypeLabel(r.appointment_type) || "Appointment"}
+            getSubtitle={(r) => formatInTimezone(r.appointment_datetime, tz)}
+            getBadge={(r) => ({ label: r.status, variant: STATUS_VARIANT[r.status] })}
+            onEdit={(r) => openEdit(r)}
+            onDelete={(r) => onDelete(r.id)}
+            emptyMessage="No appointment records yet."
+          />
         </CardContent>
       </Card>
-      </div>
 
       {error && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
 

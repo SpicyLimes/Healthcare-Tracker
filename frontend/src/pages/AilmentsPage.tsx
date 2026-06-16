@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { ailmentsApi, type Ailment, type AilmentInput, type AilmentStatus } from "../api/ailments";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -10,11 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FormField, Input, Select, Textarea } from "@/components/ui/form-field";
-import { ChevronRight, ChevronDown } from "lucide-react";
-import { useSort } from "@/hooks/useSort";
-import { useColumnResize } from "@/hooks/useColumnResize";
-import { SortableTh } from "@/components/SortableTh"
-import { MobileRecordList } from "@/components/MobileRecordList";
+import { RecordTable } from "@/components/RecordTable";
 
 const EMPTY: AilmentInput = {
   condition: "",
@@ -30,13 +26,9 @@ export default function AilmentsPage() {
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Ailment[]>([]);
   const [loading, setLoading] = useState(true);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "condition", "asc");
-  const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [form, setForm] = useState<AilmentInput>(EMPTY);
   const [error, setError] = useState("");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingRow, setEditingRow] = useState<Ailment | null>(null);
   const [editForm, setEditForm] = useState<AilmentInput>({ condition: "" });
   const [editError, setEditError] = useState("");
@@ -49,17 +41,6 @@ export default function AilmentsPage() {
     reload().catch(() => { setError("Failed to load ailments"); setRows([]); }).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    if (sortedRows.length === 0) return;
-    autoFitAll([
-      { sortKey: "condition", colIndex: 2 },
-      { sortKey: "status", colIndex: 3 },
-      { sortKey: "onset_date", colIndex: 4 },
-      { sortKey: "treating_doctor", colIndex: 5 },
-    ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedRows.length]);
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -112,103 +93,32 @@ export default function AilmentsPage() {
       >
         <Card>
           <CardContent className="p-0">
-            <div className="md:hidden">
-              <MobileRecordList
-                records={sortedRows}
-                getHeadline={(r) => r.condition}
-                getSubtitle={(r) => r.onset_date ?? null}
-                getFields={(r) => [
-                  { key: "Onset Date", value: r.onset_date ?? null },
-                  { key: "Status", value: r.status ?? null },
-                  { key: "Treating Doctor", value: resolveDoctorName(r.treating_doctor_id, r.treating_doctor) || null },
-                  { key: "Notes", value: r.notes ?? null },
-                ]}
-                expandedContent={(r) => <DocumentsPanel section="ailments" recordId={r.id} isAdmin={isAdmin} />}
-                isAdmin={isAdmin}
-                onEdit={(r) => openEdit(r)}
-                onDelete={(r) => onDelete(r.id)}
-                emptyMessage="No ailment records yet."
-              />
-            </div>
-            <div className="hidden md:block">
-            <div className="overflow-x-auto">
-              <table ref={tableRef} className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="w-8" />
-                <SortableTh label="Condition" sortKey="condition" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["condition"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Status" sortKey="status" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["status"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Onset Date" sortKey="onset_date" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["onset_date"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Treating Doctor" sortKey="treating_doctor" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["treating_doctor"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={isAdmin ? 6 : 5} className="text-center py-6 text-muted-foreground">
-                    Loading…
-                  </td>
-                </tr>
-              )}
-              {!loading && sortedRows.map((r) => (
-                <React.Fragment key={r.id}>
-                  <tr className="border-b border-border last:border-0 hover:bg-muted/20">
-                    <td className="px-2 py-3 w-8">
-                      <button
-                        onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                        aria-label={expandedId === r.id ? "Collapse" : "Expand"}
-                      >
-                        {expandedId === r.id
-                          ? <ChevronDown className="size-4" />
-                          : <ChevronRight className="size-4" />}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 font-medium text-foreground">{r.condition}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant={r.status === "active" ? "default" : "secondary"}>
-                        {r.status}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.onset_date ?? ""}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {resolveDoctorName(r.treating_doctor_id, r.treating_doctor)}
-                    </td>
-                    {isAdmin && (
-                      <td className="px-4 py-3 space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
-                        <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
-                      </td>
-                    )}
-                  </tr>
-                  {expandedId === r.id && (
-                    <tr className="bg-muted/20">
-                      <td colSpan={isAdmin ? 6 : 5} className="px-4 py-3 text-sm text-muted-foreground">
-                        <div className="flex flex-col gap-3">
-                          {r.notes && (
-                            <div className="whitespace-pre-wrap">
-                              <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
-                            </div>
-                          )}
-                          <DocumentsPanel section="ailments" recordId={r.id} isAdmin={isAdmin} />
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-              {!loading && rows.length === 0 && (
-                <tr>
-                  <td colSpan={isAdmin ? 6 : 5} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                    No ailment records yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-            </div>
-            </div>
+            <RecordTable
+              rows={rows}
+              loading={loading}
+              isAdmin={isAdmin}
+              getRowId={(r) => r.id}
+              defaultSortKey="condition"
+              primaryColumns={[
+                { header: "Condition", sortKey: "condition", render: (r) => r.condition, className: "px-4 py-3 font-medium text-foreground" },
+                { header: "Status", sortKey: "status", render: (r) => <Badge variant={r.status === "active" ? "default" : "secondary"}>{r.status}</Badge> },
+                { header: "Onset Date", sortKey: "onset_date", render: (r) => r.onset_date ?? "" },
+              ]}
+              detailTitle={(r) => r.condition}
+              detailFields={(r) => [
+                { label: "Status", value: r.status },
+                { label: "Onset Date", value: r.onset_date },
+                { label: "Treating Doctor", value: resolveDoctorName(r.treating_doctor_id, r.treating_doctor) || null },
+                { label: "Notes", value: r.notes },
+              ]}
+              renderDetailExtra={(r) => <DocumentsPanel section="ailments" recordId={r.id} isAdmin={isAdmin} />}
+              getHeadline={(r) => r.condition}
+              getSubtitle={(r) => r.onset_date ?? null}
+              getBadge={(r) => ({ label: r.status, variant: r.status === "active" ? "default" : "secondary" })}
+              onEdit={(r) => openEdit(r)}
+              onDelete={(r) => onDelete(r.id)}
+              emptyMessage="No ailment records yet."
+            />
           </CardContent>
         </Card>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

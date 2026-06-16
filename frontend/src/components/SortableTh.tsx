@@ -5,13 +5,9 @@ interface SortableThProps {
   sortKey: string;
   sort: SortState;
   onSort: (key: string) => void;
-  width?: number;
-  colIndex?: number;
-  onAutoFit?: (sortKey: string, colIndex: number) => void;
-  onStartResize?: (sortKey: string, colIndex: number, e: React.PointerEvent) => void;
 }
 
-export function SortableTh({ label, sortKey, sort, onSort, width, colIndex, onAutoFit, onStartResize }: SortableThProps) {
+export function SortableTh({ label, sortKey, sort, onSort }: SortableThProps) {
   const isActive = sort.key === sortKey;
   const ariaSort = isActive
     ? sort.direction === "asc"
@@ -20,9 +16,8 @@ export function SortableTh({ label, sortKey, sort, onSort, width, colIndex, onAu
     : "none";
   return (
     <th
-      className="relative px-4 py-3 text-left font-medium text-muted-foreground"
+      className="px-4 py-3 text-left font-medium text-muted-foreground"
       aria-sort={ariaSort}
-      style={width !== undefined ? { width: `${width}px` } : undefined}
     >
       <button
         type="button"
@@ -35,17 +30,6 @@ export function SortableTh({ label, sortKey, sort, onSort, width, colIndex, onAu
           {isActive ? (sort.direction === "asc" ? "↑" : "↓") : "↕"}
         </span>
       </button>
-      {colIndex !== undefined && (onAutoFit !== undefined || onStartResize !== undefined) && (
-        <span
-          role="separator"
-          aria-orientation="vertical"
-          onPointerDown={onStartResize ? (e) => onStartResize(sortKey, colIndex, e) : undefined}
-          onDoubleClick={onAutoFit ? (e) => { e.stopPropagation(); onAutoFit(sortKey, colIndex); } : undefined}
-          className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize select-none bg-border/30 hover:bg-primary/60 active:bg-primary transition-colors"
-          title="Drag to resize · double-click to auto-fit"
-          aria-label={`Resize ${label} column`}
-        />
-      )}
     </th>
   );
 }
