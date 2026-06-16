@@ -78,4 +78,18 @@ describe("RecordTable", () => {
     renderTable({ loading: true, rows: [] });
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
   });
+
+  it("closes the detail modal before calling onEdit from the modal", () => {
+    const onEdit = vi.fn();
+    renderTable({ onEdit });
+    // open the detail modal
+    fireEvent.click(screen.getAllByRole("button", { name: /^more$/i })[0]);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    // click Edit inside the modal (last matching Edit is the modal footer button)
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: /^edit$/i }));
+    // modal is gone and the page handler fired exactly once
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(onEdit).toHaveBeenCalledTimes(1);
+  });
 });

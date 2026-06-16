@@ -15,7 +15,7 @@ export interface PrimaryColumn<T> {
   className?: string
 }
 
-export interface RecordTableProps<T> {
+export interface RecordTableProps<T extends object> {
   rows: T[]
   loading: boolean
   isAdmin: boolean
@@ -38,7 +38,7 @@ export interface RecordTableProps<T> {
   emptyMessage?: string
 }
 
-export function RecordTable<T>({
+export function RecordTable<T extends object>({
   rows,
   loading,
   isAdmin,
@@ -58,12 +58,8 @@ export function RecordTable<T>({
 }: RecordTableProps<T>) {
   const firstSortKey =
     defaultSortKey ?? primaryColumns.find((c) => c.sortKey)?.sortKey ?? ""
-  const { sorted, sort, toggleSort } = useSort(
-    rows as unknown as object[],
-    firstSortKey,
-    defaultSortDir
-  )
-  const sortedRows = sorted as unknown as T[]
+  const { sorted, sort, toggleSort } = useSort(rows, firstSortKey, defaultSortDir)
+  const sortedRows = sorted
 
   const [detailRow, setDetailRow] = React.useState<T | null>(null)
 
