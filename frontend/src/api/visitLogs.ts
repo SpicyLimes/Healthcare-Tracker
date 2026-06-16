@@ -3,6 +3,7 @@ import { createRecordClient } from "./records";
 export interface VisitLog {
   id: string;
   visit_date: string | null;
+  visit_time: string | null;
   doctor_id: string | null;
   doctor_other: string | null;
   reason: string | null;
@@ -14,6 +15,7 @@ export interface VisitLog {
 
 export interface VisitLogInput {
   visit_date?: string | null;
+  visit_time?: string | null;
   doctor_id?: string | null;
   doctor_other?: string | null;
   reason?: string | null;
