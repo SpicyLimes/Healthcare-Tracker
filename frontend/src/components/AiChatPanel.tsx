@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { MessageCircle, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -36,12 +36,28 @@ export default function AiChatPanel() {
   const [open, setOpen] = React.useState(false)
   const [width, setWidth] = React.useState<PanelWidth>(savedWidth)
   const navigate = useNavigate()
+  const location = useLocation()
 
-  React.useEffect(() => {
+  const refresh = React.useCallback(() => {
     getAiStatus()
       .then(setStatus)
       .catch(() => setStatus(null))
   }, [])
+
+  React.useEffect(() => {
+    refresh()
+    const onFocus = () => refresh()
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh()
+    }
+    window.addEventListener("focus", onFocus)
+    document.addEventListener("visibilitychange", onVisible)
+    return () => {
+      window.removeEventListener("focus", onFocus)
+      document.removeEventListener("visibilitychange", onVisible)
+    }
+    // Re-run on route change so navigating to a new page re-checks status.
+  }, [refresh, location.pathname])
 
   if (!status?.enabled) return null
 

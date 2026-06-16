@@ -146,4 +146,19 @@ describe("AiChatPanel", () => {
     const sheetContent = document.querySelector("[data-slot='sheet-content']");
     expect(sheetContent?.className).toMatch(/max-w-lg/);
   });
+
+  it("re-checks status on window focus and shows the launcher after a recovery", async () => {
+    // First call fails (e.g. idle-tab blip) → bubble hidden.
+    (getAiStatus as any)
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValue({ enabled: true, model: "m" });
+
+    render(<MemoryRouter><AiChatPanel /></MemoryRouter>);
+    await waitFor(() => expect(getAiStatus).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("button", { name: /assistant/i })).toBeNull();
+
+    // User returns to the tab → focus event triggers a re-check that succeeds.
+    fireEvent.focus(window);
+    expect(await screen.findByRole("button", { name: /assistant/i })).toBeInTheDocument();
+  });
 });
