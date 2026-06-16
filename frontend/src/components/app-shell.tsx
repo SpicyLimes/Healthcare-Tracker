@@ -86,8 +86,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Admin summary trigger */}
-          {user?.role === "admin" && (
+          {/* Summary trigger (admin + viewer) */}
+          {user && (
             <SummaryBuilder mode="admin" availableSections={ALL_SECTIONS} />
           )}
 
