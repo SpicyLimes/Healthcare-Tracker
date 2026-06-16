@@ -1,8 +1,9 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useGuest } from "../auth/GuestContext";
 import { Button } from "@/components/ui/button";
 import SummaryBuilder from "./SummaryBuilder";
+import { applyAccent } from "./accent-picker";
 
 const SECTION_LABELS: Record<string, string> = {
   surgeries: "Surgeries",
@@ -16,6 +17,9 @@ const SECTION_LABELS: Record<string, string> = {
   insurances: "Insurance",
   ailments: "Ailment History",
   doctors: "Doctors",
+  pharmacies: "Pharmacies",
+  family_history: "Family History",
+  nutrition_plan: "Nutrition Plan",
   profile: "Profile",
 };
 
@@ -26,6 +30,18 @@ interface Props {
 
 export default function GuestLayout({ children, expired }: Props) {
   const { allowedSections, expiresAt, token } = useGuest();
+
+  useEffect(() => {
+    const prevDark = document.documentElement.classList.contains("dark");
+    const prevAccent = (document.getElementById("ht-accent-override") as HTMLStyleElement | null)?.textContent ?? "";
+    document.documentElement.classList.remove("dark");
+    applyAccent("orange", false);
+    return () => {
+      document.documentElement.classList.toggle("dark", prevDark);
+      const el = document.getElementById("ht-accent-override") as HTMLStyleElement | null;
+      if (el) el.textContent = prevAccent;
+    };
+  }, []);
 
   if (expired) {
     return (

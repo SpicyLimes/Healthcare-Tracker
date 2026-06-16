@@ -57,7 +57,7 @@ const ACCENTS: AccentDef[] = [
 
 const STYLE_ID = "ht-accent-override";
 
-function applyAccent(color: AccentColor, isDark: boolean) {
+export function applyAccent(color: AccentColor, isDark: boolean) {
   const def = ACCENTS.find((a) => a.label === color);
   if (!def) return;
   const v = isDark ? def.dark : def.light;

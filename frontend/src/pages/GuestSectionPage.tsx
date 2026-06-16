@@ -27,7 +27,9 @@ export default function GuestSectionPage() {
 
   return (
     <GuestLayout>
-      <h1 className="text-2xl font-semibold capitalize mb-4">{section.replace(/_/g, " ")}</h1>
+      <h1 className="text-2xl font-semibold mb-4">
+        {section.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+      </h1>
       {error && <p role="alert" className="text-destructive mb-4">{error}</p>}
       {records.length === 0 ? (
         <p className="text-muted-foreground">No records found.</p>

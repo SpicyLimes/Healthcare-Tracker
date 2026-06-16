@@ -30,7 +30,9 @@ export default function GuestRecordPage() {
 
   return (
     <GuestLayout>
-      <h1 className="text-2xl font-semibold capitalize mb-4">{section.replace(/_/g, " ")} — Record</h1>
+      <h1 className="text-2xl font-semibold mb-4">
+        {section.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())} — Record
+      </h1>
       {error && <p role="alert" className="text-destructive mb-4">{error}</p>}
       {record && (
         <div className="rounded-xl border border-border bg-card overflow-hidden mb-6">
