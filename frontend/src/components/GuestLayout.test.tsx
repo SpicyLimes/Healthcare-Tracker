@@ -59,4 +59,15 @@ describe("GuestLayout", () => {
     );
     expect(screen.getByRole("button", { name: /patient summary report/i })).toBeInTheDocument();
   });
+
+  it("shows re-enter-URL guidance on the expired page", () => {
+    renderWithGuest(<GuestLayout expired>{null}</GuestLayout>);
+    expect(screen.getByText(/already have your link/i)).toBeInTheDocument();
+    expect(screen.getByText(/re-enter the original link/i)).toBeInTheDocument();
+  });
+
+  it("shows the privacy footer on an active guest page", () => {
+    renderWithGuest(<GuestLayout><p>content</p></GuestLayout>);
+    expect(screen.getByText(/this link isn't saved in your browser/i)).toBeInTheDocument();
+  });
 });
