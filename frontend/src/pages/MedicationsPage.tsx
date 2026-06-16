@@ -36,7 +36,7 @@ export default function MedicationsPage() {
   const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "name", "asc");
   const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn } = useColumnResize(tableRef);
+  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<MedicationInput>(EMPTY);
   const [error, setError] = useState("");
@@ -53,6 +53,20 @@ export default function MedicationsPage() {
     reload().catch(() => { setError("Failed to load medications"); setRows([]); }).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (sortedRows.length === 0) return;
+    autoFitAll([
+      { sortKey: "name", colIndex: 2 },
+      { sortKey: "kind", colIndex: 3 },
+      { sortKey: "dose", colIndex: 4 },
+      { sortKey: "frequency", colIndex: 5 },
+      { sortKey: "route", colIndex: 6 },
+      { sortKey: "prescribing_doctor", colIndex: 7 },
+      { sortKey: "is_active", colIndex: 8 },
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedRows.length]);
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -144,13 +158,13 @@ export default function MedicationsPage() {
             <thead>
               <tr className="border-b border-border bg-muted/40">
                 <th className="w-8" />
-                <SortableTh label="Name" sortKey="name" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["name"]} onAutoFit={autoFitColumn} />
-                <SortableTh label="Kind" sortKey="kind" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["kind"]} onAutoFit={autoFitColumn} />
-                <SortableTh label="Dose" sortKey="dose" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["dose"]} onAutoFit={autoFitColumn} />
-                <SortableTh label="Frequency" sortKey="frequency" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["frequency"]} onAutoFit={autoFitColumn} />
-                <SortableTh label="Route" sortKey="route" sort={sort} onSort={toggleSort} colIndex={6} width={colWidths["route"]} onAutoFit={autoFitColumn} />
-                <SortableTh label="Prescribing Doctor" sortKey="prescribing_doctor" sort={sort} onSort={toggleSort} colIndex={7} width={colWidths["prescribing_doctor"]} onAutoFit={autoFitColumn} />
-                <SortableTh label="Active" sortKey="is_active" sort={sort} onSort={toggleSort} colIndex={8} width={colWidths["is_active"]} onAutoFit={autoFitColumn} />
+                <SortableTh label="Name" sortKey="name" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["name"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                <SortableTh label="Kind" sortKey="kind" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["kind"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                <SortableTh label="Dose" sortKey="dose" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["dose"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                <SortableTh label="Frequency" sortKey="frequency" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["frequency"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                <SortableTh label="Route" sortKey="route" sort={sort} onSort={toggleSort} colIndex={6} width={colWidths["route"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                <SortableTh label="Prescribing Doctor" sortKey="prescribing_doctor" sort={sort} onSort={toggleSort} colIndex={7} width={colWidths["prescribing_doctor"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                <SortableTh label="Active" sortKey="is_active" sort={sort} onSort={toggleSort} colIndex={8} width={colWidths["is_active"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
                 {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
               </tr>
             </thead>

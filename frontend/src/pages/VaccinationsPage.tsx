@@ -30,7 +30,7 @@ export default function VaccinationsPage() {
   const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "administered_date", "asc");
   const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn } = useColumnResize(tableRef);
+  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [form, setForm] = useState<VaccinationInput>(EMPTY);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -43,6 +43,18 @@ export default function VaccinationsPage() {
     setLoading(true);
     reload().catch(() => { setError("Failed to load vaccinations"); setRows([]); }).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (sortedRows.length === 0) return;
+    autoFitAll([
+      { sortKey: "vaccine", colIndex: 2 },
+      { sortKey: "manufacturer", colIndex: 3 },
+      { sortKey: "administered_date", colIndex: 4 },
+      { sortKey: "administrator", colIndex: 5 },
+      { sortKey: "next_due_date", colIndex: 6 },
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedRows.length]);
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -106,11 +118,11 @@ export default function VaccinationsPage() {
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
                     <th className="w-8" />
-                    <SortableTh label="Vaccine" sortKey="vaccine" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["vaccine"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Manufacturer" sortKey="manufacturer" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["manufacturer"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Date Administered" sortKey="administered_date" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["administered_date"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Administrator" sortKey="administrator" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["administrator"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Next Due" sortKey="next_due_date" sort={sort} onSort={toggleSort} colIndex={6} width={colWidths["next_due_date"]} onAutoFit={autoFitColumn} />
+                    <SortableTh label="Vaccine" sortKey="vaccine" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["vaccine"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Manufacturer" sortKey="manufacturer" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["manufacturer"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Date Administered" sortKey="administered_date" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["administered_date"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Administrator" sortKey="administrator" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["administrator"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Next Due" sortKey="next_due_date" sort={sort} onSort={toggleSort} colIndex={6} width={colWidths["next_due_date"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
                     {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
                   </tr>
                 </thead>

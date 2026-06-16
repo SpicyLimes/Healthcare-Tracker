@@ -80,7 +80,7 @@ export default function AppointmentsPage() {
   const [loading, setLoading] = useState(true);
   const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "appointment_datetime", "asc");
   const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn } = useColumnResize(tableRef);
+  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<AppointmentInput>(EMPTY);
   const [error, setError] = useState("");
@@ -95,6 +95,19 @@ export default function AppointmentsPage() {
     reload().catch(() => { setError("Failed to load appointments"); setRows([]); }).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (sortedRows.length === 0) return;
+    autoFitAll([
+      { sortKey: "appointment_datetime", colIndex: 2 },
+      { sortKey: "appointment_type", colIndex: 3 },
+      { sortKey: "doctor_id", colIndex: 4 },
+      { sortKey: "location", colIndex: 5 },
+      { sortKey: "reason", colIndex: 6 },
+      { sortKey: "status", colIndex: 7 },
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedRows.length]);
 
   function resolveDoctorName(id: string | null, other: string | null): string {
     if (id) return doctors.find((d) => d.id === id)?.name ?? other ?? "";
@@ -154,12 +167,12 @@ export default function AppointmentsPage() {
                 <thead>
                   <tr className="border-b border-border bg-muted/40">
                     <th className="w-8" />
-                    <SortableTh label="Date / Time" sortKey="appointment_datetime" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["appointment_datetime"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Type" sortKey="appointment_type" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["appointment_type"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Doctor" sortKey="doctor_id" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["doctor_id"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Location" sortKey="location" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["location"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Reason" sortKey="reason" sort={sort} onSort={toggleSort} colIndex={6} width={colWidths["reason"]} onAutoFit={autoFitColumn} />
-                    <SortableTh label="Status" sortKey="status" sort={sort} onSort={toggleSort} colIndex={7} width={colWidths["status"]} onAutoFit={autoFitColumn} />
+                    <SortableTh label="Date / Time" sortKey="appointment_datetime" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["appointment_datetime"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Type" sortKey="appointment_type" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["appointment_type"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Doctor" sortKey="doctor_id" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["doctor_id"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Location" sortKey="location" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["location"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Reason" sortKey="reason" sort={sort} onSort={toggleSort} colIndex={6} width={colWidths["reason"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
+                    <SortableTh label="Status" sortKey="status" sort={sort} onSort={toggleSort} colIndex={7} width={colWidths["status"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
                     {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
                   </tr>
                 </thead>
