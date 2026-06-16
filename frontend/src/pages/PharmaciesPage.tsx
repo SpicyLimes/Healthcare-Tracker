@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { pharmaciesApi, type Pharmacy, type PharmacyInput } from "../api/pharmacies";
 import { useAuth } from "../auth/useAuth";
-import DocumentsPanel from "../components/DocumentsPanel";
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -111,7 +110,6 @@ export default function PharmaciesPage() {
                 { label: "Fax", value: r.fax },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="pharmacies" recordId={r.id} isAdmin={isAdmin} />}
               getHeadline={(r) => r.name}
               getSubtitle={(r) => r.phone ?? null}
               onEdit={(r) => openEdit(r)}
