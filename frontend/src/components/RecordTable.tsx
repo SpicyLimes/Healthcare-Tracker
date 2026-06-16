@@ -142,16 +142,16 @@ export function RecordTable<T extends object>({
                     </td>
                   ))}
                   <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
-                    <Button variant="outline" size="sm" onClick={() => setDetailRow(r)}>
+                    <Button variant="outline" size="sm" aria-label={`More details for ${detailTitle(r)}`} onClick={() => setDetailRow(r)}>
                       More
                     </Button>
                     {isAdmin && onEdit && (
-                      <Button variant="outline" size="sm" onClick={() => onEdit(r)}>
+                      <Button variant="outline" size="sm" aria-label={`Edit ${detailTitle(r)}`} onClick={() => onEdit(r)}>
                         Edit
                       </Button>
                     )}
                     {isAdmin && onDelete && (
-                      <Button variant="destructive" size="sm" onClick={() => onDelete(r)}>
+                      <Button variant="destructive" size="sm" aria-label={`Delete ${detailTitle(r)}`} onClick={() => onDelete(r)}>
                         Delete
                       </Button>
                     )}

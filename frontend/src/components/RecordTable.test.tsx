@@ -42,7 +42,7 @@ describe("RecordTable", () => {
 
   it("opens the detail modal when More is clicked", () => {
     renderTable();
-    const moreButtons = screen.getAllByRole("button", { name: /^more$/i });
+    const moreButtons = screen.getAllByRole("button", { name: /more details for/i });
     fireEvent.click(moreButtons[0]);
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText("Kind")).toBeInTheDocument();
@@ -50,15 +50,15 @@ describe("RecordTable", () => {
 
   it("hides Edit/Delete/More-edit for non-admins", () => {
     renderTable({ isAdmin: false });
-    expect(screen.queryByRole("button", { name: /^edit$/i })).toBeNull();
-    expect(screen.queryByRole("button", { name: /^delete$/i })).toBeNull();
-    expect(screen.getAllByRole("button", { name: /^more$/i }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: /^edit /i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^delete /i })).toBeNull();
+    expect(screen.getAllByRole("button", { name: /more details for/i }).length).toBeGreaterThan(0);
   });
 
   it("calls onDelete with the row when Delete is clicked", () => {
     const onDelete = vi.fn();
     renderTable({ onDelete });
-    fireEvent.click(screen.getAllByRole("button", { name: /^delete$/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /^delete /i })[0]);
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
 
@@ -83,7 +83,7 @@ describe("RecordTable", () => {
     const onEdit = vi.fn();
     renderTable({ onEdit });
     // open the detail modal
-    fireEvent.click(screen.getAllByRole("button", { name: /^more$/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /more details for/i })[0]);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     // click Edit inside the modal (last matching Edit is the modal footer button)
     const dialog = screen.getByRole("dialog");
