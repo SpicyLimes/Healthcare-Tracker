@@ -181,3 +181,20 @@ def test_guest_document_download_returns_404_for_missing_file(client, db_session
     client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
     r = client.get(f"/api/guest/documents/{doc_id}/download?token={token}")
     assert r.status_code == 404
+
+
+def test_guest_patient_name_returns_full_name(client, db_session):
+    csrf = _admin(client, db_session)
+    # Seed a profile so full_name exists (profile endpoint is PUT /api/profile).
+    client.put("/api/profile", headers={"X-CSRF-Token": csrf}, json={"full_name": "Jane Q. Patient"})
+    token = _create_link(client, csrf, sections=["doctors"])
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+
+    res = client.get(f"/api/guest/patient-name?token={token}")
+    assert res.status_code == 200, res.text
+    assert res.json()["full_name"] == "Jane Q. Patient"
+
+
+def test_guest_patient_name_rejects_bad_token(client, db_session):
+    res = client.get("/api/guest/patient-name?token=bogus")
+    assert res.status_code == 401
