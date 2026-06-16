@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { visitLogsApi, type VisitLog, type VisitLogInput } from "../api/visitLogs";
 import { doctorsApi, type Doctor } from "../api/doctors";
 import DoctorPicker from "../components/DoctorPicker";
@@ -10,11 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
 import { formatDate } from "@/lib/format";
-import { ChevronRight, ChevronDown } from "lucide-react";
-import { useSort } from "@/hooks/useSort";
-import { useColumnResize } from "@/hooks/useColumnResize";
-import { SortableTh } from "@/components/SortableTh";
-import { MobileRecordList } from "@/components/MobileRecordList";
+import { RecordTable } from "@/components/RecordTable";
 
 function formatDateWithTime(dateStr: string | null, timeStr: string | null): string {
   if (!dateStr) return "—";
@@ -45,13 +41,9 @@ export default function VisitLogsPage() {
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<VisitLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "visit_date", "asc");
-  const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<VisitLogInput>(EMPTY);
   const [error, setError] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingRow, setEditingRow] = useState<VisitLog | null>(null);
   const [editForm, setEditForm] = useState<VisitLogInput>(EMPTY);
   const [editError, setEditError] = useState("");
@@ -62,18 +54,6 @@ export default function VisitLogsPage() {
     reload().catch(() => { setError("Failed to load visit logs"); setRows([]); }).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    if (sortedRows.length === 0) return;
-    autoFitAll([
-      { sortKey: "visit_date", colIndex: 2 },
-      { sortKey: "doctor_id", colIndex: 3 },
-      { sortKey: "reason", colIndex: 4 },
-      { sortKey: "summary", colIndex: 5 },
-      { sortKey: "follow_up_date", colIndex: 6 },
-    ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedRows.length]);
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -117,117 +97,35 @@ export default function VisitLogsPage() {
       >
         <Card>
           <CardContent className="p-0">
-            <div className="md:hidden">
-              <MobileRecordList
-                records={sortedRows}
-                getHeadline={(r) => (r.visit_date ? formatDateWithTime(r.visit_date, r.visit_time) : "Visit")}
-                getSubtitle={(r) => resolveDoctorName(r.doctor_id, r.doctor_other) || null}
-                getFields={(r) => [
-                  { key: "Date", value: r.visit_date ? formatDateWithTime(r.visit_date, r.visit_time) : null },
-                  { key: "Doctor", value: resolveDoctorName(r.doctor_id, r.doctor_other) || null },
-                  { key: "Reason", value: r.reason ?? null },
-                  { key: "Summary", value: r.summary ?? null },
-                  { key: "Follow-up Notes", value: r.follow_up ?? null },
-                  { key: "Follow-up Date", value: r.follow_up_date ?? null },
-                  { key: "Notes", value: r.notes ?? null },
-                ]}
-                expandedContent={(r) => <DocumentsPanel section="visit_logs" recordId={r.id} isAdmin={isAdmin} />}
-                isAdmin={isAdmin}
-                onEdit={(r) => openEdit(r)}
-                onDelete={(r) => onDelete(r.id)}
-                emptyMessage="No visit log records yet."
-              />
-            </div>
-            <div className="hidden md:block">
-            <div className="overflow-x-auto">
-              <table ref={tableRef} className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="w-8" />
-                    <SortableTh label="Date" sortKey="visit_date" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["visit_date"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                    <SortableTh label="Doctor" sortKey="doctor_id" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["doctor_id"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                    <SortableTh label="Reason" sortKey="reason" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["reason"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                    <SortableTh label="Summary" sortKey="summary" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["summary"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                    <SortableTh label="Follow-up Date" sortKey="follow_up_date" sort={sort} onSort={toggleSort} colIndex={6} width={colWidths["follow_up_date"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                    {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading && (
-                    <tr>
-                      <td colSpan={isAdmin ? 7 : 6} className="text-center py-6 text-muted-foreground">
-                        Loading…
-                      </td>
-                    </tr>
-                  )}
-                  {!loading && sortedRows.map((r) => (
-                    <React.Fragment key={r.id}>
-                      <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="px-2 py-3 w-8">
-                          <button
-                            onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                            className="text-muted-foreground hover:text-foreground transition-colors"
-                            aria-label={expandedId === r.id ? "Collapse" : "Expand"}
-                          >
-                            {expandedId === r.id
-                              ? <ChevronDown className="size-4" />
-                              : <ChevronRight className="size-4" />}
-                          </button>
-                        </td>
-                        <td className="px-4 py-3 font-medium text-foreground">{formatDateWithTime(r.visit_date, r.visit_time)}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{resolveDoctorName(r.doctor_id, r.doctor_other)}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{r.reason ?? "—"}</td>
-                        <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">
-                          {r.summary ? r.summary.slice(0, 60) + (r.summary.length > 60 ? "…" : "") : ""}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">{r.follow_up_date ?? ""}</td>
-                        {isAdmin && (
-                          <td className="px-4 py-3 space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
-                            <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
-                          </td>
-                        )}
-                      </tr>
-                      {expandedId === r.id && (
-                        <tr className="bg-muted/20">
-                          <td colSpan={isAdmin ? 7 : 6} className="px-4 py-3 text-sm text-muted-foreground">
-                            <div className="flex flex-col gap-3">
-                              {r.summary && (
-                                <div>
-                                  <span className="font-medium text-foreground mr-2">Summary:</span>
-                                  <span className="whitespace-pre-wrap">{r.summary}</span>
-                                </div>
-                              )}
-                              {r.follow_up && (
-                                <div>
-                                  <span className="font-medium text-foreground mr-2">Follow-up:</span>
-                                  <span className="whitespace-pre-wrap">{r.follow_up}</span>
-                                </div>
-                              )}
-                              {r.notes && (
-                                <div>
-                                  <span className="font-medium text-foreground mr-2">Notes:</span>
-                                  <span className="whitespace-pre-wrap">{r.notes}</span>
-                                </div>
-                              )}
-                              <DocumentsPanel section="visit_logs" recordId={r.id} isAdmin={isAdmin} />
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  ))}
-                  {!loading && rows.length === 0 && (
-                    <tr>
-                      <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                        No visit log records yet.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            </div>
+            <RecordTable
+              rows={rows}
+              loading={loading}
+              isAdmin={isAdmin}
+              getRowId={(r) => r.id}
+              defaultSortKey="visit_date"
+              defaultSortDir="desc"
+              primaryColumns={[
+                { header: "Date", sortKey: "visit_date", render: (r) => r.visit_date ? formatDateWithTime(r.visit_date, r.visit_time) : "", className: "px-4 py-3 font-medium text-foreground" },
+                { header: "Doctor", sortKey: "doctor_other", render: (r) => resolveDoctorName(r.doctor_id, r.doctor_other) },
+                { header: "Reason", sortKey: "reason", render: (r) => r.reason ?? "" },
+              ]}
+              detailTitle={(r) => r.visit_date ? formatDateWithTime(r.visit_date, r.visit_time) : "Visit"}
+              detailFields={(r) => [
+                { label: "Date", value: r.visit_date ? formatDateWithTime(r.visit_date, r.visit_time) : null },
+                { label: "Doctor", value: resolveDoctorName(r.doctor_id, r.doctor_other) || null },
+                { label: "Reason", value: r.reason },
+                { label: "Summary", value: r.summary },
+                { label: "Follow-up", value: r.follow_up },
+                { label: "Follow-up Date", value: r.follow_up_date },
+                { label: "Notes", value: r.notes },
+              ]}
+              renderDetailExtra={(r) => <DocumentsPanel section="visit_logs" recordId={r.id} isAdmin={isAdmin} />}
+              getHeadline={(r) => r.visit_date ? formatDateWithTime(r.visit_date, r.visit_time) : "Visit"}
+              getSubtitle={(r) => resolveDoctorName(r.doctor_id, r.doctor_other) || null}
+              onEdit={(r) => openEdit(r)}
+              onDelete={(r) => onDelete(r.id)}
+              emptyMessage="No visit log records yet."
+            />
           </CardContent>
         </Card>
 

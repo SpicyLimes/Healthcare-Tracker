@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { hospitalizationsApi, type Hospitalization, type HospitalizationInput } from "../api/hospitalizations";
 import { doctorsApi, type Doctor } from "../api/doctors";
 import DoctorPicker from "../components/DoctorPicker";
@@ -9,24 +9,16 @@ import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
-import { ChevronRight, ChevronDown } from "lucide-react";
-import { useSort } from "@/hooks/useSort";
-import { useColumnResize } from "@/hooks/useColumnResize";
-import { SortableTh } from "@/components/SortableTh";
-import { MobileRecordList } from "@/components/MobileRecordList";
+import { RecordTable } from "@/components/RecordTable";
 
 export default function HospitalizationsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Hospitalization[]>([]);
   const [loading, setLoading] = useState(true);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "admission_date", "asc");
-  const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState<HospitalizationInput>({ facility: "" });
   const [error, setError] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingRow, setEditingRow] = useState<Hospitalization | null>(null);
   const [editForm, setEditForm] = useState<HospitalizationInput>({ facility: "" });
   const [editError, setEditError] = useState("");
@@ -37,19 +29,6 @@ export default function HospitalizationsPage() {
     reload().catch(() => { setError("Failed to load hospitalizations"); setRows([]); }).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    if (sortedRows.length === 0) return;
-    autoFitAll([
-      { sortKey: "facility", colIndex: 2 },
-      { sortKey: "admission_date", colIndex: 3 },
-      { sortKey: "discharge_date", colIndex: 4 },
-      { sortKey: "reason", colIndex: 5 },
-      { sortKey: "attending_physician_id", colIndex: 6 },
-      { sortKey: "outcome", colIndex: 7 },
-    ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedRows.length]);
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -90,109 +69,34 @@ export default function HospitalizationsPage() {
       <PageLayout title="Hospitalizations" description="Hospital stays and inpatient events.">
         <Card>
           <CardContent className="p-0">
-            <div className="md:hidden">
-              <MobileRecordList
-                records={sortedRows}
-                getHeadline={(r) => r.reason ?? r.facility ?? "Hospitalization"}
-                getSubtitle={(r) => {
-                  const parts = [r.admission_date, r.discharge_date].filter(Boolean)
-                  return parts.length ? parts.join(" – ") : null
-                }}
-                getFields={(r) => [
-                  { key: "Facility", value: r.facility ?? null },
-                  { key: "Admission", value: r.admission_date ?? null },
-                  { key: "Discharge", value: r.discharge_date ?? null },
-                  { key: "Reason", value: r.reason ?? null },
-                  { key: "Physician", value: resolveDoctorName(r.attending_physician_id, r.attending_physician_other) || null },
-                  { key: "Outcome", value: r.outcome ?? null },
-                  { key: "Notes", value: r.notes ?? null },
-                ]}
-                expandedContent={(r) => <DocumentsPanel section="hospitalizations" recordId={r.id} isAdmin={isAdmin} />}
-                isAdmin={isAdmin}
-                onEdit={(r) => openEdit(r)}
-                onDelete={(r) => onDelete(r.id)}
-                emptyMessage="No hospitalization records yet."
-              />
-            </div>
-            <div className="hidden md:block">
-            <div className="overflow-x-auto">
-              <table ref={tableRef} className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="w-8" />
-                    <SortableTh label="Facility" sortKey="facility" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["facility"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                    <SortableTh label="Admission" sortKey="admission_date" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["admission_date"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                    <SortableTh label="Discharge" sortKey="discharge_date" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["discharge_date"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                    <SortableTh label="Reason" sortKey="reason" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["reason"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                    <SortableTh label="Doctor" sortKey="attending_physician_id" sort={sort} onSort={toggleSort} colIndex={6} width={colWidths["attending_physician_id"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                    <SortableTh label="Outcome" sortKey="outcome" sort={sort} onSort={toggleSort} colIndex={7} width={colWidths["outcome"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                    {isAdmin && <th className="px-4 py-3" />}
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading && (
-                    <tr>
-                      <td colSpan={isAdmin ? 8 : 7} className="text-center py-6 text-muted-foreground">
-                        Loading…
-                      </td>
-                    </tr>
-                  )}
-                  {!loading && sortedRows.map((r) => (
-                    <React.Fragment key={r.id}>
-                      <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="px-2 py-3 w-8">
-                          <button
-                            onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                            className="text-muted-foreground hover:text-foreground transition-colors"
-                            aria-label={expandedId === r.id ? "Collapse" : "Expand"}
-                          >
-                            {expandedId === r.id
-                              ? <ChevronDown className="size-4" />
-                              : <ChevronRight className="size-4" />}
-                          </button>
-                        </td>
-                        <td className="px-4 py-3 font-medium text-foreground">{r.facility}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{r.admission_date ?? ""}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{r.discharge_date ?? ""}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{r.reason ?? ""}</td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {resolveDoctorName(r.attending_physician_id, r.attending_physician_other)}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{r.outcome ?? ""}</td>
-                        {isAdmin && (
-                          <td className="px-4 py-3 space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
-                            <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
-                          </td>
-                        )}
-                      </tr>
-                      {expandedId === r.id && (
-                        <tr className="bg-muted/20">
-                          <td colSpan={isAdmin ? 8 : 7} className="px-4 py-3 text-sm text-muted-foreground">
-                            <div className="flex flex-col gap-3">
-                              {r.notes && (
-                                <div className="whitespace-pre-wrap">
-                                  <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
-                                </div>
-                              )}
-                              <DocumentsPanel section="hospitalizations" recordId={r.id} isAdmin={isAdmin} />
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  ))}
-                  {!loading && rows.length === 0 && (
-                    <tr>
-                      <td colSpan={isAdmin ? 8 : 7} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                        No hospitalization records yet.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            </div>
+            <RecordTable
+              rows={rows}
+              loading={loading}
+              isAdmin={isAdmin}
+              getRowId={(r) => r.id}
+              defaultSortKey="admission_date"
+              defaultSortDir="desc"
+              primaryColumns={[
+                { header: "Admission", sortKey: "admission_date", render: (r) => r.admission_date ?? "", className: "px-4 py-3 font-medium text-foreground" },
+                { header: "Facility", sortKey: "facility", render: (r) => r.facility },
+                { header: "Reason", sortKey: "reason", render: (r) => r.reason ?? "" },
+              ]}
+              detailTitle={(r) => r.facility}
+              detailFields={(r) => [
+                { label: "Admission", value: r.admission_date },
+                { label: "Discharge", value: r.discharge_date },
+                { label: "Reason", value: r.reason },
+                { label: "Doctor", value: resolveDoctorName(r.attending_physician_id, r.attending_physician_other) || null },
+                { label: "Outcome", value: r.outcome },
+                { label: "Notes", value: r.notes },
+              ]}
+              renderDetailExtra={(r) => <DocumentsPanel section="hospitalizations" recordId={r.id} isAdmin={isAdmin} />}
+              getHeadline={(r) => r.facility}
+              getSubtitle={(r) => r.admission_date ?? null}
+              onEdit={(r) => openEdit(r)}
+              onDelete={(r) => onDelete(r.id)}
+              emptyMessage="No hospitalization records yet."
+            />
           </CardContent>
         </Card>
 

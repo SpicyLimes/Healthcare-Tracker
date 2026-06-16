@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { insurancesApi, type Insurance, type InsuranceInput } from "../api/insurances";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -7,22 +7,14 @@ import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
-import { ChevronRight, ChevronDown } from "lucide-react";
-import { useSort } from "@/hooks/useSort";
-import { useColumnResize } from "@/hooks/useColumnResize";
-import { SortableTh } from "@/components/SortableTh";
-import { MobileRecordList } from "@/components/MobileRecordList";
+import { RecordTable } from "@/components/RecordTable";
 
 export default function InsurancePage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Insurance[]>([]);
   const [loading, setLoading] = useState(true);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "insurer_name", "asc");
-  const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [error, setError] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState({
     insurer_name: "",
     policy_number: "",
@@ -42,17 +34,6 @@ export default function InsurancePage() {
     setLoading(true);
     reload().catch(() => { setError("Failed to load insurance records"); setRows([]); }).finally(() => setLoading(false));
   }, []);
-
-  useEffect(() => {
-    if (sortedRows.length === 0) return;
-    autoFitAll([
-      { sortKey: "insurer_name", colIndex: 2 },
-      { sortKey: "policy_number", colIndex: 3 },
-      { sortKey: "group_number", colIndex: 4 },
-      { sortKey: "contact_phone", colIndex: 5 },
-    ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedRows.length]);
 
   function set(key: keyof typeof form, value: string) {
     setForm((s) => ({ ...s, [key]: value }));
@@ -114,97 +95,32 @@ export default function InsurancePage() {
       <PageLayout title="Insurance" description="Health insurance policies and contact information.">
         <Card>
           <CardContent className="p-0">
-            <div className="md:hidden">
-              <MobileRecordList
-                records={sortedRows}
-                getHeadline={(r) => r.insurer_name}
-                getSubtitle={(r) => [r.contact_phone].filter(Boolean).join(" · ") || null}
-                getFields={(r) => [
-                  { key: "Policy #", value: r.policy_number ?? null },
-                  { key: "Group #", value: r.group_number ?? null },
-                  { key: "Phone", value: r.contact_phone ?? null },
-                  { key: "Notes", value: r.notes ?? null },
-                ]}
-                isAdmin={isAdmin}
-                onEdit={(r) => openEdit(r)}
-                onDelete={(r) => onDelete(r.id)}
-                expandedContent={(r) => <DocumentsPanel section="insurances" recordId={r.id} isAdmin={isAdmin} />}
-                emptyMessage="No insurance records yet."
-              />
-            </div>
-            <div className="hidden md:block">
-            <div className="overflow-x-auto">
-              <table ref={tableRef} className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="w-8" />
-                <SortableTh label="Insurer" sortKey="insurer_name" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["insurer_name"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Policy #" sortKey="policy_number" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["policy_number"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Group #" sortKey="group_number" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["group_number"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Phone" sortKey="contact_phone" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["contact_phone"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={isAdmin ? 6 : 5} className="text-center py-6 text-muted-foreground">
-                    Loading…
-                  </td>
-                </tr>
-              )}
-              {!loading && sortedRows.map((r) => (
-                <React.Fragment key={r.id}>
-                  <tr className="border-b border-border last:border-0">
-                    <td className="px-2 py-3 w-8">
-                      <button
-                        onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                        aria-label={expandedId === r.id ? "Collapse" : "Expand"}
-                      >
-                        {expandedId === r.id
-                          ? <ChevronDown className="size-4" />
-                          : <ChevronRight className="size-4" />}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 font-medium text-foreground">{r.insurer_name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.policy_number ?? ""}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.group_number ?? ""}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.contact_phone ?? ""}</td>
-                    {isAdmin && (
-                      <td className="px-4 py-3 space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
-                        <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
-                      </td>
-                    )}
-                  </tr>
-                  {expandedId === r.id && (
-                    <tr className="bg-muted/20">
-                      <td colSpan={isAdmin ? 6 : 5} className="px-4 py-3 text-sm text-muted-foreground">
-                        <div className="flex flex-col gap-3">
-                          {r.notes && (
-                            <div className="whitespace-pre-wrap">
-                              <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
-                            </div>
-                          )}
-                          <DocumentsPanel section="insurances" recordId={r.id} isAdmin={isAdmin} />
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-              {!loading && rows.length === 0 && (
-                <tr>
-                  <td colSpan={isAdmin ? 6 : 5} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                    No insurance records yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-            </div>
-            </div>
+            <RecordTable
+              rows={rows}
+              loading={loading}
+              isAdmin={isAdmin}
+              getRowId={(r) => r.id}
+              defaultSortKey="insurer_name"
+              primaryColumns={[
+                { header: "Insurer", sortKey: "insurer_name", render: (r) => r.insurer_name, className: "px-4 py-3 font-medium text-foreground" },
+                { header: "Policy #", sortKey: "policy_number", render: (r) => r.policy_number ?? "" },
+                { header: "Phone", sortKey: "contact_phone", render: (r) => r.contact_phone ?? "" },
+              ]}
+              detailTitle={(r) => r.insurer_name}
+              detailFields={(r) => [
+                { label: "Policy #", value: r.policy_number },
+                { label: "Group #", value: r.group_number },
+                { label: "Phone", value: r.contact_phone },
+                { label: "Address", value: r.contact_address },
+                { label: "Notes", value: r.notes },
+              ]}
+              renderDetailExtra={(r) => <DocumentsPanel section="insurances" recordId={r.id} isAdmin={isAdmin} />}
+              getHeadline={(r) => r.insurer_name}
+              getSubtitle={(r) => r.policy_number ?? null}
+              onEdit={(r) => openEdit(r)}
+              onDelete={(r) => onDelete(r.id)}
+              emptyMessage="No insurance records yet."
+            />
           </CardContent>
         </Card>
 

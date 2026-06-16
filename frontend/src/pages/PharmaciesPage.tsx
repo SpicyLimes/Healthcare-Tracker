@@ -1,27 +1,20 @@
-import React, { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { pharmaciesApi, type Pharmacy, type PharmacyInput } from "../api/pharmacies";
 import { useAuth } from "../auth/useAuth";
+import DocumentsPanel from "../components/DocumentsPanel";
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
-import { ChevronRight, ChevronDown } from "lucide-react";
-import { useSort } from "@/hooks/useSort";
-import { useColumnResize } from "@/hooks/useColumnResize";
-import { SortableTh } from "@/components/SortableTh"
-import { MobileRecordList } from "@/components/MobileRecordList";
+import { RecordTable } from "@/components/RecordTable";
 
 export default function PharmaciesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Pharmacy[]>([]);
   const [loading, setLoading] = useState(true);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "name", "asc");
-  const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [error, setError] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     address: "",
@@ -40,16 +33,6 @@ export default function PharmaciesPage() {
     setLoading(true);
     reload().catch(() => { setError("Failed to load pharmacies"); setRows([]); }).finally(() => setLoading(false));
   }, []);
-
-  useEffect(() => {
-    if (sortedRows.length === 0) return;
-    autoFitAll([
-      { sortKey: "name", colIndex: 2 },
-      { sortKey: "phone", colIndex: 3 },
-      { sortKey: "address", colIndex: 4 },
-    ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedRows.length]);
 
   function set(key: keyof typeof form, value: string) {
     setForm((s) => ({ ...s, [key]: value }));
@@ -110,86 +93,31 @@ export default function PharmaciesPage() {
       <PageLayout title="Pharmacies" description="Preferred pharmacies and contact information.">
         <Card>
           <CardContent className="p-0">
-            <div className="md:hidden">
-              <MobileRecordList
-                records={sortedRows}
-                getHeadline={(r) => r.name}
-                getSubtitle={(r) => r.phone ?? null}
-                getFields={(r) => [
-                  { key: "Phone", value: r.phone ?? null },
-                  { key: "Address", value: r.address ?? null },
-                  { key: "Notes", value: r.notes ?? null },
-                ]}
-                isAdmin={isAdmin}
-                onEdit={(r) => openEdit(r)}
-                onDelete={(r) => onDelete(r.id)}
-                emptyMessage="No pharmacy records yet."
-              />
-            </div>
-            <div className="hidden md:block">
-            <div className="overflow-x-auto">
-              <table ref={tableRef} className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="w-8" />
-                <SortableTh label="Name" sortKey="name" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["name"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Phone" sortKey="phone" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["phone"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Address" sortKey="address" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["address"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={isAdmin ? 5 : 4} className="text-center py-6 text-muted-foreground">
-                    Loading…
-                  </td>
-                </tr>
-              )}
-              {!loading && sortedRows.map((r) => (
-                <React.Fragment key={r.id}>
-                  <tr className="border-b border-border last:border-0">
-                    <td className="px-2 py-3 w-8">
-                      <button
-                        onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                        aria-label={expandedId === r.id ? "Collapse" : "Expand"}
-                      >
-                        {expandedId === r.id
-                          ? <ChevronDown className="size-4" />
-                          : <ChevronRight className="size-4" />}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 font-medium text-foreground">{r.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.phone ?? ""}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.address ?? ""}</td>
-                    {isAdmin && (
-                      <td className="px-4 py-3 space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
-                        <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
-                      </td>
-                    )}
-                  </tr>
-                  {expandedId === r.id && r.notes && (
-                    <tr className="bg-muted/20">
-                      <td colSpan={isAdmin ? 5 : 4} className="px-4 py-3 text-sm text-muted-foreground whitespace-pre-wrap">
-                        <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-              {!loading && rows.length === 0 && (
-                <tr>
-                  <td colSpan={isAdmin ? 5 : 4} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                    No pharmacies yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-            </div>
-            </div>
+            <RecordTable
+              rows={rows}
+              loading={loading}
+              isAdmin={isAdmin}
+              getRowId={(r) => r.id}
+              defaultSortKey="name"
+              primaryColumns={[
+                { header: "Name", sortKey: "name", render: (r) => r.name, className: "px-4 py-3 font-medium text-foreground" },
+                { header: "Phone", sortKey: "phone", render: (r) => r.phone ?? "" },
+                { header: "Address", sortKey: "address", render: (r) => r.address ?? "" },
+              ]}
+              detailTitle={(r) => r.name}
+              detailFields={(r) => [
+                { label: "Phone", value: r.phone },
+                { label: "Address", value: r.address },
+                { label: "Fax", value: r.fax },
+                { label: "Notes", value: r.notes },
+              ]}
+              renderDetailExtra={(r) => <DocumentsPanel section="pharmacies" recordId={r.id} isAdmin={isAdmin} />}
+              getHeadline={(r) => r.name}
+              getSubtitle={(r) => r.phone ?? null}
+              onEdit={(r) => openEdit(r)}
+              onDelete={(r) => onDelete(r.id)}
+              emptyMessage="No pharmacy records yet."
+            />
           </CardContent>
         </Card>
 

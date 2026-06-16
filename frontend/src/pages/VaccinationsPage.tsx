@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { vaccinationsApi, type Vaccination, type VaccinationInput } from "../api/vaccinations";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -8,11 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
 import { formatDate } from "@/lib/format";
-import { ChevronRight, ChevronDown } from "lucide-react";
-import { useSort } from "@/hooks/useSort";
-import { useColumnResize } from "@/hooks/useColumnResize";
-import { SortableTh } from "@/components/SortableTh"
-import { MobileRecordList } from "@/components/MobileRecordList";
+import { RecordTable } from "@/components/RecordTable";
 
 const EMPTY: VaccinationInput = {
   vaccine: "",
@@ -28,12 +24,8 @@ export default function VaccinationsPage() {
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Vaccination[]>([]);
   const [loading, setLoading] = useState(true);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "administered_date", "asc");
-  const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [form, setForm] = useState<VaccinationInput>(EMPTY);
   const [error, setError] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingRow, setEditingRow] = useState<Vaccination | null>(null);
   const [editForm, setEditForm] = useState<VaccinationInput>(EMPTY);
   const [editError, setEditError] = useState("");
@@ -43,18 +35,6 @@ export default function VaccinationsPage() {
     setLoading(true);
     reload().catch(() => { setError("Failed to load vaccinations"); setRows([]); }).finally(() => setLoading(false));
   }, []);
-
-  useEffect(() => {
-    if (sortedRows.length === 0) return;
-    autoFitAll([
-      { sortKey: "vaccine", colIndex: 2 },
-      { sortKey: "manufacturer", colIndex: 3 },
-      { sortKey: "administered_date", colIndex: 4 },
-      { sortKey: "administrator", colIndex: 5 },
-      { sortKey: "next_due_date", colIndex: 6 },
-    ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedRows.length]);
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -93,100 +73,34 @@ export default function VaccinationsPage() {
       >
         <Card>
           <CardContent className="p-0">
-            <div className="md:hidden">
-              <MobileRecordList
-                records={sortedRows}
-                getHeadline={(r) => r.vaccine}
-                getSubtitle={(r) => r.administered_date ? formatDate(r.administered_date) : null}
-                getFields={(r) => [
-                  { key: "Manufacturer", value: r.manufacturer ?? null },
-                  { key: "Date Given", value: r.administered_date ? formatDate(r.administered_date) : null },
-                  { key: "Administrator", value: r.administrator ?? null },
-                  { key: "Next Due", value: r.next_due_date ? formatDate(r.next_due_date) : null },
-                  { key: "Notes", value: r.notes ?? null },
-                ]}
-                expandedContent={(r) => <DocumentsPanel section="vaccinations" recordId={r.id} isAdmin={isAdmin} />}
-                isAdmin={isAdmin}
-                onEdit={(r) => openEdit(r)}
-                onDelete={(r) => onDelete(r.id)}
-                emptyMessage="No vaccination records yet."
-              />
-            </div>
-            <div className="hidden md:block">
-            <div className="overflow-x-auto">
-              <table ref={tableRef} className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="w-8" />
-                    <SortableTh label="Vaccine" sortKey="vaccine" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["vaccine"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                    <SortableTh label="Manufacturer" sortKey="manufacturer" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["manufacturer"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                    <SortableTh label="Date Administered" sortKey="administered_date" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["administered_date"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                    <SortableTh label="Administrator" sortKey="administrator" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["administrator"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                    <SortableTh label="Next Due" sortKey="next_due_date" sort={sort} onSort={toggleSort} colIndex={6} width={colWidths["next_due_date"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                    {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading && (
-                    <tr>
-                      <td colSpan={isAdmin ? 7 : 6} className="text-center py-6 text-muted-foreground">
-                        Loading…
-                      </td>
-                    </tr>
-                  )}
-                  {!loading && sortedRows.map((r) => (
-                    <React.Fragment key={r.id}>
-                      <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="px-2 py-3 w-8">
-                          <button
-                            onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                            className="text-muted-foreground hover:text-foreground transition-colors"
-                            aria-label={expandedId === r.id ? "Collapse" : "Expand"}
-                          >
-                            {expandedId === r.id
-                              ? <ChevronDown className="size-4" />
-                              : <ChevronRight className="size-4" />}
-                          </button>
-                        </td>
-                        <td className="px-4 py-3 font-medium text-foreground">{r.vaccine}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{r.manufacturer ?? "—"}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{formatDate(r.administered_date)}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{r.administrator ?? "—"}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{formatDate(r.next_due_date)}</td>
-                        {isAdmin && (
-                          <td className="px-4 py-3 space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
-                            <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
-                          </td>
-                        )}
-                      </tr>
-                      {expandedId === r.id && (
-                        <tr className="bg-muted/20">
-                          <td colSpan={isAdmin ? 7 : 6} className="px-4 py-3 text-sm text-muted-foreground">
-                            <div className="flex flex-col gap-3">
-                              {r.notes && (
-                                <div className="whitespace-pre-wrap">
-                                  <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
-                                </div>
-                              )}
-                              <DocumentsPanel section="vaccinations" recordId={r.id} isAdmin={isAdmin} />
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  ))}
-                  {!loading && rows.length === 0 && (
-                    <tr>
-                      <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                        No vaccination records yet.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            </div>
+            <RecordTable
+              rows={rows}
+              loading={loading}
+              isAdmin={isAdmin}
+              getRowId={(r) => r.id}
+              defaultSortKey="administered_date"
+              defaultSortDir="desc"
+              primaryColumns={[
+                { header: "Date Administered", sortKey: "administered_date", render: (r) => r.administered_date ? formatDate(r.administered_date) : "", className: "px-4 py-3 font-medium text-foreground" },
+                { header: "Vaccine", sortKey: "vaccine", render: (r) => r.vaccine },
+                { header: "Next Due", sortKey: "next_due_date", render: (r) => r.next_due_date ? formatDate(r.next_due_date) : "" },
+              ]}
+              detailTitle={(r) => r.vaccine}
+              detailFields={(r) => [
+                { label: "Date Administered", value: r.administered_date ? formatDate(r.administered_date) : null },
+                { label: "Next Due", value: r.next_due_date ? formatDate(r.next_due_date) : null },
+                { label: "Manufacturer", value: r.manufacturer },
+                { label: "Administrator", value: r.administrator },
+                { label: "Lot Number", value: r.lot_number },
+                { label: "Notes", value: r.notes },
+              ]}
+              renderDetailExtra={(r) => <DocumentsPanel section="vaccinations" recordId={r.id} isAdmin={isAdmin} />}
+              getHeadline={(r) => r.vaccine}
+              getSubtitle={(r) => r.administered_date ? formatDate(r.administered_date) : null}
+              onEdit={(r) => openEdit(r)}
+              onDelete={(r) => onDelete(r.id)}
+              emptyMessage="No vaccination records yet."
+            />
           </CardContent>
         </Card>
 

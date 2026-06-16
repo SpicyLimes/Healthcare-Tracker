@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { doctorsApi, type Doctor, type DoctorInput } from "../api/doctors";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -7,11 +7,7 @@ import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
-import { ChevronRight, ChevronDown } from "lucide-react";
-import { useSort } from "@/hooks/useSort";
-import { useColumnResize } from "@/hooks/useColumnResize";
-import { SortableTh } from "@/components/SortableTh"
-import { MobileRecordList } from "@/components/MobileRecordList";
+import { RecordTable } from "@/components/RecordTable";
 
 const EMPTY: DoctorInput = {
   name: "",
@@ -28,12 +24,8 @@ export default function DoctorsPage() {
   const isAdmin = user?.role === "admin";
   const [rows, setRows] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
-  const { sorted: sortedRows, sort, toggleSort } = useSort(rows, "name", "asc");
-  const tableRef = useRef<HTMLTableElement>(null);
-  const { colWidths, autoFitColumn, autoFitAll, startDrag } = useColumnResize(tableRef);
   const [form, setForm] = useState<DoctorInput>(EMPTY);
   const [error, setError] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingRow, setEditingRow] = useState<Doctor | null>(null);
   const [editForm, setEditForm] = useState<DoctorInput>(EMPTY);
   const [editError, setEditError] = useState("");
@@ -45,18 +37,6 @@ export default function DoctorsPage() {
     setLoading(true);
     reload().catch(() => { setError("Failed to load doctors"); setRows([]); }).finally(() => setLoading(false));
   }, []);
-
-  useEffect(() => {
-    if (sortedRows.length === 0) return;
-    autoFitAll([
-      { sortKey: "name", colIndex: 2 },
-      { sortKey: "specialty", colIndex: 3 },
-      { sortKey: "practice", colIndex: 4 },
-      { sortKey: "phone", colIndex: 5 },
-      { sortKey: "patient_portal_url", colIndex: 6 },
-    ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedRows.length]);
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
@@ -104,117 +84,34 @@ export default function DoctorsPage() {
       >
         <Card>
           <CardContent className="p-0">
-            <div className="md:hidden">
-              <MobileRecordList
-                records={sortedRows}
-                getHeadline={(r) => r.name}
-                getSubtitle={(r) => r.specialty ?? null}
-                getFields={(r) => [
-                  { key: "Practice", value: r.practice ?? null },
-                  { key: "Phone", value: r.phone ?? null },
-                  { key: "Address", value: r.address ?? null },
-                  { key: "Portal URL", value: r.patient_portal_url ?? null },
-                  { key: "Notes", value: r.notes ?? null },
-                ]}
-                expandedContent={(r) => <DocumentsPanel section="doctors" recordId={r.id} isAdmin={isAdmin} />}
-                isAdmin={isAdmin}
-                onEdit={(r) => openEdit(r)}
-                onDelete={(r) => onDelete(r.id)}
-                emptyMessage="No doctor records yet."
-              />
-            </div>
-            <div className="hidden md:block">
-            <div className="overflow-x-auto">
-              <table ref={tableRef} className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="w-8" />
-                <SortableTh label="Name" sortKey="name" sort={sort} onSort={toggleSort} colIndex={2} width={colWidths["name"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Specialty" sortKey="specialty" sort={sort} onSort={toggleSort} colIndex={3} width={colWidths["specialty"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Practice" sortKey="practice" sort={sort} onSort={toggleSort} colIndex={4} width={colWidths["practice"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Phone" sortKey="phone" sort={sort} onSort={toggleSort} colIndex={5} width={colWidths["phone"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                <SortableTh label="Portal URL" sortKey="patient_portal_url" sort={sort} onSort={toggleSort} colIndex={6} width={colWidths["patient_portal_url"]} onAutoFit={autoFitColumn} onStartResize={startDrag} />
-                {isAdmin && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={isAdmin ? 7 : 6} className="text-center py-6 text-muted-foreground">
-                    Loading…
-                  </td>
-                </tr>
-              )}
-              {!loading && sortedRows.map((r) => (
-                <React.Fragment key={r.id}>
-                  <tr className="border-b border-border last:border-0 hover:bg-muted/20">
-                    <td className="px-2 py-3 w-8">
-                      <button
-                        onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                        aria-label={expandedId === r.id ? "Collapse" : "Expand"}
-                      >
-                        {expandedId === r.id
-                          ? <ChevronDown className="size-4" />
-                          : <ChevronRight className="size-4" />}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 font-medium text-foreground">{r.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.specialty ?? ""}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.practice ?? ""}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.phone ?? ""}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {r.patient_portal_url ? (
-                        <a
-                          href={r.patient_portal_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary underline-offset-2 hover:underline"
-                        >
-                          Portal
-                        </a>
-                      ) : ""}
-                    </td>
-                    {isAdmin && (
-                      <td className="px-4 py-3 space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => openEdit(r)}>Edit</Button>
-                        <Button variant="destructive" size="sm" onClick={() => onDelete(r.id)}>Delete</Button>
-                      </td>
-                    )}
-                  </tr>
-                  {expandedId === r.id && (
-                    <tr className="bg-muted/20">
-                      <td colSpan={isAdmin ? 7 : 6} className="px-4 py-3 text-sm text-muted-foreground">
-                        <div className="flex flex-col gap-3">
-                          {r.address && (
-                            <div>
-                              <span className="font-medium text-foreground mr-2">Address:</span>
-                              <span className="whitespace-pre-wrap">{r.address}</span>
-                            </div>
-                          )}
-                          {r.notes && (
-                            <div className="whitespace-pre-wrap">
-                              <span className="font-medium text-foreground mr-2">Notes:</span>{r.notes}
-                            </div>
-                          )}
-                          <DocumentsPanel section="doctors" recordId={r.id} isAdmin={isAdmin} />
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-              {!loading && rows.length === 0 && (
-                <tr>
-                  <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                    No doctor records yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-            </div>
-            </div>
+            <RecordTable
+              rows={rows}
+              loading={loading}
+              isAdmin={isAdmin}
+              getRowId={(r) => r.id}
+              defaultSortKey="name"
+              primaryColumns={[
+                { header: "Name", sortKey: "name", render: (r) => r.name, className: "px-4 py-3 font-medium text-foreground" },
+                { header: "Specialty", sortKey: "specialty", render: (r) => r.specialty ?? "" },
+                { header: "Phone", sortKey: "phone", render: (r) => r.phone ?? "" },
+              ]}
+              detailTitle={(r) => r.name}
+              detailFields={(r) => [
+                { label: "Specialty", value: r.specialty },
+                { label: "Practice", value: r.practice },
+                { label: "Phone", value: r.phone },
+                { label: "Fax", value: r.fax },
+                { label: "Address", value: r.address },
+                { label: "Portal URL", value: r.patient_portal_url },
+                { label: "Notes", value: r.notes },
+              ]}
+              renderDetailExtra={(r) => <DocumentsPanel section="doctors" recordId={r.id} isAdmin={isAdmin} />}
+              getHeadline={(r) => r.name}
+              getSubtitle={(r) => r.specialty ?? null}
+              onEdit={(r) => openEdit(r)}
+              onDelete={(r) => onDelete(r.id)}
+              emptyMessage="No doctor records yet."
+            />
           </CardContent>
         </Card>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
