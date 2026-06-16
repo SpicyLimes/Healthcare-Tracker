@@ -254,3 +254,21 @@ def test_guest_summary_rejects_revoked_token(client, db_session):
 
     r = client.post(f"/api/summary/guest?token={token}", json={"sections": ["doctors"]})
     assert r.status_code == 403  # get_guest_access raises 403 for revoked links
+
+
+def test_guest_summary_empty_link_grants_all_sections(client, db_session):
+    """Empty allowed_sections in share link grants guest access to ALL sections."""
+    csrf = _login_admin(client, db_session, email="emptylinkadmin@example.com")
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "AllAccessDoc"})
+    client.post("/api/medications", headers={"X-CSRF-Token": csrf}, json={"name": "AllAccessMed"})
+    token = _make_link(client, csrf, [])  # empty == all sections
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+
+    # Guest requests both doctors and medications; both should be granted
+    r = client.post(
+        f"/api/summary/guest?token={token}",
+        json={"sections": ["doctors", "medications"]},
+    )
+    assert r.status_code == 200, r.text
+    assert "AllAccessDoc" in r.text
+    assert "AllAccessMed" in r.text
