@@ -32,3 +32,10 @@ export async function listGuestDocuments(section: string, recordId: string, toke
 export function getGuestDownloadUrl(docId: number, token: string): string {
   return `/api/guest/documents/${docId}/download?token=${encodeURIComponent(token)}`;
 }
+
+export async function getGuestPatientName(token: string): Promise<string | null> {
+  const res = await guestFetch("/api/guest/patient-name", token);
+  if (!res.ok) return null;
+  const body = await res.json();
+  return body.full_name ?? null;
+}
