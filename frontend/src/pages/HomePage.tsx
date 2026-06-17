@@ -23,6 +23,7 @@ import {
   UserCog,
   ChevronRight,
   StickyNote,
+  Bot,
 } from "lucide-react";
 import { calendarApi, type CalendarEvent, EVENT_TYPE_LABELS } from "../api/calendar";
 import { useAuth } from "../auth/useAuth";
@@ -95,6 +96,7 @@ const ADMIN_SECTION = {
     { to: "/share-links", label: "Share Links", icon: Share2, desc: "Share records with providers" },
     { to: "/audit-log", label: "Audit Log", icon: ScrollText, desc: "System activity log" },
     { to: "/users", label: "Manage Users", icon: UserCog, desc: "User accounts & roles" },
+    { to: "/settings", label: "AI Settings", icon: Bot, desc: "AI assistant configuration" },
   ],
 };
 

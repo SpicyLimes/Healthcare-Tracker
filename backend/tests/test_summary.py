@@ -18,11 +18,11 @@ def test_summary_request_defaults():
 
 def test_section_map_has_all_sections():
     section_map = summary_service.get_section_map()
-    # Same 15 sections the guest router exposes
+    # Same 16 sections the guest router exposes
     assert set(section_map.keys()) == {
         "medications", "doctors", "ailments", "profile", "surgeries",
         "hospitalizations", "vision_history", "dental_history", "visit_logs",
-        "appointments", "vaccinations", "insurances", "pharmacies",
+        "vitals", "appointments", "vaccinations", "insurances", "pharmacies",
         "family_history", "nutrition_plan",
     }
 

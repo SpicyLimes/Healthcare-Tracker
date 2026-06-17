@@ -12,6 +12,7 @@ const SECTION_LABELS: Record<string, string> = {
   vision_history: "Vision History",
   dental_history: "Dental History",
   visit_logs: "Visit Logs",
+  vitals: "Vitals",
   appointments: "Appointments",
   medications: "Medications",
   vaccinations: "Vaccinations",
@@ -71,7 +72,7 @@ export default function GuestLayout({ children, expired }: Props) {
 
   return (
     <main className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
-      <header className="border-b border-border pb-4 mb-6 flex flex-wrap items-start justify-between gap-4">
+      <header className="pb-4 mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-foreground">
             {patientName ?? "Healthcare Records"}
@@ -89,6 +90,7 @@ export default function GuestLayout({ children, expired }: Props) {
             availableSections={allowedSections}
             token={token ?? ""}
             description="Generate a printable summary of the Patient's Records that have been shared with you."
+            triggerClassName="border-amber-500 bg-amber-400 text-amber-950 hover:bg-amber-500 hover:text-amber-950"
           />
         )}
       </header>
@@ -102,7 +104,7 @@ export default function GuestLayout({ children, expired }: Props) {
         ))}
       </nav>
       {children}
-      <footer className="mt-10 border-t border-border pt-4 text-center text-xs text-muted-foreground">
+      <footer className="mt-10 pt-4 text-center text-xs text-muted-foreground">
         For your privacy, this link isn't saved in your browser. If you refresh or close this page,
         you'll need to re-enter the original link you were given to access these records again.
       </footer>

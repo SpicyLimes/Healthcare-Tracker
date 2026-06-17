@@ -15,7 +15,7 @@ import { MobileRecordList } from "@/components/MobileRecordList";
 
 const ALL_SECTIONS = [
   "surgeries", "hospitalizations", "vision_history", "dental_history",
-  "visit_logs", "appointments", "medications", "vaccinations",
+  "visit_logs", "vitals", "appointments", "medications", "vaccinations",
   "insurances", "ailments", "doctors", "pharmacies", "family_history", "profile",
   "nutrition_plan",
 ];

@@ -44,6 +44,7 @@ def _get_section_map() -> dict[str, tuple[Any, Any]]:
         Vaccination,
         VisionHistory,
         VisitLog,
+        Vitals,
     )
     from app.models.medication import Medication
     from app.models.nutrition import NutritionMeal
@@ -59,6 +60,7 @@ def _get_section_map() -> dict[str, tuple[Any, Any]]:
         VaccinationResponse,
         VisionHistoryResponse,
         VisitLogResponse,
+        VitalsResponse,
     )
     from app.schemas.nutrition import NutritionMealResponse
     from app.schemas.records import (
@@ -78,6 +80,7 @@ def _get_section_map() -> dict[str, tuple[Any, Any]]:
         "vision_history": (VisionHistory, VisionHistoryResponse),
         "dental_history": (DentalHistory, DentalHistoryResponse),
         "visit_logs": (VisitLog, VisitLogResponse),
+        "vitals": (Vitals, VitalsResponse),
         "appointments": (Appointment, AppointmentResponse),
         "vaccinations": (Vaccination, VaccinationResponse),
         "insurances": (Insurance, InsuranceResponse),

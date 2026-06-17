@@ -50,6 +50,7 @@ SECTION_TITLES: dict[str, str] = {
     "vision_history": "Vision History",
     "dental_history": "Dental History",
     "visit_logs": "Visit Logs",
+    "vitals": "Vitals",
     "appointments": "Appointments",
     "vaccinations": "Vaccinations",
     "insurances": "Insurance",

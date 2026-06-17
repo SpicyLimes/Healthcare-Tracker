@@ -11,7 +11,7 @@ import {
 const SECTION_LABELS: Record<string, string> = {
   doctors: "Doctors", medications: "Medications", ailments: "Ailment History",
   surgeries: "Surgeries", hospitalizations: "Hospitalizations", vision_history: "Vision History",
-  dental_history: "Dental History", visit_logs: "Visit Logs", appointments: "Appointments",
+  dental_history: "Dental History", visit_logs: "Visit Logs", vitals: "Vitals", appointments: "Appointments",
   vaccinations: "Vaccinations", insurances: "Insurance", pharmacies: "Pharmacies",
   family_history: "Family History", nutrition_plan: "Nutrition Plan", profile: "Profile",
 };
@@ -21,9 +21,10 @@ interface Props {
   availableSections: string[];
   token?: string;
   description?: string;
+  triggerClassName?: string;
 }
 
-export default function SummaryBuilder({ mode, availableSections, token, description }: Props) {
+export default function SummaryBuilder({ mode, availableSections, token, description, triggerClassName }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
   const [preparedFor, setPreparedFor] = useState("");
   const [includeHeader, setIncludeHeader] = useState(true);
@@ -72,7 +73,7 @@ export default function SummaryBuilder({ mode, availableSections, token, descrip
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <div className="flex flex-col items-end gap-1">
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm">Patient Summary Report</Button>
+          <Button variant="outline" size="sm" className={triggerClassName}>Patient Summary Report</Button>
         </DialogTrigger>
         {description && (
           <p className="max-w-xs text-right text-xs text-muted-foreground">{description}</p>

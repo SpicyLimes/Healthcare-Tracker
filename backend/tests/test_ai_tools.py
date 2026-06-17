@@ -40,7 +40,7 @@ def test_tool_defs_are_read_only_and_well_formed():
     grec = next(d for d in defs if d["function"]["name"] == "get_section_records")
     section_enum = grec["function"]["parameters"]["properties"]["section"]["enum"]
     assert "doctors" in section_enum and "medications" in section_enum
-    assert len(section_enum) == 15
+    assert len(section_enum) == 16
 
 
 def test_dispatch_list_sections(db_session):
@@ -48,7 +48,7 @@ def test_dispatch_list_sections(db_session):
     names = {s["name"] for s in result["sections"]}
     assert "doctors" in names
     assert "notes" in names                    # Notes & To-Dos surfaced for the AI
-    assert len(names) == 16                     # 15 record sections + notes
+    assert len(names) == 17                     # 16 record sections + notes
     # every section entry carries a non-empty human title
     assert all("title" in s and s["title"] for s in result["sections"])
 
