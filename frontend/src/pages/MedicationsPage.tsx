@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Select, Textarea } from "@/components/ui/form-field";
 import { RecordTable } from "@/components/RecordTable";
+import { RecordFormModal } from "@/components/RecordFormModal";
 
 const EMPTY: MedicationInput = {
   name: "",
@@ -31,11 +32,11 @@ export default function MedicationsPage() {
   const [rows, setRows] = useState<Medication[]>([]);
   const [loading, setLoading] = useState(true);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [form, setForm] = useState<MedicationInput>(EMPTY);
   const [error, setError] = useState("");
+  const [modalMode, setModalMode] = useState<"add" | "edit" | null>(null);
   const [editingRow, setEditingRow] = useState<Medication | null>(null);
-  const [editForm, setEditForm] = useState<MedicationInput>(EMPTY);
-  const [editError, setEditError] = useState("");
+  const [form, setForm] = useState<MedicationInput>(EMPTY);
+  const [modalError, setModalError] = useState("");
 
   async function reload() {
     setRows(await medicationsApi.list());
@@ -46,15 +47,44 @@ export default function MedicationsPage() {
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
 
-  async function onAdd(e: FormEvent) {
+  function openAdd() {
+    setForm(EMPTY);
+    setEditingRow(null);
+    setModalError("");
+    setModalMode("add");
+  }
+
+  function openEdit(r: Medication) {
+    setEditingRow(r);
+    setForm({
+      name: r.name, kind: r.kind, dose: r.dose, frequency: r.frequency,
+      route: r.route, prescribing_doctor: r.prescribing_doctor,
+      prescribing_doctor_id: r.prescribing_doctor_id,
+      start_date: r.start_date, end_date: r.end_date,
+      is_active: r.is_active, notes: r.notes,
+    });
+    setModalError("");
+    setModalMode("edit");
+  }
+
+  function closeModal() {
+    setModalMode(null);
+    setEditingRow(null);
+  }
+
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setError("");
+    setModalError("");
     try {
-      await medicationsApi.create(form);
-      setForm(EMPTY);
+      if (modalMode === "edit" && editingRow) {
+        await medicationsApi.update(editingRow.id, form);
+      } else {
+        await medicationsApi.create(form);
+      }
+      closeModal();
       await reload();
     } catch {
-      setError("Could not add record");
+      setModalError(modalMode === "edit" ? "Could not update record" : "Could not add record");
     }
   }
 
@@ -67,29 +97,6 @@ export default function MedicationsPage() {
     }
   }
 
-  function openEdit(r: Medication) {
-    setEditingRow(r);
-    setEditForm({
-      name: r.name, kind: r.kind, dose: r.dose, frequency: r.frequency,
-      route: r.route, prescribing_doctor: r.prescribing_doctor,
-      prescribing_doctor_id: r.prescribing_doctor_id,
-      start_date: r.start_date, end_date: r.end_date,
-      is_active: r.is_active, notes: r.notes,
-    });
-    setEditError("");
-  }
-  function closeEdit() { setEditingRow(null); }
-  async function onSaveEdit(e: FormEvent) {
-    e.preventDefault();
-    if (!editingRow) return;
-    setEditError("");
-    try {
-      await medicationsApi.update(editingRow.id, editForm);
-      closeEdit();
-      await reload();
-    } catch { setEditError("Could not update record"); }
-  }
-
   function resolveDoctorName(id: string | null, other: string | null): string {
     if (id) return doctors.find((d) => d.id === id)?.name ?? other ?? "";
     return other ?? "";
@@ -100,6 +107,7 @@ export default function MedicationsPage() {
       <PageLayout
         title="Medications"
         description="Track current and past medications, dosages, and prescribing doctors."
+        action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
       >
         <Card>
           <CardContent className="p-0">
@@ -136,165 +144,81 @@ export default function MedicationsPage() {
           </CardContent>
         </Card>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        {isAdmin && (
-          <Card>
-            <CardContent className="py-6">
-              <form onSubmit={onAdd} className="flex flex-col gap-5">
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  <FormField label="Medication Name" htmlFor="med-name">
-                    <Input id="med-name" required placeholder="e.g. Lisinopril"
-                      value={form.name}
-                      onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} />
-                  </FormField>
-                  <FormField label="Kind" htmlFor="med-kind">
-                    <Select id="med-kind" value={form.kind ?? "medication"}
-                      onChange={(e) => setForm((s) => ({ ...s, kind: e.target.value as MedicationKind }))}>
-                      <option value="medication">Medication</option>
-                      <option value="vitamin">Vitamin</option>
-                      <option value="supplement">Supplement</option>
-                    </Select>
-                  </FormField>
-                </div>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  <FormField label="Dose" htmlFor="med-dose">
-                    <Input id="med-dose" placeholder="e.g. 10 mg"
-                      value={form.dose ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, dose: e.target.value || null }))} />
-                  </FormField>
-                  <FormField label="Frequency" htmlFor="med-frequency">
-                    <Input id="med-frequency" placeholder="e.g. Once daily"
-                      value={form.frequency ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, frequency: e.target.value || null }))} />
-                  </FormField>
-                </div>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  <FormField label="Route" htmlFor="med-route">
-                    <Select id="med-route" value={form.route ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, route: e.target.value || null }))}>
-                      <option value="">Select…</option>
-                      <option value="oral">Oral</option>
-                      <option value="topical">Topical</option>
-                      <option value="injection">Injection</option>
-                      <option value="inhaled">Inhaled</option>
-                      <option value="other">Other</option>
-                    </Select>
-                  </FormField>
-                  <FormField label="Status" htmlFor="med-active">
-                    <Select id="med-active" value={form.is_active === false ? "false" : "true"}
-                      onChange={(e) => setForm((s) => ({ ...s, is_active: e.target.value === "true" }))}>
-                      <option value="true">Active</option>
-                      <option value="false">Inactive</option>
-                    </Select>
-                  </FormField>
-                </div>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  <FormField label="Start Date" htmlFor="med-start-date">
-                    <Input id="med-start-date" type="date"
-                      value={form.start_date ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, start_date: e.target.value || null }))} />
-                  </FormField>
-                  <FormField label="End Date" htmlFor="med-end-date">
-                    <Input id="med-end-date" type="date"
-                      value={form.end_date ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, end_date: e.target.value || null }))} />
-                  </FormField>
-                </div>
-                <FormField label="Prescribing Doctor" htmlFor="med-prescriber">
-                  <DoctorPicker
-                    doctorId={form.prescribing_doctor_id ?? null}
-                    doctorOther={form.prescribing_doctor ?? null}
-                    onChange={(id, other) => setForm((s) => ({ ...s, prescribing_doctor_id: id, prescribing_doctor: other }))}
-                  />
-                </FormField>
-                <FormField label="Notes" htmlFor="med-notes">
-                  <Textarea id="med-notes" placeholder="Side effects, instructions, or other notes…"
-                    value={form.notes ?? ""}
-                    onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value || null }))} />
-                </FormField>
-                <div className="flex justify-end">
-                  <Button type="submit">Add Medication</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
       </PageLayout>
-      {editingRow && (
-        <div role="dialog" aria-modal="true" aria-labelledby="edit-med-heading"
-             onKeyDown={(e) => e.key === "Escape" && closeEdit()}
-             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-             onClick={closeEdit}>
-          <div className="mx-4 sm:mx-auto w-full sm:max-w-lg rounded-xl border border-border bg-card p-4 sm:p-6 shadow-lg overflow-y-auto max-h-[90vh]"
-               onClick={(e) => e.stopPropagation()}>
-            <h2 id="edit-med-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Medication</h2>
-            {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
-            <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <FormField label="Medication Name" htmlFor="edit-med-name">
-                  <Input id="edit-med-name" required value={editForm.name ?? ""}
-                    onChange={(e) => setEditForm((s) => ({ ...s, name: e.target.value }))} />
-                </FormField>
-                <FormField label="Kind" htmlFor="edit-med-kind">
-                  <Select id="edit-med-kind" value={editForm.kind ?? "medication"}
-                    onChange={(e) => setEditForm((s) => ({ ...s, kind: e.target.value as MedicationKind }))}>
-                    <option value="medication">Medication</option>
-                    <option value="vitamin">Vitamin</option>
-                    <option value="supplement">Supplement</option>
-                  </Select>
-                </FormField>
-                <FormField label="Dose" htmlFor="edit-med-dose">
-                  <Input id="edit-med-dose" value={editForm.dose ?? ""}
-                    onChange={(e) => setEditForm((s) => ({ ...s, dose: e.target.value || null }))} />
-                </FormField>
-                <FormField label="Frequency" htmlFor="edit-med-frequency">
-                  <Input id="edit-med-frequency" value={editForm.frequency ?? ""}
-                    onChange={(e) => setEditForm((s) => ({ ...s, frequency: e.target.value || null }))} />
-                </FormField>
-                <FormField label="Route" htmlFor="edit-med-route">
-                  <Select id="edit-med-route" value={editForm.route ?? ""}
-                    onChange={(e) => setEditForm((s) => ({ ...s, route: e.target.value || null }))}>
-                    <option value="">Select…</option>
-                    <option value="oral">Oral</option>
-                    <option value="topical">Topical</option>
-                    <option value="injection">Injection</option>
-                    <option value="inhaled">Inhaled</option>
-                    <option value="other">Other</option>
-                  </Select>
-                </FormField>
-                <FormField label="Status" htmlFor="edit-med-active">
-                  <Select id="edit-med-active" value={editForm.is_active === false ? "false" : "true"}
-                    onChange={(e) => setEditForm((s) => ({ ...s, is_active: e.target.value === "true" }))}>
-                    <option value="true">Active</option>
-                    <option value="false">Inactive</option>
-                  </Select>
-                </FormField>
-                <FormField label="Start Date" htmlFor="edit-med-start">
-                  <Input id="edit-med-start" type="date" value={editForm.start_date ?? ""}
-                    onChange={(e) => setEditForm((s) => ({ ...s, start_date: e.target.value || null }))} />
-                </FormField>
-                <FormField label="End Date" htmlFor="edit-med-end">
-                  <Input id="edit-med-end" type="date" value={editForm.end_date ?? ""}
-                    onChange={(e) => setEditForm((s) => ({ ...s, end_date: e.target.value || null }))} />
-                </FormField>
-              </div>
-              <FormField label="Prescribing Doctor" htmlFor="edit-med-prescriber">
-                <DoctorPicker
-                  doctorId={editForm.prescribing_doctor_id ?? null}
-                  doctorOther={editForm.prescribing_doctor ?? null}
-                  onChange={(id, other) => setEditForm((s) => ({ ...s, prescribing_doctor_id: id, prescribing_doctor: other }))}
-                />
-              </FormField>
-              <FormField label="Notes" htmlFor="edit-med-notes">
-                <Textarea id="edit-med-notes" value={editForm.notes ?? ""}
-                  onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value || null }))} />
-              </FormField>
-              <div className="mt-2 flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={closeEdit}>Cancel</Button>
-                <Button type="submit">Save</Button>
-              </div>
-            </form>
+      {modalMode && (
+        <RecordFormModal
+          title={modalMode === "edit" ? "Edit Medication" : "Add Medication"}
+          submitLabel={modalMode === "edit" ? "Save" : "Add Medication"}
+          error={modalError || null}
+          onClose={closeModal}
+          onSubmit={onSubmit}
+        >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField label="Medication Name" htmlFor="med-name">
+              <Input id="med-name" required placeholder="e.g. Lisinopril"
+                value={form.name}
+                onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} />
+            </FormField>
+            <FormField label="Kind" htmlFor="med-kind">
+              <Select id="med-kind" value={form.kind ?? "medication"}
+                onChange={(e) => setForm((s) => ({ ...s, kind: e.target.value as MedicationKind }))}>
+                <option value="medication">Medication</option>
+                <option value="vitamin">Vitamin</option>
+                <option value="supplement">Supplement</option>
+              </Select>
+            </FormField>
+            <FormField label="Dose" htmlFor="med-dose">
+              <Input id="med-dose" placeholder="e.g. 10 mg"
+                value={form.dose ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, dose: e.target.value || null }))} />
+            </FormField>
+            <FormField label="Frequency" htmlFor="med-frequency">
+              <Input id="med-frequency" placeholder="e.g. Once daily"
+                value={form.frequency ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, frequency: e.target.value || null }))} />
+            </FormField>
+            <FormField label="Route" htmlFor="med-route">
+              <Select id="med-route" value={form.route ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, route: e.target.value || null }))}>
+                <option value="">Select…</option>
+                <option value="oral">Oral</option>
+                <option value="topical">Topical</option>
+                <option value="injection">Injection</option>
+                <option value="inhaled">Inhaled</option>
+                <option value="other">Other</option>
+              </Select>
+            </FormField>
+            <FormField label="Status" htmlFor="med-active">
+              <Select id="med-active" value={form.is_active === false ? "false" : "true"}
+                onChange={(e) => setForm((s) => ({ ...s, is_active: e.target.value === "true" }))}>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </Select>
+            </FormField>
+            <FormField label="Start Date" htmlFor="med-start-date">
+              <Input id="med-start-date" type="date"
+                value={form.start_date ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, start_date: e.target.value || null }))} />
+            </FormField>
+            <FormField label="End Date" htmlFor="med-end-date">
+              <Input id="med-end-date" type="date"
+                value={form.end_date ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, end_date: e.target.value || null }))} />
+            </FormField>
           </div>
-        </div>
+          <FormField label="Prescribing Doctor" htmlFor="med-prescriber">
+            <DoctorPicker
+              doctorId={form.prescribing_doctor_id ?? null}
+              doctorOther={form.prescribing_doctor ?? null}
+              onChange={(id, other) => setForm((s) => ({ ...s, prescribing_doctor_id: id, prescribing_doctor: other }))}
+            />
+          </FormField>
+          <FormField label="Notes" htmlFor="med-notes">
+            <Textarea id="med-notes" placeholder="Side effects, instructions, or other notes…"
+              value={form.notes ?? ""}
+              onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value || null }))} />
+          </FormField>
+        </RecordFormModal>
       )}
     </AppShell>
   );
