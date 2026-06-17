@@ -97,10 +97,20 @@ export default function NutritionPlanPage() {
     }
   }
 
-  // Card 1: delete
+  // Card 1: delete — also clear the corresponding acceptable-food flag so the checkbox stays in sync
   async function handleCard1Delete(id: string) {
     try {
+      const meal = meals.find((m) => m.id === id);
       await mealsApi.remove(id);
+      if (meal) {
+        const flag = MEAL_FLAG[meal.meal_type];
+        const matchingFood = acceptableFoods.find(
+          (f) => f.food_name === meal.food_name && (f[flag] as boolean)
+        );
+        if (matchingFood) {
+          await acceptableFoodsApi.patch(matchingFood.id, { [flag]: false });
+        }
+      }
       await reload();
     } catch {
       setError("Could not delete meal");

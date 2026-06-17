@@ -171,7 +171,14 @@ def list_guest_records(
     if section not in section_map:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown section")
     model, schema = section_map[section]
-    rows = db.scalars(select(model)).all()
+    rows = list(db.scalars(select(model)).all())
+    if section == "visit_logs":
+        from app.models.extended_records import VisitLog as _VisitLog, Vitals as _Vitals
+        for row in rows:
+            linked = db.get(_Vitals, row.linked_vitals_id) if row.linked_vitals_id else None
+            row.bp_systolic = linked.bp_systolic if linked else None
+            row.bp_diastolic = linked.bp_diastolic if linked else None
+            row.pulse_bpm = linked.pulse_bpm if linked else None
     log_event(
         db,
         action=AuditAction.share_link_access,
@@ -206,6 +213,12 @@ def get_guest_record(
     row = db.get(model, record_id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    if section == "visit_logs":
+        from app.models.extended_records import Vitals as _Vitals
+        linked = db.get(_Vitals, row.linked_vitals_id) if row.linked_vitals_id else None
+        row.bp_systolic = linked.bp_systolic if linked else None
+        row.bp_diastolic = linked.bp_diastolic if linked else None
+        row.pulse_bpm = linked.pulse_bpm if linked else None
     log_event(
         db,
         action=AuditAction.share_link_access,

@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FormField, Input } from "@/components/ui/form-field";
 import { formatDate } from "@/lib/format";
+import { formatInTimezone } from "@/lib/datetime";
+import { useAuth } from "../auth/useAuth";
 import { MobileRecordList } from "@/components/MobileRecordList";
 
 const ALL_SECTIONS = [
@@ -37,6 +39,8 @@ function linkStatus(link: ShareLink): string {
 }
 
 export default function ShareLinksPage() {
+  const { user } = useAuth();
+  const tz = user?.timezone ?? "America/Chicago";
   const [links, setLinks] = useState<ShareLink[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -237,7 +241,7 @@ export default function ShareLinksPage() {
           <MobileRecordList
             records={links}
             getHeadline={(link) => link.label}
-            getSubtitle={(link) => `Expires: ${formatDate(link.expires_at)}`}
+            getSubtitle={(link) => `Expires: ${formatInTimezone(link.expires_at, tz)}`}
             getBadge={(link) => {
               const status = linkStatus(link)
               return {
@@ -247,7 +251,7 @@ export default function ShareLinksPage() {
             }}
             getFields={(link) => [
               { key: "Sections", value: link.allowed_sections.length === 0 ? "All sections" : link.allowed_sections.map(formatSection).join(", ") },
-              { key: "Expires", value: formatDate(link.expires_at) },
+              { key: "Expires", value: formatInTimezone(link.expires_at, tz) },
               { key: "Created", value: formatDate(link.created_at) },
             ]}
             isAdmin={true}
@@ -289,7 +293,7 @@ export default function ShareLinksPage() {
                         ? "All"
                         : link.allowed_sections.map(formatSection).join(", ")}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatDate(link.expires_at)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{formatInTimezone(link.expires_at, tz)}</td>
                     <td className="px-4 py-3">
                       <Badge variant={status === "Active" ? "default" : "secondary"}>
                         {status}

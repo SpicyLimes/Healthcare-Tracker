@@ -198,3 +198,40 @@ def test_guest_patient_name_returns_full_name(client, db_session):
 def test_guest_patient_name_rejects_bad_token(client, db_session):
     res = client.get("/api/guest/patient-name?token=bogus")
     assert res.status_code == 401
+
+
+def test_guest_visit_logs_serializes_bp_fields(client, db_session):
+    """Guest visit_logs endpoint must return records with bp_systolic/diastolic/pulse_bpm (even if None)."""
+    csrf = _admin(client, db_session)
+    vlog = client.post(
+        "/api/visit-logs",
+        headers={"X-CSRF-Token": csrf},
+        json={"visit_date": "2026-01-15", "reason": "Checkup"},
+    ).json()
+    token = _create_link(client, csrf, sections=["visit_logs"])
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+    r = client.get(f"/api/guest/visit_logs?token={token}")
+    assert r.status_code == 200
+    rows = r.json()
+    assert len(rows) >= 1
+    row = next((x for x in rows if x["id"] == vlog["id"]), None)
+    assert row is not None
+    assert "bp_systolic" in row
+    assert "bp_diastolic" in row
+    assert "pulse_bpm" in row
+
+
+def test_guest_nutrition_plan_returns_meals(client, db_session):
+    """Guest nutrition_plan section returns NutritionMeal rows."""
+    csrf = _admin(client, db_session)
+    meal = client.post(
+        "/api/nutrition/meals",
+        headers={"X-CSRF-Token": csrf},
+        json={"food_name": "Oatmeal", "meal_type": "breakfast"},
+    ).json()
+    token = _create_link(client, csrf, sections=["nutrition_plan"])
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+    r = client.get(f"/api/guest/nutrition_plan?token={token}")
+    assert r.status_code == 200
+    rows = r.json()
+    assert any(x["id"] == meal["id"] for x in rows)
