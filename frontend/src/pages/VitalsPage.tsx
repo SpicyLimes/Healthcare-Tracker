@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
 import { RecordTable } from "@/components/RecordTable";
 import { RecordFormModal } from "@/components/RecordFormModal";
+import { localToUtcIso, formatInTimezone } from "@/lib/datetime";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -20,40 +21,29 @@ function computeBmi(h: number | null, w: number | null): number | null {
   return null;
 }
 
-/** ISO datetime string → datetime-local input value (YYYY-MM-DDTHH:MM) */
-function toLocalInput(iso: string): string {
-  if (!iso) return "";
+/** UTC ISO datetime → datetime-local input value (YYYY-MM-DDTHH:MM) in the user's timezone */
+function toLocalInputValue(isoUtc: string | null | undefined, timezone: string): string {
+  if (!isoUtc) return "";
   try {
-    const d = new Date(iso);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return (
-      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
-      `T${pad(d.getHours())}:${pad(d.getMinutes())}`
-    );
-  } catch {
-    return "";
-  }
-}
-
-/** Current local time in datetime-local format */
-function nowLocal(): string {
-  return toLocalInput(new Date().toISOString());
-}
-
-/** Format an ISO datetime for display in the table/detail */
-function fmtDateTime(iso: string | null): string {
-  if (!iso) return "—";
-  try {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
+    const formatter = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: timezone,
       year: "numeric",
-      hour: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
       minute: "2-digit",
-    }).format(new Date(iso));
+      second: "2-digit",
+      hour12: false,
+    });
+    return formatter.format(new Date(isoUtc)).replace(" ", "T").slice(0, 16);
   } catch {
-    return iso;
+    return isoUtc.slice(0, 16);
   }
+}
+
+/** Current time as a datetime-local input value in the user's timezone */
+function nowLocal(timezone: string): string {
+  return toLocalInputValue(new Date().toISOString(), timezone);
 }
 
 // ─── form state shape ────────────────────────────────────────────────────────
@@ -93,6 +83,7 @@ const EMPTY: VitalsFormState = {
 export default function VitalsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const tz = user?.timezone ?? "America/Chicago";
 
   const [rows, setRows] = useState<Vitals[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,7 +105,7 @@ export default function VitalsPage() {
   }, []);
 
   function openAdd() {
-    setForm({ ...EMPTY, measured_at: nowLocal() });
+    setForm({ ...EMPTY, measured_at: nowLocal(tz) });
     setEditingRow(null);
     setModalError("");
     setModalMode("add");
@@ -123,7 +114,7 @@ export default function VitalsPage() {
   function openEdit(r: Vitals) {
     setEditingRow(r);
     setForm({
-      measured_at: toLocalInput(r.measured_at),
+      measured_at: toLocalInputValue(r.measured_at, tz),
       bp_systolic: r.bp_systolic,
       bp_diastolic: r.bp_diastolic,
       pulse_bpm: r.pulse_bpm,
@@ -150,7 +141,7 @@ export default function VitalsPage() {
     setModalError("");
     const payload: VitalsInput = {
       ...form,
-      measured_at: form.measured_at ? new Date(form.measured_at).toISOString() : undefined,
+      measured_at: form.measured_at ? localToUtcIso(form.measured_at, tz) : undefined,
     };
     try {
       if (modalMode === "edit" && editingRow) {
@@ -193,7 +184,7 @@ export default function VitalsPage() {
                 {
                   header: "Date & Time",
                   sortKey: "measured_at",
-                  render: (r) => fmtDateTime(r.measured_at),
+                  render: (r) => formatInTimezone(r.measured_at, tz),
                   className: "px-4 py-3 font-medium text-foreground",
                 },
                 {
@@ -218,9 +209,9 @@ export default function VitalsPage() {
                   render: (r) => r.visit_log_id ? "From Visit Log" : "Manual",
                 },
               ]}
-              detailTitle={(r) => fmtDateTime(r.measured_at)}
+              detailTitle={(r) => formatInTimezone(r.measured_at, tz)}
               detailFields={(r) => [
-                { label: "Date & Time", value: fmtDateTime(r.measured_at) },
+                { label: "Date & Time", value: formatInTimezone(r.measured_at, tz) },
                 {
                   label: "Blood Pressure",
                   value: r.bp_systolic != null && r.bp_diastolic != null
@@ -238,7 +229,7 @@ export default function VitalsPage() {
                 { label: "Source", value: r.visit_log_id ? "From Visit Log" : "Manual" },
                 { label: "Notes", value: r.notes },
               ]}
-              getHeadline={(r) => fmtDateTime(r.measured_at)}
+              getHeadline={(r) => formatInTimezone(r.measured_at, tz)}
               getSubtitle={(r) =>
                 r.bp_systolic != null && r.bp_diastolic != null
                   ? `BP ${r.bp_systolic}/${r.bp_diastolic}`
