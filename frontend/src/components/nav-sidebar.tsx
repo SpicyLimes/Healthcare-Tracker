@@ -60,7 +60,6 @@ const navGroups = [
     label: "Account",
     items: [
       { to: "/change-password", label: "Settings", icon: KeyRound },
-      { to: "/share-links", label: "Share Links", icon: Share2 },
     ],
   },
   {
@@ -72,6 +71,7 @@ const navGroups = [
 ];
 
 const adminItems = [
+  { to: "/share-links", label: "Share Links", icon: Share2 },
   { to: "/audit-log", label: "Audit Log", icon: ScrollText },
   { to: "/users", label: "Manage Users", icon: UserCog },
   { to: "/settings", label: "AI Settings", icon: Bot },
