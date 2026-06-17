@@ -36,6 +36,7 @@ export interface RecordTableProps<T extends object> {
   onEdit?: (row: T) => void
   onDelete?: (row: T) => void
   emptyMessage?: string
+  pageSize?: number
 }
 
 export function RecordTable<T extends object>({
@@ -55,11 +56,20 @@ export function RecordTable<T extends object>({
   onEdit,
   onDelete,
   emptyMessage = "No records yet.",
+  pageSize = 10,
 }: RecordTableProps<T>) {
   const firstSortKey =
     defaultSortKey ?? primaryColumns.find((c) => c.sortKey)?.sortKey ?? ""
   const { sorted, sort, toggleSort } = useSort(rows, firstSortKey, defaultSortDir)
   const sortedRows = sorted
+
+  const [visibleCount, setVisibleCount] = React.useState(pageSize)
+  React.useEffect(() => {
+    setVisibleCount(pageSize)
+  }, [sort, rows, pageSize])
+
+  const pagedRows = sortedRows.slice(0, visibleCount)
+  const remaining = sortedRows.length - pagedRows.length
 
   const [detailRow, setDetailRow] = React.useState<T | null>(null)
 
@@ -70,7 +80,7 @@ export function RecordTable<T extends object>({
       {/* Mobile */}
       <div className="md:hidden">
         <MobileRecordList
-          records={sortedRows as Array<T & { id: string | number }>}
+          records={pagedRows as Array<T & { id: string | number }>}
           getHeadline={getHeadline}
           getSubtitle={getSubtitle}
           getBadge={getBadge}
@@ -128,7 +138,7 @@ export function RecordTable<T extends object>({
               </tr>
             )}
             {!loading &&
-              sortedRows.map((r) => (
+              pagedRows.map((r) => (
                 <tr
                   key={getRowId(r)}
                   className="border-b border-border last:border-0 hover:bg-muted/20"
@@ -171,6 +181,14 @@ export function RecordTable<T extends object>({
           </tbody>
         </table>
       </div>
+
+      {!loading && remaining > 0 && (
+        <div className="flex justify-center py-4">
+          <Button variant="outline" onClick={() => setVisibleCount((c) => c + pageSize)}>
+            Show More ({remaining} more)
+          </Button>
+        </div>
+      )}
 
       {detailRow && (
         <RecordDetailModal
