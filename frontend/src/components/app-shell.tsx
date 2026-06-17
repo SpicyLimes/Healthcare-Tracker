@@ -114,20 +114,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="mx-auto flex max-w-5xl flex-col items-center gap-1 text-center sm:flex-row sm:justify-between sm:text-left">
             <p className="text-[0.7rem] text-muted-foreground">
               © {new Date().getFullYear()}{" "}
-              <a href="https://spicylimes.io" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">SpicyLimes.io</a>
-              {" "}· All rights reserved ·{" "}
+              <a href="https://spicylimes.io" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors"><img src="/spicylimes.png" alt="SpicyLimes.io" className="size-4 shrink-0" /> SpicyLimes.io</a>
+              {" "}· All Rights Reserved ·{" "}
               <span className="italic">
-                For personal health record keeping only. Not a substitute for professional medical advice.
+                For Personal Health Record Keeping ONLY - Not a substitute for Professional Medical Advice
               </span>
+              <a
+                href="https://github.com/SpicyLimes/Healthcare-Tracker"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[0.7rem] text-muted-foreground hover:text-foreground transition-colors shrink-0"
+              >
+                | <img src="/github.svg" alt="Healthcare Tracker via GitHub" className="size-4 shrink-0" /> GitHub ↗
+              </a>
             </p>
-            <a
-              href="https://github.com/SpicyLimes/Healthcare-Tracker"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[0.7rem] text-muted-foreground hover:text-foreground transition-colors shrink-0"
-            >
-              GitHub ↗
-            </a>
           </div>
         </footer>
       </div>
