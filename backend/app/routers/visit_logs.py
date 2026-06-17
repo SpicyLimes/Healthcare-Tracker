@@ -29,20 +29,32 @@ _VISIT_LOG_COLUMNS = (
 )
 
 
-def _measured_at_from_visit(record: VisitLog):
+def _measured_at_from_visit(record: VisitLog, tz: str):
+    """Build a UTC datetime for the linked Vitals entry from the visit's date(+time),
+    interpreting that wall-clock value in the user's timezone `tz`.
+
+    The visit stores a naive date/time the user entered in their own zone; stamping it
+    as UTC directly would shift it (e.g. midnight Central -> previous-day 19:00 on display).
+    """
     from datetime import datetime, time as time_cls, timezone
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
     if record.visit_date is None:
         return datetime.now(timezone.utc)
+    try:
+        zone = ZoneInfo(tz)
+    except (ZoneInfoNotFoundError, ValueError):
+        zone = ZoneInfo("America/Chicago")
     t = record.visit_time or time_cls(0, 0)
-    return datetime.combine(record.visit_date, t, tzinfo=timezone.utc)
+    local_dt = datetime.combine(record.visit_date, t, tzinfo=zone)
+    return local_dt.astimezone(timezone.utc)
 
 
-def _sync_vitals(db: Session, record: VisitLog, vitals_data: dict, created_by: uuid.UUID):
+def _sync_vitals(db: Session, record: VisitLog, vitals_data: dict, created_by: uuid.UUID, tz: str):
     has_any = any(vitals_data.get(f) is not None for f in _VITALS_FIELDS)
     linked = db.get(Vitals, record.linked_vitals_id) if record.linked_vitals_id else None
     if linked is None and has_any:
         v = Vitals(
-            measured_at=_measured_at_from_visit(record),
+            measured_at=_measured_at_from_visit(record, tz),
             visit_log_id=record.id,
             created_by=created_by,
             **{f: vitals_data.get(f) for f in _VITALS_FIELDS},
@@ -54,7 +66,16 @@ def _sync_vitals(db: Session, record: VisitLog, vitals_data: dict, created_by: u
     elif linked is not None:
         for f in _VITALS_FIELDS:
             setattr(linked, f, vitals_data.get(f))
-        linked.measured_at = _measured_at_from_visit(record)
+        linked.measured_at = _measured_at_from_visit(record, tz)
+        db.flush()
+
+
+def _resync_measured_at(db: Session, record: VisitLog, tz: str):
+    """Re-stamp a linked Vitals entry's measured_at when the visit's date/time changed,
+    without touching its BP/Pulse or other fields. No-op if there's no linked entry."""
+    linked = db.get(Vitals, record.linked_vitals_id) if record.linked_vitals_id else None
+    if linked is not None:
+        linked.measured_at = _measured_at_from_visit(record, tz)
         db.flush()
 
 
@@ -94,7 +115,7 @@ def create_record(
     data = payload.model_dump()
     vitals_data = {f: data.pop(f) for f in _VITALS_FIELDS}
     record = service.create(db, {k: data[k] for k in _VISIT_LOG_COLUMNS if k in data}, created_by=current.id)
-    _sync_vitals(db, record, vitals_data, current.id)
+    _sync_vitals(db, record, vitals_data, current.id, current.timezone)
     try:
         log_event(
             db,
@@ -123,13 +144,18 @@ def update_record(
 ):
     data = payload.model_dump(exclude_unset=True)
     vitals_provided = any(f in data for f in _VITALS_FIELDS)
+    datetime_changed = "visit_date" in data or "visit_time" in data
     vitals_data = {f: data.pop(f, None) for f in _VITALS_FIELDS}
     try:
         record = service.update(db, record_id, {k: v for k, v in data.items() if k in _VISIT_LOG_COLUMNS})
     except NotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     if vitals_provided:
-        _sync_vitals(db, record, vitals_data, current.id)
+        _sync_vitals(db, record, vitals_data, current.id, current.timezone)
+    elif datetime_changed:
+        # Visit date/time changed but BP/Pulse weren't touched — keep the linked
+        # Vitals entry's timestamp in step with the visit (no-op if unlinked).
+        _resync_measured_at(db, record, current.timezone)
     try:
         log_event(
             db,

@@ -80,3 +80,42 @@ def test_update_non_vitals_field_leaves_linked_vitals_unchanged(client, db_sessi
     assert vitals[0]["bp_systolic"] == 120
     assert vitals[0]["bp_diastolic"] == 80
     assert vitals[0]["pulse_bpm"] == 72
+
+
+def test_measured_at_uses_user_timezone_not_utc(client, db_session):
+    # Admin defaults to America/Chicago. A visit at 14:30 local must store 19:30/20:30Z
+    # (CDT is UTC-5 in May), NOT 14:30Z — and must stay on the same calendar day.
+    csrf = _admin(client, db_session); h = {"X-CSRF-Token": csrf}
+    client.post("/api/visit-logs", headers=h,
+                json=_visit(visit_date="2026-05-19", visit_time="14:30", bp_systolic=120, bp_diastolic=80))
+    vitals = client.get("/api/vitals").json()
+    assert len(vitals) == 1
+    measured = vitals[0]["measured_at"]
+    # 14:30 America/Chicago in May (CDT, UTC-5) -> 19:30Z, still 2026-05-19
+    assert measured.startswith("2026-05-19T19:30")
+
+
+def test_midnight_date_only_visit_does_not_roll_to_previous_day(client, db_session):
+    # The reported bug: a date-only visit (midnight local) was rendering as the
+    # previous day. Midnight Central -> 05:00/06:00Z, which is still the SAME date.
+    csrf = _admin(client, db_session); h = {"X-CSRF-Token": csrf}
+    client.post("/api/visit-logs", headers=h,
+                json=_visit(visit_date="2026-05-19", bp_systolic=118, pulse_bpm=70))
+    vitals = client.get("/api/vitals").json()
+    assert vitals[0]["measured_at"].startswith("2026-05-19")
+
+
+def test_editing_only_visit_time_resyncs_linked_vitals_measured_at(client, db_session):
+    # Bug B: create with BP but no time (midnight), then add the time in a later edit
+    # that touches NO BP/Pulse keys. The linked vitals timestamp must follow the new time.
+    csrf = _admin(client, db_session); h = {"X-CSRF-Token": csrf}
+    vid = client.post("/api/visit-logs", headers=h,
+                      json=_visit(visit_date="2026-05-19", bp_systolic=120, bp_diastolic=80)).json()["id"]
+    before = client.get("/api/vitals").json()[0]["measured_at"]
+    assert before.startswith("2026-05-19T05:00") or before.startswith("2026-05-19T06:00")  # midnight CDT->UTC
+    # Edit ONLY the time — no BP/Pulse keys in the body
+    client.put(f"/api/visit-logs/{vid}", headers=h, json={"visit_time": "14:30"})
+    after = client.get("/api/vitals").json()
+    assert len(after) == 1  # no duplicate row
+    assert after[0]["measured_at"].startswith("2026-05-19T19:30")  # re-stamped to 14:30 CDT
+    assert after[0]["bp_systolic"] == 120  # BP untouched
