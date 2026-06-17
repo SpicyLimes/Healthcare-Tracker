@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { FormField, Input, Select, Textarea } from "@/components/ui/form-field";
 import { localToUtcIso, formatInTimezone } from "@/lib/datetime";
 import { RecordTable } from "@/components/RecordTable";
+import { RecordFormModal } from "@/components/RecordFormModal";
 
 const STATUSES: AppointmentStatus[] = ["upcoming", "completed", "cancelled", "rescheduled"];
 
@@ -76,11 +77,11 @@ export default function AppointmentsPage() {
   const [rows, setRows] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [form, setForm] = useState<AppointmentInput>(EMPTY);
   const [error, setError] = useState("");
+  const [modalMode, setModalMode] = useState<"add" | "edit" | null>(null);
   const [editingRow, setEditingRow] = useState<Appointment | null>(null);
-  const [editForm, setEditForm] = useState<AppointmentInput>(EMPTY);
-  const [editError, setEditError] = useState("");
+  const [form, setForm] = useState<AppointmentInput>(EMPTY);
+  const [modalError, setModalError] = useState("");
 
   async function reload() { setRows(await appointmentsApi.list()); }
   useEffect(() => {
@@ -98,18 +99,56 @@ export default function AppointmentsPage() {
     return other ?? "";
   }
 
-  async function onAdd(e: FormEvent) {
+  function openAdd() {
+    setForm(EMPTY);
+    setEditingRow(null);
+    setModalError("");
+    setModalMode("add");
+  }
+
+  function openEdit(r: Appointment) {
+    setEditingRow(r);
+    setForm({
+      appointment_datetime: toLocalInputValue(r.appointment_datetime, tz),
+      appointment_type: r.appointment_type,
+      doctor_id: r.doctor_id,
+      doctor_other: r.doctor_other,
+      location: r.location,
+      reason: r.reason,
+      status: r.status,
+      notes: r.notes,
+    });
+    setModalError("");
+    setModalMode("edit");
+  }
+
+  function closeModal() {
+    setModalMode(null);
+    setEditingRow(null);
+  }
+
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setError("");
+    setModalError("");
     try {
-      const payload = {
-        ...form,
-        appointment_datetime: localToUtcIso(form.appointment_datetime, tz),
-      };
-      await appointmentsApi.create(payload);
-      setForm(EMPTY);
+      if (modalMode === "edit" && editingRow) {
+        const payload = {
+          ...form,
+          appointment_datetime: localToUtcIso(form.appointment_datetime, tz),
+        };
+        await appointmentsApi.update(editingRow.id, payload);
+      } else {
+        const payload = {
+          ...form,
+          appointment_datetime: localToUtcIso(form.appointment_datetime, tz),
+        };
+        await appointmentsApi.create(payload);
+      }
+      closeModal();
       await reload();
-    } catch { setError("Could not add record"); }
+    } catch {
+      setModalError(modalMode === "edit" ? "Could not update record" : "Could not add record");
+    }
   }
 
   async function onDelete(id: string) {
@@ -117,32 +156,12 @@ export default function AppointmentsPage() {
     catch { setError("Could not delete record"); }
   }
 
-  function openEdit(r: Appointment) {
-    setEditingRow(r);
-    setEditForm({ appointment_datetime: toLocalInputValue(r.appointment_datetime, tz), appointment_type: r.appointment_type, doctor_id: r.doctor_id, doctor_other: r.doctor_other, location: r.location, reason: r.reason, status: r.status, notes: r.notes });
-    setEditError("");
-  }
-  function closeEdit() { setEditingRow(null); }
-  async function onSaveEdit(e: FormEvent) {
-    e.preventDefault();
-    if (!editingRow) return;
-    setEditError("");
-    try {
-      const payload = {
-        ...editForm,
-        appointment_datetime: localToUtcIso(editForm.appointment_datetime ?? "", tz),
-      };
-      await appointmentsApi.update(editingRow.id, payload);
-      setEditingRow(null);
-      await reload();
-    } catch { setEditError("Could not update record"); }
-  }
-
   return (
     <AppShell>
       <PageLayout
         title="Appointments"
         description="Manage upcoming and past healthcare appointments."
+        action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
       >
         <Card>
           <CardContent className="p-0">
@@ -183,163 +202,98 @@ export default function AppointmentsPage() {
             {error}
           </p>
         )}
-
-        {isAdmin && (
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <form onSubmit={onAdd}>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {/* Date/Time */}
-                  <FormField label="Date / Time" htmlFor="appointment_datetime">
-                    <Input
-                      id="appointment_datetime"
-                      required
-                      type="datetime-local"
-                      value={form.appointment_datetime}
-                      onChange={(e) => setForm((s) => ({ ...s, appointment_datetime: e.target.value }))}
-                    />
-                  </FormField>
-
-                  {/* Appointment Type */}
-                  <FormField label="Appointment Type" htmlFor="appointment_type">
-                    <Select
-                      id="appointment_type"
-                      value={form.appointment_type ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, appointment_type: (e.target.value as AppointmentType) || null }))}
-                    >
-                      <option value="">Select…</option>
-                      {APPOINTMENT_TYPES.map((t) => (
-                        <option key={t.value} value={t.value}>{t.label}</option>
-                      ))}
-                    </Select>
-                  </FormField>
-
-                  {/* Doctor (full width) */}
-                  <div className="sm:col-span-2">
-                    <FormField label="Doctor" htmlFor="appt-doctor">
-                      <DoctorPicker
-                        doctorId={form.doctor_id ?? null}
-                        doctorOther={form.doctor_other ?? null}
-                        onChange={(id, other) => setForm((s) => ({ ...s, doctor_id: id, doctor_other: other }))}
-                      />
-                    </FormField>
-                  </div>
-
-                  {/* Location */}
-                  <FormField label="Location" htmlFor="location">
-                    <Input
-                      id="location"
-                      value={form.location ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, location: e.target.value || null }))}
-                      placeholder="e.g. Main Street Clinic"
-                    />
-                  </FormField>
-
-                  {/* Reason */}
-                  <FormField label="Reason" htmlFor="reason">
-                    <Input
-                      id="reason"
-                      value={form.reason ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, reason: e.target.value || null }))}
-                      placeholder="e.g. Annual physical"
-                    />
-                  </FormField>
-
-                  {/* Status */}
-                  <FormField label="Status" htmlFor="status">
-                    <Select
-                      id="status"
-                      value={form.status ?? "upcoming"}
-                      onChange={(e) => setForm((s) => ({ ...s, status: e.target.value as AppointmentStatus }))}
-                    >
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s} className="capitalize">{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                      ))}
-                    </Select>
-                  </FormField>
-
-                  {/* Notes (full width) */}
-                  <div className="sm:col-span-2">
-                    <FormField label="Notes" htmlFor="appt-notes">
-                      <Textarea
-                        id="appt-notes"
-                        placeholder="Additional notes…"
-                        value={form.notes ?? ""}
-                        onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value || null }))}
-                      />
-                    </FormField>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex justify-end">
-                  <Button type="submit">Add Appointment</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
       </PageLayout>
-      {editingRow && (
-        <div role="dialog" aria-modal="true" aria-labelledby="edit-appt-heading"
-             onKeyDown={(e) => e.key === "Escape" && closeEdit()}
-             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-             onClick={closeEdit}>
-          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg overflow-y-auto max-h-[90vh]"
-               onClick={(e) => e.stopPropagation()}>
-            <h2 id="edit-appt-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Appointment</h2>
-            {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
-            <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <FormField label="Date / Time" htmlFor="edit-appt-datetime">
-                  <Input id="edit-appt-datetime" required type="datetime-local" value={editForm.appointment_datetime}
-                    onChange={(e) => setEditForm((s) => ({ ...s, appointment_datetime: e.target.value }))} />
-                </FormField>
-                <FormField label="Appointment Type" htmlFor="edit-appt-type">
-                  <Select id="edit-appt-type" value={editForm.appointment_type ?? ""}
-                    onChange={(e) => setEditForm((s) => ({ ...s, appointment_type: (e.target.value as AppointmentType) || null }))}>
-                    <option value="">Select…</option>
-                    {APPOINTMENT_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
-                    ))}
-                  </Select>
-                </FormField>
-                <div className="sm:col-span-2">
-                  <FormField label="Doctor" htmlFor="edit-appt-doctor">
-                    <DoctorPicker
-                      doctorId={editForm.doctor_id ?? null}
-                      doctorOther={editForm.doctor_other ?? null}
-                      onChange={(id, other) => setEditForm((s) => ({ ...s, doctor_id: id, doctor_other: other }))}
-                    />
-                  </FormField>
-                </div>
-                <FormField label="Location" htmlFor="edit-appt-location">
-                  <Input id="edit-appt-location" value={editForm.location ?? ""}
-                    onChange={(e) => setEditForm((s) => ({ ...s, location: e.target.value || null }))} />
-                </FormField>
-                <FormField label="Reason" htmlFor="edit-appt-reason">
-                  <Input id="edit-appt-reason" value={editForm.reason ?? ""}
-                    onChange={(e) => setEditForm((s) => ({ ...s, reason: e.target.value || null }))} />
-                </FormField>
-                <FormField label="Status" htmlFor="edit-appt-status">
-                  <Select id="edit-appt-status" value={editForm.status ?? "upcoming"}
-                    onChange={(e) => setEditForm((s) => ({ ...s, status: e.target.value as AppointmentStatus }))}>
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                    ))}
-                  </Select>
-                </FormField>
-              </div>
-              <FormField label="Notes" htmlFor="edit-appt-notes">
-                <Textarea id="edit-appt-notes" value={editForm.notes ?? ""}
-                  onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value || null }))} />
+      {modalMode && (
+        <RecordFormModal
+          title={modalMode === "edit" ? "Edit Appointment" : "Add Appointment"}
+          submitLabel={modalMode === "edit" ? "Save" : "Add Appointment"}
+          error={modalError || null}
+          onClose={closeModal}
+          onSubmit={onSubmit}
+        >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* Date/Time */}
+            <FormField label="Date / Time" htmlFor="appointment_datetime">
+              <Input
+                id="appointment_datetime"
+                required
+                type="datetime-local"
+                value={form.appointment_datetime}
+                onChange={(e) => setForm((s) => ({ ...s, appointment_datetime: e.target.value }))}
+              />
+            </FormField>
+
+            {/* Appointment Type */}
+            <FormField label="Appointment Type" htmlFor="appointment_type">
+              <Select
+                id="appointment_type"
+                value={form.appointment_type ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, appointment_type: (e.target.value as AppointmentType) || null }))}
+              >
+                <option value="">Select…</option>
+                {APPOINTMENT_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </Select>
+            </FormField>
+
+            {/* Doctor (full width) */}
+            <div className="sm:col-span-2">
+              <FormField label="Doctor" htmlFor="appt-doctor">
+                <DoctorPicker
+                  doctorId={form.doctor_id ?? null}
+                  doctorOther={form.doctor_other ?? null}
+                  onChange={(id, other) => setForm((s) => ({ ...s, doctor_id: id, doctor_other: other }))}
+                />
               </FormField>
-              <div className="mt-2 flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={closeEdit}>Cancel</Button>
-                <Button type="submit">Save</Button>
-              </div>
-            </form>
+            </div>
+
+            {/* Location */}
+            <FormField label="Location" htmlFor="location">
+              <Input
+                id="location"
+                value={form.location ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, location: e.target.value || null }))}
+                placeholder="e.g. Main Street Clinic"
+              />
+            </FormField>
+
+            {/* Reason */}
+            <FormField label="Reason" htmlFor="reason">
+              <Input
+                id="reason"
+                value={form.reason ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, reason: e.target.value || null }))}
+                placeholder="e.g. Annual physical"
+              />
+            </FormField>
+
+            {/* Status */}
+            <FormField label="Status" htmlFor="status">
+              <Select
+                id="status"
+                value={form.status ?? "upcoming"}
+                onChange={(e) => setForm((s) => ({ ...s, status: e.target.value as AppointmentStatus }))}
+              >
+                {STATUSES.map((s) => (
+                  <option key={s} value={s} className="capitalize">{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                ))}
+              </Select>
+            </FormField>
+
+            {/* Notes (full width) */}
+            <div className="sm:col-span-2">
+              <FormField label="Notes" htmlFor="appt-notes">
+                <Textarea
+                  id="appt-notes"
+                  placeholder="Additional notes…"
+                  value={form.notes ?? ""}
+                  onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value || null }))}
+                />
+              </FormField>
+            </div>
           </div>
-        </div>
+        </RecordFormModal>
       )}
     </AppShell>
   );

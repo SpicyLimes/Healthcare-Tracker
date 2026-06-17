@@ -7,6 +7,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
 import { RecordTable } from "@/components/RecordTable";
+import { RecordFormModal } from "@/components/RecordFormModal";
+
+const EMPTY: FamilyHistoryInput = {
+  relative: "",
+  condition: "",
+  age_of_onset: null,
+  notes: null,
+};
 
 export default function FamilyHistoryPage() {
   const { user } = useAuth();
@@ -14,15 +22,10 @@ export default function FamilyHistoryPage() {
   const [rows, setRows] = useState<FamilyHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({
-    relative: "",
-    condition: "",
-    age_of_onset: "",
-    notes: "",
-  });
+  const [modalMode, setModalMode] = useState<"add" | "edit" | null>(null);
   const [editingRow, setEditingRow] = useState<FamilyHistory | null>(null);
-  const [editForm, setEditForm] = useState({ relative: "", condition: "", age_of_onset: "", notes: "" });
-  const [editError, setEditError] = useState("");
+  const [form, setForm] = useState<FamilyHistoryInput>(EMPTY);
+  const [modalError, setModalError] = useState("");
 
   async function reload() {
     setRows(await familyHistoryApi.list());
@@ -33,22 +36,43 @@ export default function FamilyHistoryPage() {
     reload().catch(() => { setError("Failed to load family history"); setRows([]); }).finally(() => setLoading(false));
   }, []);
 
-  function set(key: keyof typeof form, value: string) {
-    setForm((s) => ({ ...s, [key]: value }));
+  function openAdd() {
+    setForm(EMPTY);
+    setEditingRow(null);
+    setModalError("");
+    setModalMode("add");
   }
 
-  async function onAdd(e: FormEvent) {
+  function openEdit(r: FamilyHistory) {
+    setEditingRow(r);
+    setForm({
+      relative: r.relative,
+      condition: r.condition,
+      age_of_onset: r.age_of_onset,
+      notes: r.notes,
+    });
+    setModalError("");
+    setModalMode("edit");
+  }
+
+  function closeModal() {
+    setModalMode(null);
+    setEditingRow(null);
+  }
+
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setError("");
+    setModalError("");
     try {
-      const payload = Object.fromEntries(
-        Object.entries(form).filter(([, v]) => v !== ""),
-      ) as typeof form;
-      await familyHistoryApi.create(payload);
-      setForm({ relative: "", condition: "", age_of_onset: "", notes: "" });
+      if (modalMode === "edit" && editingRow) {
+        await familyHistoryApi.update(editingRow.id, form);
+      } else {
+        await familyHistoryApi.create(form);
+      }
+      closeModal();
       await reload();
     } catch {
-      setError("Could not add family history record");
+      setModalError(modalMode === "edit" ? "Could not update record" : "Could not add family history record");
     }
   }
 
@@ -62,34 +86,13 @@ export default function FamilyHistoryPage() {
     }
   }
 
-  function openEdit(r: FamilyHistory) {
-    setEditingRow(r);
-    setEditForm({
-      relative: r.relative,
-      condition: r.condition,
-      age_of_onset: r.age_of_onset ?? "",
-      notes: r.notes ?? "",
-    });
-    setEditError("");
-  }
-  function closeEdit() { setEditingRow(null); }
-  async function onSaveEdit(e: FormEvent) {
-    e.preventDefault();
-    if (!editingRow) return;
-    setEditError("");
-    try {
-      const payload = Object.fromEntries(
-        Object.entries(editForm).map(([k, v]) => [k, v === "" ? null : v])
-      ) as unknown as FamilyHistoryInput;
-      await familyHistoryApi.update(editingRow.id, payload);
-      closeEdit();
-      await reload();
-    } catch { setEditError("Could not update record"); }
-  }
-
   return (
     <AppShell>
-      <PageLayout title="Family Health History" description="Hereditary conditions and family medical history.">
+      <PageLayout
+        title="Family Health History"
+        description="Hereditary conditions and family medical history."
+        action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
+      >
         <Card>
           <CardContent className="p-0">
             <RecordTable
@@ -120,101 +123,60 @@ export default function FamilyHistoryPage() {
         </Card>
 
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-
-        {isAdmin && (
-          <Card>
-            <CardContent className="py-6">
-              <form onSubmit={onAdd} className="flex flex-col gap-5">
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  <FormField label="Relative" htmlFor="relative">
-                    <Input
-                      id="relative"
-                      type="text"
-                      required
-                      value={form.relative}
-                      onChange={(e) => set("relative", e.target.value)}
-                      placeholder="e.g. Father, Maternal grandmother"
-                    />
-                  </FormField>
-
-                  <FormField label="Condition" htmlFor="condition">
-                    <Input
-                      id="condition"
-                      type="text"
-                      required
-                      value={form.condition}
-                      onChange={(e) => set("condition", e.target.value)}
-                      placeholder="e.g. Type 2 diabetes"
-                    />
-                  </FormField>
-
-                  <FormField label="Age of onset" htmlFor="age_of_onset">
-                    <Input
-                      id="age_of_onset"
-                      type="text"
-                      value={form.age_of_onset}
-                      onChange={(e) => set("age_of_onset", e.target.value)}
-                      placeholder="e.g. 55"
-                    />
-                  </FormField>
-
-                  <div className="sm:col-span-2">
-                    <FormField label="Notes" htmlFor="notes">
-                      <Textarea
-                        id="notes"
-                        value={form.notes}
-                        onChange={(e) => set("notes", e.target.value)}
-                        placeholder="Additional notes..."
-                      />
-                    </FormField>
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <Button type="submit">Add record</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
       </PageLayout>
-      {editingRow && (
-        <div role="dialog" aria-modal="true" aria-labelledby="edit-fh-heading"
-             onKeyDown={(e) => e.key === "Escape" && closeEdit()}
-             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-             onClick={closeEdit}>
-          <div className="mx-4 sm:mx-auto w-full sm:max-w-lg rounded-xl border border-border bg-card p-4 sm:p-6 shadow-lg overflow-y-auto max-h-[90vh]"
-               onClick={(e) => e.stopPropagation()}>
-            <h2 id="edit-fh-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Family History</h2>
-            {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
-            <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <FormField label="Relative" htmlFor="edit-fh-relative">
-                  <Input id="edit-fh-relative" required value={editForm.relative}
-                    onChange={(e) => setEditForm((s) => ({ ...s, relative: e.target.value }))} />
-                </FormField>
-                <FormField label="Condition" htmlFor="edit-fh-condition">
-                  <Input id="edit-fh-condition" required value={editForm.condition}
-                    onChange={(e) => setEditForm((s) => ({ ...s, condition: e.target.value }))} />
-                </FormField>
-                <FormField label="Age of Onset" htmlFor="edit-fh-onset">
-                  <Input id="edit-fh-onset" value={editForm.age_of_onset}
-                    onChange={(e) => setEditForm((s) => ({ ...s, age_of_onset: e.target.value }))} />
-                </FormField>
-                <div className="sm:col-span-2">
-                  <FormField label="Notes" htmlFor="edit-fh-notes">
-                    <Textarea id="edit-fh-notes" value={editForm.notes}
-                      onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value }))} />
-                  </FormField>
-                </div>
-              </div>
-              <div className="mt-2 flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={closeEdit}>Cancel</Button>
-                <Button type="submit">Save</Button>
-              </div>
-            </form>
+      {modalMode && (
+        <RecordFormModal
+          title={modalMode === "edit" ? "Edit Family History" : "Add Family History"}
+          submitLabel={modalMode === "edit" ? "Save" : "Add record"}
+          error={modalError || null}
+          onClose={closeModal}
+          onSubmit={onSubmit}
+        >
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <FormField label="Relative" htmlFor="relative">
+              <Input
+                id="relative"
+                type="text"
+                required
+                value={form.relative}
+                onChange={(e) => setForm((s) => ({ ...s, relative: e.target.value }))}
+                placeholder="e.g. Father, Maternal grandmother"
+              />
+            </FormField>
+
+            <FormField label="Condition" htmlFor="condition">
+              <Input
+                id="condition"
+                type="text"
+                required
+                value={form.condition}
+                onChange={(e) => setForm((s) => ({ ...s, condition: e.target.value }))}
+                placeholder="e.g. Type 2 diabetes"
+              />
+            </FormField>
+
+            <FormField label="Age of onset" htmlFor="age_of_onset">
+              <Input
+                id="age_of_onset"
+                type="text"
+                value={form.age_of_onset ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, age_of_onset: e.target.value || null }))}
+                placeholder="e.g. 55"
+              />
+            </FormField>
+
+            <div className="sm:col-span-2">
+              <FormField label="Notes" htmlFor="notes">
+                <Textarea
+                  id="notes"
+                  value={form.notes ?? ""}
+                  onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value || null }))}
+                  placeholder="Additional notes..."
+                />
+              </FormField>
+            </div>
           </div>
-        </div>
+        </RecordFormModal>
       )}
     </AppShell>
   );
