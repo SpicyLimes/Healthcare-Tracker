@@ -258,6 +258,9 @@ class VisitLogCreate(BaseModel):
     follow_up: str | None = None
     follow_up_date: date | None = None
     notes: str | None = None
+    bp_systolic: int | None = None
+    bp_diastolic: int | None = None
+    pulse_bpm: int | None = None
 
 class VisitLogUpdate(BaseModel):
     visit_date: date | None = None
@@ -269,6 +272,9 @@ class VisitLogUpdate(BaseModel):
     follow_up: str | None = None
     follow_up_date: date | None = None
     notes: str | None = None
+    bp_systolic: int | None = None
+    bp_diastolic: int | None = None
+    pulse_bpm: int | None = None
 
 class VisitLogResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -282,6 +288,10 @@ class VisitLogResponse(BaseModel):
     follow_up: str | None
     follow_up_date: date | None
     notes: str | None
+    bp_systolic: int | None
+    bp_diastolic: int | None
+    pulse_bpm: int | None
+    linked_vitals_id: uuid.UUID | None
     created_at: datetime
     updated_at: datetime
 
