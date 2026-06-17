@@ -77,7 +77,6 @@ const NON_ADMIN_SECTIONS = [
     description: "Security settings and sharing preferences.",
     items: [
       { to: "/change-password", label: "Settings", icon: KeyRound, desc: "Display name & password" },
-      { to: "/share-links", label: "Share Links", icon: Share2, desc: "Share records with providers" },
     ],
   },
   {
@@ -93,6 +92,7 @@ const ADMIN_SECTION = {
   group: "Admin",
   description: "System administration and user management.",
   items: [
+    { to: "/share-links", label: "Share Links", icon: Share2, desc: "Share records with providers" },
     { to: "/audit-log", label: "Audit Log", icon: ScrollText, desc: "System activity log" },
     { to: "/users", label: "Manage Users", icon: UserCog, desc: "User accounts & roles" },
   ],
