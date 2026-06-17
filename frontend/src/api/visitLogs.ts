@@ -11,6 +11,10 @@ export interface VisitLog {
   follow_up: string | null;
   follow_up_date: string | null;
   notes: string | null;
+  bp_systolic: number | null;
+  bp_diastolic: number | null;
+  pulse_bpm: number | null;
+  linked_vitals_id: string | null;
 }
 
 export interface VisitLogInput {
@@ -23,6 +27,9 @@ export interface VisitLogInput {
   follow_up?: string | null;
   follow_up_date?: string | null;
   notes?: string | null;
+  bp_systolic?: number | null;
+  bp_diastolic?: number | null;
+  pulse_bpm?: number | null;
 }
 
 export const visitLogsApi = createRecordClient<VisitLog, VisitLogInput, VisitLogInput>("/api/visit-logs");
