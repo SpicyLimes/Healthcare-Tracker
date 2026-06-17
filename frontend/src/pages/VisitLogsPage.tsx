@@ -130,6 +130,8 @@ export default function VisitLogsPage() {
                 { label: "Date", value: r.visit_date ? formatDateWithTime(r.visit_date, r.visit_time) : null },
                 { label: "Doctor", value: resolveDoctorName(r.doctor_id, r.doctor_other) || null },
                 { label: "Reason", value: r.reason },
+                { label: "Blood Pressure", value: (r.bp_systolic != null && r.bp_diastolic != null) ? `${r.bp_systolic}/${r.bp_diastolic} mmHg` : null },
+                { label: "Pulse", value: r.pulse_bpm != null ? `${r.pulse_bpm} bpm` : null },
                 { label: "Summary", value: r.summary },
                 { label: "Follow-up", value: r.follow_up },
                 { label: "Follow-up Date", value: r.follow_up_date },
