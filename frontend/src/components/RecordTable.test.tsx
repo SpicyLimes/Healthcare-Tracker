@@ -92,4 +92,64 @@ describe("RecordTable", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(onEdit).toHaveBeenCalledTimes(1);
   });
+
+  // --- Show More pagination ---
+  const manyRows: Row[] = Array.from({ length: 25 }, (_, i) => ({
+    id: String(i + 1),
+    name: `Row ${String(i + 1).padStart(2, "0")}`,
+    dose: null,
+    active: true,
+    kind: "Medication",
+  }));
+
+  function visibleCount() {
+    // The desktop table renders exactly one "More details for …" button per
+    // visible row; the mobile list uses a different control. Count directly.
+    return screen.getAllByRole("button", { name: /more details for/i }).length;
+  }
+
+  it("shows only the first page (10) by default", () => {
+    renderTable({ rows: manyRows });
+    expect(visibleCount()).toBe(10);
+  });
+
+  it("reveals 10 more rows each time Show More is clicked", () => {
+    renderTable({ rows: manyRows });
+    const showMore = () => screen.getByRole("button", { name: /show more/i });
+    fireEvent.click(showMore());
+    expect(visibleCount()).toBe(20);
+    fireEvent.click(showMore());
+    expect(visibleCount()).toBe(25);
+  });
+
+  it("shows the remaining count in the Show More button", () => {
+    renderTable({ rows: manyRows });
+    expect(screen.getByRole("button", { name: /show more \(15 more\)/i })).toBeInTheDocument();
+  });
+
+  it("hides Show More once all rows are visible", () => {
+    renderTable({ rows: manyRows });
+    fireEvent.click(screen.getByRole("button", { name: /show more/i }));
+    fireEvent.click(screen.getByRole("button", { name: /show more/i }));
+    expect(screen.queryByRole("button", { name: /show more/i })).toBeNull();
+  });
+
+  it("does not render Show More when rows fit on one page", () => {
+    renderTable({ rows: manyRows.slice(0, 8) });
+    expect(screen.queryByRole("button", { name: /show more/i })).toBeNull();
+  });
+
+  it("resets the window to the first page when sort changes", () => {
+    renderTable({ rows: manyRows });
+    fireEvent.click(screen.getByRole("button", { name: /show more/i })); // now 20
+    expect(visibleCount()).toBe(20);
+    fireEvent.click(screen.getByRole("button", { name: /sort by name/i })); // re-sort
+    expect(visibleCount()).toBe(10);
+  });
+
+  it("respects a custom pageSize", () => {
+    renderTable({ rows: manyRows, pageSize: 5 });
+    expect(visibleCount()).toBe(5);
+    expect(screen.getByRole("button", { name: /show more \(20 more\)/i })).toBeInTheDocument();
+  });
 });

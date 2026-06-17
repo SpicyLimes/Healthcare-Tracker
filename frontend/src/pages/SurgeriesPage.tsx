@@ -10,6 +10,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
 import { RecordTable } from "@/components/RecordTable";
+import { RecordFormModal } from "@/components/RecordFormModal";
+
+const EMPTY: SurgeryInput = {
+  procedure: "",
+  surgery_date: null,
+  surgeon_id: null,
+  surgeon_other: null,
+  hospital: null,
+  outcome: null,
+  notes: null,
+};
 
 export default function SurgeriesPage() {
   const { user } = useAuth();
@@ -17,11 +28,11 @@ export default function SurgeriesPage() {
   const [rows, setRows] = useState<Surgery[]>([]);
   const [loading, setLoading] = useState(true);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [form, setForm] = useState<SurgeryInput>({ procedure: "" });
   const [error, setError] = useState("");
+  const [modalMode, setModalMode] = useState<"add" | "edit" | null>(null);
   const [editingRow, setEditingRow] = useState<Surgery | null>(null);
-  const [editForm, setEditForm] = useState<SurgeryInput>({ procedure: "" });
-  const [editError, setEditError] = useState("");
+  const [form, setForm] = useState<SurgeryInput>(EMPTY);
+  const [modalError, setModalError] = useState("");
 
   async function reload() { setRows(await surgeriesApi.list()); }
   useEffect(() => {
@@ -30,36 +41,44 @@ export default function SurgeriesPage() {
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
 
-  async function onAdd(e: FormEvent) {
+  function openAdd() {
+    setForm(EMPTY);
+    setEditingRow(null);
+    setModalError("");
+    setModalMode("add");
+  }
+
+  function openEdit(r: Surgery) {
+    setEditingRow(r);
+    setForm({ procedure: r.procedure, surgery_date: r.surgery_date, surgeon_id: r.surgeon_id, surgeon_other: r.surgeon_other, hospital: r.hospital, outcome: r.outcome, notes: r.notes });
+    setModalError("");
+    setModalMode("edit");
+  }
+
+  function closeModal() {
+    setModalMode(null);
+    setEditingRow(null);
+  }
+
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setError("");
+    setModalError("");
     try {
-      await surgeriesApi.create(form);
-      setForm({ procedure: "" });
+      if (modalMode === "edit" && editingRow) {
+        await surgeriesApi.update(editingRow.id, form);
+      } else {
+        await surgeriesApi.create(form);
+      }
+      closeModal();
       await reload();
-    } catch { setError("Could not add record"); }
+    } catch {
+      setModalError(modalMode === "edit" ? "Could not update record" : "Could not add record");
+    }
   }
 
   async function onDelete(id: string) {
     try { await surgeriesApi.remove(id); await reload(); }
     catch { setError("Could not delete record"); }
-  }
-
-  function openEdit(r: Surgery) {
-    setEditingRow(r);
-    setEditForm({ procedure: r.procedure, surgery_date: r.surgery_date, surgeon_id: r.surgeon_id, surgeon_other: r.surgeon_other, hospital: r.hospital, outcome: r.outcome, notes: r.notes });
-    setEditError("");
-  }
-  function closeEdit() { setEditingRow(null); }
-  async function onSaveEdit(e: FormEvent) {
-    e.preventDefault();
-    if (!editingRow) return;
-    setEditError("");
-    try {
-      await surgeriesApi.update(editingRow.id, editForm);
-      closeEdit();
-      await reload();
-    } catch { setEditError("Could not update record"); }
   }
 
   function resolveDoctorName(id: string | null, other: string | null): string {
@@ -69,7 +88,11 @@ export default function SurgeriesPage() {
 
   return (
     <AppShell>
-      <PageLayout title="Surgery Records" description="Surgical procedures and outcomes.">
+      <PageLayout
+        title="Surgery Records"
+        description="Surgical procedures and outcomes."
+        action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
+      >
         <Card>
           <CardContent className="p-0">
             <RecordTable
@@ -101,149 +124,81 @@ export default function SurgeriesPage() {
             />
           </CardContent>
         </Card>
-
         {error && (
           <p role="alert" className="mb-4 text-sm text-destructive">
             {error}
           </p>
         )}
-
-        {isAdmin && (
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <form onSubmit={onAdd}>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {/* Procedure (full width) */}
-                  <div className="sm:col-span-2">
-                    <FormField label="Procedure" htmlFor="procedure">
-                      <Input
-                        id="procedure"
-                        type="text"
-                        required
-                        value={form.procedure}
-                        onChange={(e) => setForm((s) => ({ ...s, procedure: e.target.value }))}
-                        placeholder="e.g. Appendectomy"
-                      />
-                    </FormField>
-                  </div>
-
-                  {/* Date | Hospital */}
-                  <FormField label="Surgery Date" htmlFor="surgery_date">
-                    <Input
-                      id="surgery_date"
-                      type="date"
-                      value={form.surgery_date ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, surgery_date: e.target.value || null }))}
-                    />
-                  </FormField>
-                  <FormField label="Hospital" htmlFor="hospital">
-                    <Input
-                      id="hospital"
-                      type="text"
-                      value={form.hospital ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, hospital: e.target.value || null }))}
-                      placeholder="e.g. General Hospital"
-                    />
-                  </FormField>
-
-                  {/* Surgeon (full width) */}
-                  <div className="sm:col-span-2">
-                    <FormField label="Surgeon" htmlFor="surgeon">
-                      <DoctorPicker
-                        doctorId={form.surgeon_id ?? null}
-                        doctorOther={form.surgeon_other ?? null}
-                        onChange={(id, other) => setForm((s) => ({ ...s, surgeon_id: id, surgeon_other: other }))}
-                      />
-                    </FormField>
-                  </div>
-
-                  {/* Outcome (full width) */}
-                  <div className="sm:col-span-2">
-                    <FormField label="Outcome" htmlFor="outcome">
-                      <Textarea
-                        id="outcome"
-                        value={form.outcome ?? ""}
-                        onChange={(e) => setForm((s) => ({ ...s, outcome: e.target.value || null }))}
-                        placeholder="Describe the outcome..."
-                      />
-                    </FormField>
-                  </div>
-
-                  {/* Notes (full width) */}
-                  <div className="sm:col-span-2">
-                    <FormField label="Notes" htmlFor="notes">
-                      <Textarea
-                        id="notes"
-                        value={form.notes ?? ""}
-                        onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value || null }))}
-                        placeholder="Additional notes..."
-                      />
-                    </FormField>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex justify-end">
-                  <Button type="submit">Add Record</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
       </PageLayout>
-      {editingRow && (
-        <div role="dialog" aria-modal="true" aria-labelledby="edit-surg-heading"
-             onKeyDown={(e) => e.key === "Escape" && closeEdit()}
-             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-             onClick={closeEdit}>
-          <div className="mx-4 sm:mx-auto w-full sm:max-w-lg rounded-xl border border-border bg-card p-4 sm:p-6 shadow-lg overflow-y-auto max-h-[90vh]"
-               onClick={(e) => e.stopPropagation()}>
-            <h2 id="edit-surg-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Surgery</h2>
-            {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
-            <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <FormField label="Procedure" htmlFor="edit-surg-procedure">
-                    <Input id="edit-surg-procedure" required value={editForm.procedure ?? ""}
-                      onChange={(e) => setEditForm((s) => ({ ...s, procedure: e.target.value }))} />
-                  </FormField>
-                </div>
-                <FormField label="Surgery Date" htmlFor="edit-surg-date">
-                  <Input id="edit-surg-date" type="date" value={editForm.surgery_date ?? ""}
-                    onChange={(e) => setEditForm((s) => ({ ...s, surgery_date: e.target.value || null }))} />
-                </FormField>
-                <FormField label="Hospital" htmlFor="edit-surg-hospital">
-                  <Input id="edit-surg-hospital" value={editForm.hospital ?? ""}
-                    onChange={(e) => setEditForm((s) => ({ ...s, hospital: e.target.value || null }))} />
-                </FormField>
-                <div className="sm:col-span-2">
-                  <FormField label="Surgeon" htmlFor="edit-surg-surgeon">
-                    <DoctorPicker
-                      doctorId={editForm.surgeon_id ?? null}
-                      doctorOther={editForm.surgeon_other ?? null}
-                      onChange={(id, other) => setEditForm((s) => ({ ...s, surgeon_id: id, surgeon_other: other }))}
-                    />
-                  </FormField>
-                </div>
-                <div className="sm:col-span-2">
-                  <FormField label="Outcome" htmlFor="edit-surg-outcome">
-                    <Textarea id="edit-surg-outcome" value={editForm.outcome ?? ""}
-                      onChange={(e) => setEditForm((s) => ({ ...s, outcome: e.target.value || null }))} />
-                  </FormField>
-                </div>
-                <div className="sm:col-span-2">
-                  <FormField label="Notes" htmlFor="edit-surg-notes">
-                    <Textarea id="edit-surg-notes" value={editForm.notes ?? ""}
-                      onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value || null }))} />
-                  </FormField>
-                </div>
-              </div>
-              <div className="mt-2 flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={closeEdit}>Cancel</Button>
-                <Button type="submit">Save</Button>
-              </div>
-            </form>
+      {modalMode && (
+        <RecordFormModal
+          title={modalMode === "edit" ? "Edit Surgery" : "Add Surgery"}
+          submitLabel={modalMode === "edit" ? "Save" : "Add Surgery"}
+          error={modalError || null}
+          onClose={closeModal}
+          onSubmit={onSubmit}
+        >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <FormField label="Procedure" htmlFor="surg-procedure">
+                <Input
+                  id="surg-procedure"
+                  type="text"
+                  required
+                  value={form.procedure}
+                  onChange={(e) => setForm((s) => ({ ...s, procedure: e.target.value }))}
+                  placeholder="e.g. Appendectomy"
+                />
+              </FormField>
+            </div>
+            <FormField label="Surgery Date" htmlFor="surg-date">
+              <Input
+                id="surg-date"
+                type="date"
+                value={form.surgery_date ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, surgery_date: e.target.value || null }))}
+              />
+            </FormField>
+            <FormField label="Hospital" htmlFor="surg-hospital">
+              <Input
+                id="surg-hospital"
+                type="text"
+                value={form.hospital ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, hospital: e.target.value || null }))}
+                placeholder="e.g. General Hospital"
+              />
+            </FormField>
+            <div className="sm:col-span-2">
+              <FormField label="Surgeon" htmlFor="surg-surgeon">
+                <DoctorPicker
+                  doctorId={form.surgeon_id ?? null}
+                  doctorOther={form.surgeon_other ?? null}
+                  onChange={(id, other) => setForm((s) => ({ ...s, surgeon_id: id, surgeon_other: other }))}
+                />
+              </FormField>
+            </div>
+            <div className="sm:col-span-2">
+              <FormField label="Outcome" htmlFor="surg-outcome">
+                <Textarea
+                  id="surg-outcome"
+                  value={form.outcome ?? ""}
+                  onChange={(e) => setForm((s) => ({ ...s, outcome: e.target.value || null }))}
+                  placeholder="Describe the outcome..."
+                />
+              </FormField>
+            </div>
+            <div className="sm:col-span-2">
+              <FormField label="Notes" htmlFor="surg-notes">
+                <Textarea
+                  id="surg-notes"
+                  value={form.notes ?? ""}
+                  onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value || null }))}
+                  placeholder="Additional notes..."
+                />
+              </FormField>
+            </div>
           </div>
-        </div>
+        </RecordFormModal>
       )}
     </AppShell>
   );

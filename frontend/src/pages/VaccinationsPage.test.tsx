@@ -28,7 +28,7 @@ describe("VaccinationsPage", () => {
     mockAuth("viewer");
     vi.spyOn(vacApi.vaccinationsApi, "list").mockResolvedValue([
       { id: "1", vaccine: "Flu Shot", administered_date: null, lot_number: null,
-        administrator: null, next_due_date: null, notes: null },
+        administrator: null, manufacturer: null, next_due_date: null, notes: null },
     ]);
     render(<VaccinationsPage />);
     expect((await screen.findAllByText("Flu Shot")).length).toBeGreaterThan(0);
@@ -47,16 +47,17 @@ describe("VaccinationsPage", () => {
     const mockList = vi.spyOn(vacApi.vaccinationsApi, "list").mockResolvedValue([]);
     const mockCreate = vi.spyOn(vacApi.vaccinationsApi, "create").mockResolvedValue({
       id: "2", vaccine: "COVID-19", administered_date: null, lot_number: null,
-      administrator: null, next_due_date: null, notes: null,
+      administrator: null, manufacturer: null, next_due_date: null, notes: null,
     });
     mockList.mockResolvedValueOnce([]).mockResolvedValue([
       { id: "2", vaccine: "COVID-19", administered_date: null, lot_number: null,
-        administrator: null, next_due_date: null, notes: null },
+        administrator: null, manufacturer: null, next_due_date: null, notes: null },
     ]);
     render(<VaccinationsPage />);
     await waitFor(() => expect(mockList).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: /\+ add/i }));
     fireEvent.change(screen.getByLabelText("Vaccine"), { target: { value: "COVID-19" } });
-    fireEvent.click(screen.getByRole("button", { name: /add/i }));
+    fireEvent.click(screen.getByRole("button", { name: /add vaccination/i }));
     expect((await screen.findAllByText("COVID-19")).length).toBeGreaterThan(0);
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ vaccine: "COVID-19" }));
   });

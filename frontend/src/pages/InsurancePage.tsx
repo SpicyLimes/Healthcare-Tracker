@@ -8,6 +8,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
 import { RecordTable } from "@/components/RecordTable";
+import { RecordFormModal } from "@/components/RecordFormModal";
+
+const EMPTY: InsuranceInput = {
+  insurer_name: "",
+  policy_number: null,
+  group_number: null,
+  contact_phone: null,
+  notes: null,
+};
 
 export default function InsurancePage() {
   const { user } = useAuth();
@@ -15,16 +24,10 @@ export default function InsurancePage() {
   const [rows, setRows] = useState<Insurance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({
-    insurer_name: "",
-    policy_number: "",
-    group_number: "",
-    contact_phone: "",
-    notes: "",
-  });
+  const [modalMode, setModalMode] = useState<"add" | "edit" | null>(null);
   const [editingRow, setEditingRow] = useState<Insurance | null>(null);
-  const [editForm, setEditForm] = useState({ insurer_name: "", policy_number: "", group_number: "", contact_phone: "", notes: "" });
-  const [editError, setEditError] = useState("");
+  const [form, setForm] = useState<InsuranceInput>(EMPTY);
+  const [modalError, setModalError] = useState("");
 
   async function reload() {
     setRows(await insurancesApi.list());
@@ -35,22 +38,44 @@ export default function InsurancePage() {
     reload().catch(() => { setError("Failed to load insurance records"); setRows([]); }).finally(() => setLoading(false));
   }, []);
 
-  function set(key: keyof typeof form, value: string) {
-    setForm((s) => ({ ...s, [key]: value }));
+  function openAdd() {
+    setForm(EMPTY);
+    setEditingRow(null);
+    setModalError("");
+    setModalMode("add");
   }
 
-  async function onAdd(e: FormEvent) {
+  function openEdit(r: Insurance) {
+    setEditingRow(r);
+    setForm({
+      insurer_name: r.insurer_name,
+      policy_number: r.policy_number ?? null,
+      group_number: r.group_number ?? null,
+      contact_phone: r.contact_phone ?? null,
+      notes: r.notes ?? null,
+    });
+    setModalError("");
+    setModalMode("edit");
+  }
+
+  function closeModal() {
+    setModalMode(null);
+    setEditingRow(null);
+  }
+
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setError("");
+    setModalError("");
     try {
-      const payload = Object.fromEntries(
-        Object.entries(form).filter(([, v]) => v !== ""),
-      ) as typeof form;
-      await insurancesApi.create(payload);
-      setForm({ insurer_name: "", policy_number: "", group_number: "", contact_phone: "", notes: "" });
+      if (modalMode === "edit" && editingRow) {
+        await insurancesApi.update(editingRow.id, form);
+      } else {
+        await insurancesApi.create(form);
+      }
+      closeModal();
       await reload();
     } catch {
-      setError("Could not add insurance record");
+      setModalError(modalMode === "edit" ? "Could not update record" : "Could not add insurance record");
     }
   }
 
@@ -64,35 +89,13 @@ export default function InsurancePage() {
     }
   }
 
-  function openEdit(r: Insurance) {
-    setEditingRow(r);
-    setEditForm({
-      insurer_name: r.insurer_name,
-      policy_number: r.policy_number ?? "",
-      group_number: r.group_number ?? "",
-      contact_phone: r.contact_phone ?? "",
-      notes: r.notes ?? "",
-    });
-    setEditError("");
-  }
-  function closeEdit() { setEditingRow(null); }
-  async function onSaveEdit(e: FormEvent) {
-    e.preventDefault();
-    if (!editingRow) return;
-    setEditError("");
-    try {
-      const payload = Object.fromEntries(
-        Object.entries(editForm).map(([k, v]) => [k, v === "" ? null : v])
-      ) as unknown as InsuranceInput;
-      await insurancesApi.update(editingRow.id, payload);
-      closeEdit();
-      await reload();
-    } catch { setEditError("Could not update record"); }
-  }
-
   return (
     <AppShell>
-      <PageLayout title="Insurance" description="Health insurance policies and contact information.">
+      <PageLayout
+        title="Insurance"
+        description="Health insurance policies and contact information."
+        action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
+      >
         <Card>
           <CardContent className="p-0">
             <RecordTable
@@ -125,118 +128,67 @@ export default function InsurancePage() {
         </Card>
 
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-
-        {isAdmin && (
-          <Card>
-            <CardContent className="py-6">
-              <form onSubmit={onAdd} className="flex flex-col gap-5">
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <FormField label="Insurer name" htmlFor="insurer_name">
-                      <Input
-                        id="insurer_name"
-                        type="text"
-                        required
-                        value={form.insurer_name}
-                        onChange={(e) => set("insurer_name", e.target.value)}
-                        placeholder="e.g. Blue Cross Blue Shield"
-                      />
-                    </FormField>
-                  </div>
-
-                  <FormField label="Policy #" htmlFor="policy_number">
-                    <Input
-                      id="policy_number"
-                      type="text"
-                      value={form.policy_number}
-                      onChange={(e) => set("policy_number", e.target.value)}
-                      placeholder="e.g. XYZ123456"
-                    />
-                  </FormField>
-
-                  <FormField label="Group #" htmlFor="group_number">
-                    <Input
-                      id="group_number"
-                      type="text"
-                      value={form.group_number}
-                      onChange={(e) => set("group_number", e.target.value)}
-                      placeholder="e.g. GRP987654"
-                    />
-                  </FormField>
-
-                  <FormField label="Contact phone" htmlFor="contact_phone">
-                    <Input
-                      id="contact_phone"
-                      type="tel"
-                      value={form.contact_phone}
-                      onChange={(e) => set("contact_phone", e.target.value)}
-                      placeholder="e.g. +1 800-555-0100"
-                    />
-                  </FormField>
-
-                  <div className="sm:col-span-2">
-                    <FormField label="Notes" htmlFor="notes">
-                      <Textarea
-                        id="notes"
-                        value={form.notes}
-                        onChange={(e) => set("notes", e.target.value)}
-                        placeholder="Additional notes..."
-                      />
-                    </FormField>
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <Button type="submit">Add insurance</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
       </PageLayout>
-      {editingRow && (
-        <div role="dialog" aria-modal="true" aria-labelledby="edit-ins-heading"
-             onKeyDown={(e) => e.key === "Escape" && closeEdit()}
-             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-             onClick={closeEdit}>
-          <div className="mx-4 sm:mx-auto w-full sm:max-w-lg rounded-xl border border-border bg-card p-4 sm:p-6 shadow-lg overflow-y-auto max-h-[90vh]"
-               onClick={(e) => e.stopPropagation()}>
-            <h2 id="edit-ins-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Insurance</h2>
-            {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
-            <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <FormField label="Insurer Name" htmlFor="edit-ins-insurer">
-                    <Input id="edit-ins-insurer" required value={editForm.insurer_name}
-                      onChange={(e) => setEditForm((s) => ({ ...s, insurer_name: e.target.value }))} />
-                  </FormField>
-                </div>
-                <FormField label="Policy #" htmlFor="edit-ins-policy">
-                  <Input id="edit-ins-policy" value={editForm.policy_number}
-                    onChange={(e) => setEditForm((s) => ({ ...s, policy_number: e.target.value }))} />
-                </FormField>
-                <FormField label="Group #" htmlFor="edit-ins-group">
-                  <Input id="edit-ins-group" value={editForm.group_number}
-                    onChange={(e) => setEditForm((s) => ({ ...s, group_number: e.target.value }))} />
-                </FormField>
-                <FormField label="Contact Phone" htmlFor="edit-ins-phone">
-                  <Input id="edit-ins-phone" type="tel" value={editForm.contact_phone}
-                    onChange={(e) => setEditForm((s) => ({ ...s, contact_phone: e.target.value }))} />
-                </FormField>
-                <div className="sm:col-span-2">
-                  <FormField label="Notes" htmlFor="edit-ins-notes">
-                    <Textarea id="edit-ins-notes" value={editForm.notes}
-                      onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value }))} />
-                  </FormField>
-                </div>
-              </div>
-              <div className="mt-2 flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={closeEdit}>Cancel</Button>
-                <Button type="submit">Save</Button>
-              </div>
-            </form>
+      {modalMode && (
+        <RecordFormModal
+          title={modalMode === "edit" ? "Edit Insurance" : "Add Insurance"}
+          submitLabel={modalMode === "edit" ? "Save" : "Add Insurance"}
+          error={modalError || null}
+          onClose={closeModal}
+          onSubmit={onSubmit}
+        >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <FormField label="Insurer name" htmlFor="ins-insurer-name">
+                <Input
+                  id="ins-insurer-name"
+                  type="text"
+                  required
+                  value={form.insurer_name}
+                  onChange={(e) => setForm((s) => ({ ...s, insurer_name: e.target.value }))}
+                  placeholder="e.g. Blue Cross Blue Shield"
+                />
+              </FormField>
+            </div>
+            <FormField label="Policy #" htmlFor="ins-policy-number">
+              <Input
+                id="ins-policy-number"
+                type="text"
+                value={form.policy_number ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, policy_number: e.target.value || null }))}
+                placeholder="e.g. XYZ123456"
+              />
+            </FormField>
+            <FormField label="Group #" htmlFor="ins-group-number">
+              <Input
+                id="ins-group-number"
+                type="text"
+                value={form.group_number ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, group_number: e.target.value || null }))}
+                placeholder="e.g. GRP987654"
+              />
+            </FormField>
+            <FormField label="Contact phone" htmlFor="ins-contact-phone">
+              <Input
+                id="ins-contact-phone"
+                type="tel"
+                value={form.contact_phone ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, contact_phone: e.target.value || null }))}
+                placeholder="e.g. +1 800-555-0100"
+              />
+            </FormField>
+            <div className="sm:col-span-2">
+              <FormField label="Notes" htmlFor="ins-notes">
+                <Textarea
+                  id="ins-notes"
+                  value={form.notes ?? ""}
+                  onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value || null }))}
+                  placeholder="Additional notes..."
+                />
+              </FormField>
+            </div>
           </div>
-        </div>
+        </RecordFormModal>
       )}
     </AppShell>
   );
