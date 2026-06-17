@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-  User, Pill, Stethoscope, HeartPulse, Shield, Building2, Users,
+  Activity, User, Pill, Stethoscope, HeartPulse, Shield, Building2, Users,
   Scissors, Hospital, Eye, Smile, Syringe, ClipboardList,
   FolderOpen, KeyRound, Share2, ScrollText, UserCog, LogOut,
   LayoutDashboard, Calendar, CheckCircle2, Database, StickyNote, Salad, Bot,
@@ -51,6 +51,7 @@ const navGroups = [
     label: "Activity",
     items: [
       { to: "/visit-logs", label: "Visit Logs", icon: ClipboardList },
+      { to: "/vitals", label: "Vitals", icon: Activity },
       { to: "/nutrition-plan", label: "Nutrition Plan", icon: Salad },
       { to: "/documents", label: "Documents", icon: FolderOpen },
     ],
