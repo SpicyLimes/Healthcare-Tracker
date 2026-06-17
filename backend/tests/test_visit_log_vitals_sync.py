@@ -1,0 +1,82 @@
+from app.models.user import Role
+from app.services import user_service
+
+
+def _admin(client, db):
+    user_service.create_user(db, "admin@example.com", "a-strong-passphrase-123", Role.admin)
+    client.post("/api/auth/login", json={"email": "admin@example.com", "password": "a-strong-passphrase-123"})
+    return client.cookies.get("csrf_token")
+
+
+def _visit(**kw):
+    base = {"visit_date": "2026-06-17", "reason": "Checkup"}
+    base.update(kw)
+    return base
+
+
+def test_create_visit_with_bp_creates_linked_vitals(client, db_session):
+    csrf = _admin(client, db_session)
+    h = {"X-CSRF-Token": csrf}
+    res = client.post("/api/visit-logs", headers=h, json=_visit(bp_systolic=120, bp_diastolic=80, pulse_bpm=72))
+    assert res.status_code == 201, res.text
+    assert res.json()["linked_vitals_id"] is not None
+    vitals = client.get("/api/vitals").json()
+    assert len(vitals) == 1
+    assert vitals[0]["bp_systolic"] == 120
+    assert vitals[0]["visit_log_id"] == res.json()["id"]
+
+
+def test_create_visit_without_bp_creates_no_vitals(client, db_session):
+    csrf = _admin(client, db_session)
+    res = client.post("/api/visit-logs", headers={"X-CSRF-Token": csrf}, json=_visit())
+    assert res.status_code == 201
+    assert res.json()["linked_vitals_id"] is None
+    assert client.get("/api/vitals").json() == []
+
+
+def test_update_visit_bp_updates_same_vitals_no_duplicate(client, db_session):
+    csrf = _admin(client, db_session); h = {"X-CSRF-Token": csrf}
+    vid = client.post("/api/visit-logs", headers=h, json=_visit(bp_systolic=120, bp_diastolic=80)).json()["id"]
+    client.put(f"/api/visit-logs/{vid}", headers=h, json={"bp_systolic": 130, "bp_diastolic": 85})
+    vitals = client.get("/api/vitals").json()
+    assert len(vitals) == 1
+    assert vitals[0]["bp_systolic"] == 130
+
+
+def test_update_adds_bp_to_previously_unlinked_visit(client, db_session):
+    csrf = _admin(client, db_session); h = {"X-CSRF-Token": csrf}
+    vid = client.post("/api/visit-logs", headers=h, json=_visit()).json()["id"]
+    assert client.get("/api/vitals").json() == []
+    res = client.put(f"/api/visit-logs/{vid}", headers=h, json={"bp_systolic": 118, "pulse_bpm": 70})
+    assert res.json()["linked_vitals_id"] is not None
+    assert len(client.get("/api/vitals").json()) == 1
+
+
+def test_clearing_bp_and_pulse_keeps_entry_nulls_fields(client, db_session):
+    csrf = _admin(client, db_session); h = {"X-CSRF-Token": csrf}
+    vid = client.post("/api/visit-logs", headers=h, json=_visit(bp_systolic=120, bp_diastolic=80, pulse_bpm=72)).json()["id"]
+    client.put(f"/api/visit-logs/{vid}", headers=h, json={"bp_systolic": None, "bp_diastolic": None, "pulse_bpm": None})
+    vitals = client.get("/api/vitals").json()
+    assert len(vitals) == 1
+    assert vitals[0]["bp_systolic"] is None and vitals[0]["pulse_bpm"] is None
+
+
+def test_delete_visit_keeps_vitals_unlinked(client, db_session):
+    csrf = _admin(client, db_session); h = {"X-CSRF-Token": csrf}
+    vid = client.post("/api/visit-logs", headers=h, json=_visit(bp_systolic=120, bp_diastolic=80)).json()["id"]
+    client.delete(f"/api/visit-logs/{vid}", headers=h)
+    vitals = client.get("/api/vitals").json()
+    assert len(vitals) == 1
+    assert vitals[0]["visit_log_id"] is None
+
+
+def test_update_non_vitals_field_leaves_linked_vitals_unchanged(client, db_session):
+    csrf = _admin(client, db_session); h = {"X-CSRF-Token": csrf}
+    vid = client.post("/api/visit-logs", headers=h, json=_visit(bp_systolic=120, bp_diastolic=80, pulse_bpm=72)).json()["id"]
+    # Update ONLY a non-vitals field; BP/Pulse keys are absent from the body
+    client.put(f"/api/visit-logs/{vid}", headers=h, json={"reason": "Updated reason"})
+    vitals = client.get("/api/vitals").json()
+    assert len(vitals) == 1
+    assert vitals[0]["bp_systolic"] == 120
+    assert vitals[0]["bp_diastolic"] == 80
+    assert vitals[0]["pulse_bpm"] == 72

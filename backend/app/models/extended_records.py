@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime, time
 from typing import Optional
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Text, Time, func
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, Time, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -154,6 +154,11 @@ class VisitLog(Base):
     follow_up: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     follow_up_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    linked_vitals_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("vitals.id", ondelete="SET NULL", use_alter=True, name="fk_visit_logs_linked_vitals_id"),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
@@ -177,5 +182,25 @@ class Appointment(Base):
         default=AppointmentStatus.upcoming,
     )
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class Vitals(Base):
+    __tablename__ = "vitals"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    measured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    bp_systolic: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    bp_diastolic: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    pulse_bpm: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    height_in: Mapped[Optional[float]] = mapped_column(Numeric(5, 1), nullable=True)
+    weight_lb: Mapped[Optional[float]] = mapped_column(Numeric(6, 1), nullable=True)
+    temperature_f: Mapped[Optional[float]] = mapped_column(Numeric(4, 1), nullable=True)
+    respiratory_rate: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    spo2: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    blood_glucose: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    visit_log_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("visit_logs.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

@@ -11,7 +11,7 @@ from app.routers import (
     ai, ailments, appointments, audit_log, auth, calendar, dental_history, documents,
     doctors, family_history, guest, health, hospitalizations, insurances, medications,
     notes, nutrition, pharmacies, profile, share_links, summary, surgeries,
-    users, vaccinations, vision_history, visit_logs,
+    users, vaccinations, vision_history, visit_logs, vitals,
 )
 from app.routers import settings as settings_router
 from app.limiter import limiter
@@ -57,6 +57,7 @@ app.include_router(vision_history.router)
 app.include_router(dental_history.router)
 app.include_router(vaccinations.router)
 app.include_router(visit_logs.router)
+app.include_router(vitals.router)
 app.include_router(appointments.router)
 app.include_router(documents.router)
 app.include_router(share_links.router)

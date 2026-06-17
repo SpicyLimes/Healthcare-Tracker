@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  Activity,
   User,
   Pill,
   Stethoscope,
@@ -66,6 +67,7 @@ const NON_ADMIN_SECTIONS = [
     description: "Doctor visits, upcoming appointments, and stored documents.",
     items: [
       { to: "/visit-logs", label: "Visit Logs", icon: ClipboardList, desc: "Provider visit notes" },
+      { to: "/vitals", label: "Vitals", icon: Activity, desc: "Blood pressure, pulse, weight & more" },
       { to: "/calendar", label: "Appointments", icon: CalendarDays, desc: "Scheduled appointments" },
       { to: "/documents", label: "Documents", icon: FolderOpen, desc: "Medical documents & files" },
     ],

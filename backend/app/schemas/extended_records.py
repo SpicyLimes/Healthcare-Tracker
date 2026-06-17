@@ -2,7 +2,7 @@
 import uuid
 from datetime import date, datetime, time
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, computed_field
 
 from app.models.extended_records import AppointmentStatus, AppointmentType
 
@@ -258,6 +258,9 @@ class VisitLogCreate(BaseModel):
     follow_up: str | None = None
     follow_up_date: date | None = None
     notes: str | None = None
+    bp_systolic: int | None = None
+    bp_diastolic: int | None = None
+    pulse_bpm: int | None = None
 
 class VisitLogUpdate(BaseModel):
     visit_date: date | None = None
@@ -269,6 +272,9 @@ class VisitLogUpdate(BaseModel):
     follow_up: str | None = None
     follow_up_date: date | None = None
     notes: str | None = None
+    bp_systolic: int | None = None
+    bp_diastolic: int | None = None
+    pulse_bpm: int | None = None
 
 class VisitLogResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -282,6 +288,10 @@ class VisitLogResponse(BaseModel):
     follow_up: str | None
     follow_up_date: date | None
     notes: str | None
+    bp_systolic: int | None
+    bp_diastolic: int | None
+    pulse_bpm: int | None
+    linked_vitals_id: uuid.UUID | None
     created_at: datetime
     updated_at: datetime
 
@@ -320,3 +330,60 @@ class AppointmentResponse(BaseModel):
     notes: str | None
     created_at: datetime
     updated_at: datetime
+
+
+# ---- Vitals ----
+class VitalsCreate(BaseModel):
+    measured_at: datetime
+    bp_systolic: int | None = None
+    bp_diastolic: int | None = None
+    pulse_bpm: int | None = None
+    height_in: float | None = None
+    weight_lb: float | None = None
+    temperature_f: float | None = None
+    respiratory_rate: int | None = None
+    spo2: int | None = None
+    blood_glucose: int | None = None
+    notes: str | None = None
+    visit_log_id: uuid.UUID | None = None
+
+
+class VitalsUpdate(BaseModel):
+    measured_at: datetime | None = None
+    bp_systolic: int | None = None
+    bp_diastolic: int | None = None
+    pulse_bpm: int | None = None
+    height_in: float | None = None
+    weight_lb: float | None = None
+    temperature_f: float | None = None
+    respiratory_rate: int | None = None
+    spo2: int | None = None
+    blood_glucose: int | None = None
+    notes: str | None = None
+    visit_log_id: uuid.UUID | None = None
+
+
+class VitalsResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    measured_at: datetime
+    bp_systolic: int | None
+    bp_diastolic: int | None
+    pulse_bpm: int | None
+    height_in: float | None
+    weight_lb: float | None
+    temperature_f: float | None
+    respiratory_rate: int | None
+    spo2: int | None
+    blood_glucose: int | None
+    notes: str | None
+    visit_log_id: uuid.UUID | None
+    created_at: datetime
+    updated_at: datetime
+
+    @computed_field
+    @property
+    def bmi(self) -> float | None:
+        if self.height_in and self.weight_lb and self.height_in > 0:
+            return round(703 * float(self.weight_lb) / (float(self.height_in) ** 2), 1)
+        return None

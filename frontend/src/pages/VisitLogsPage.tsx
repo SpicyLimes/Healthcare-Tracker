@@ -35,6 +35,9 @@ const EMPTY: VisitLogInput = {
   follow_up: null,
   follow_up_date: null,
   notes: null,
+  bp_systolic: null,
+  bp_diastolic: null,
+  pulse_bpm: null,
 };
 
 export default function VisitLogsPage() {
@@ -65,7 +68,7 @@ export default function VisitLogsPage() {
 
   function openEdit(r: VisitLog) {
     setEditingRow(r);
-    setForm({ visit_date: r.visit_date, visit_time: r.visit_time, doctor_id: r.doctor_id, doctor_other: r.doctor_other, reason: r.reason, summary: r.summary, follow_up: r.follow_up, follow_up_date: r.follow_up_date, notes: r.notes });
+    setForm({ visit_date: r.visit_date, visit_time: r.visit_time, doctor_id: r.doctor_id, doctor_other: r.doctor_other, reason: r.reason, summary: r.summary, follow_up: r.follow_up, follow_up_date: r.follow_up_date, notes: r.notes, bp_systolic: r.bp_systolic, bp_diastolic: r.bp_diastolic, pulse_bpm: r.pulse_bpm });
     setModalError("");
     setModalMode("edit");
   }
@@ -127,6 +130,8 @@ export default function VisitLogsPage() {
                 { label: "Date", value: r.visit_date ? formatDateWithTime(r.visit_date, r.visit_time) : null },
                 { label: "Doctor", value: resolveDoctorName(r.doctor_id, r.doctor_other) || null },
                 { label: "Reason", value: r.reason },
+                { label: "Blood Pressure", value: (r.bp_systolic != null && r.bp_diastolic != null) ? `${r.bp_systolic}/${r.bp_diastolic} mmHg` : null },
+                { label: "Pulse", value: r.pulse_bpm != null ? `${r.pulse_bpm} bpm` : null },
                 { label: "Summary", value: r.summary },
                 { label: "Follow-up", value: r.follow_up },
                 { label: "Follow-up Date", value: r.follow_up_date },
@@ -239,6 +244,22 @@ export default function VisitLogsPage() {
                 />
               </FormField>
             </div>
+
+            <div className="sm:col-span-2 border-t border-border pt-4 text-sm font-medium text-muted-foreground">
+              Vitals (optional) — captured to the Vitals page
+            </div>
+            <FormField label="Systolic (mmHg)" htmlFor="vl-sys">
+              <Input id="vl-sys" type="number" value={form.bp_systolic ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, bp_systolic: e.target.value === "" ? null : Number(e.target.value) }))} />
+            </FormField>
+            <FormField label="Diastolic (mmHg)" htmlFor="vl-dia">
+              <Input id="vl-dia" type="number" value={form.bp_diastolic ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, bp_diastolic: e.target.value === "" ? null : Number(e.target.value) }))} />
+            </FormField>
+            <FormField label="Pulse (bpm)" htmlFor="vl-pulse">
+              <Input id="vl-pulse" type="number" value={form.pulse_bpm ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, pulse_bpm: e.target.value === "" ? null : Number(e.target.value) }))} />
+            </FormField>
           </div>
         </RecordFormModal>
       )}

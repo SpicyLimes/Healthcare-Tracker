@@ -20,6 +20,7 @@ import VisionHistoryPage from "./pages/VisionHistoryPage";
 import DentalHistoryPage from "./pages/DentalHistoryPage";
 import VaccinationsPage from "./pages/VaccinationsPage";
 import VisitLogsPage from "./pages/VisitLogsPage";
+import VitalsPage from "./pages/VitalsPage";
 import CalendarPage from "./pages/CalendarPage";
 import DocumentsPage from "./pages/DocumentsPage";
 import ShareLinksPage from "./pages/ShareLinksPage";
@@ -55,6 +56,7 @@ export default function App() {
             <Route path="/dental-history" element={<ProtectedRoute><DentalHistoryPage /></ProtectedRoute>} />
             <Route path="/vaccinations" element={<ProtectedRoute><VaccinationsPage /></ProtectedRoute>} />
             <Route path="/visit-logs" element={<ProtectedRoute><VisitLogsPage /></ProtectedRoute>} />
+            <Route path="/vitals" element={<ProtectedRoute><VitalsPage /></ProtectedRoute>} />
             <Route path="/appointments" element={<Navigate to="/calendar" replace />} />
             <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
             <Route path="/notes" element={<ProtectedRoute><NotesPage /></ProtectedRoute>} />
