@@ -111,26 +111,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* Footer */}
         <footer className="shrink-0 border-t border-sidebar-border bg-sidebar px-6 py-3">
-          <div className="mx-auto flex max-w-5xl flex-col items-center gap-1 text-center sm:flex-row sm:justify-between sm:text-left">
-            <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[0.7rem] text-sidebar-foreground/60">
+          <div className="mx-auto flex max-w-5xl flex-col items-center gap-0.5 text-center text-[0.7rem] text-sidebar-foreground/60">
+            <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5">
               <span>© {new Date().getFullYear()}</span>
               <a href="https://spicylimes.io" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-sidebar-foreground transition-colors">
-                <img src="/spicylimes.png" alt="SpicyLimes.io" className="size-4 align-middle" />
+                <img src="/spicylimes.png" alt="SpicyLimes.io" className="size-4" />
                 SpicyLimes.io
               </a>
               <span>· All Rights Reserved ·</span>
-              <span className="italic">For Personal Health Record Keeping ONLY - Not a substitute for Professional Medical Advice</span>
               <a
                 href="https://github.com/SpicyLimes/Healthcare-Tracker"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 hover:text-sidebar-foreground transition-colors"
               >
-                <span>|</span>
                 <img src="/github.svg" alt="" className="size-4" />
                 <span>GitHub ↗</span>
               </a>
             </div>
+            <p className="italic">For Personal Health Record Keeping ONLY - Not a substitute for Professional Medical Advice</p>
           </div>
         </footer>
       </div>
