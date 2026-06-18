@@ -134,14 +134,20 @@
   :root:not(.dark) body {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='52'%3E%3Cpolygon points='60,26 45,52 15,52 0,26 15,0 45,0' fill='none' stroke='black' stroke-width='1' stroke-opacity='0.08'/%3E%3Cpolygon points='105,0 90,26 60,26 45,0 60,-26 90,-26' fill='none' stroke='black' stroke-width='1' stroke-opacity='0.08'/%3E%3Cpolygon points='105,52 90,78 60,78 45,52 60,26 90,26' fill='none' stroke='black' stroke-width='1' stroke-opacity='0.08'/%3E%3C/svg%3E");
   }
-  :root:not(.dark) .bg-card {
+}
+
+@layer utilities {
+  /* Light theme: drop shadow on cards and nav chrome */
+  :root:not(.dark) .bg-card,
+  :root:not(.dark) [data-slot="card"] {
     box-shadow: 0 8px 24px -2px rgba(0,0,0,0.14), 0 1px 2px 0 rgba(0,0,0,0.10);
   }
   :root:not(.dark) .bg-sidebar {
     box-shadow: 0 8px 24px -2px rgba(0,0,0,0.14), 0 1px 2px 0 rgba(0,0,0,0.10);
   }
   /* Dark theme: accent-colored outer glow — color driven by --glow-color (set by accent picker) */
-  .dark .bg-card {
+  .dark .bg-card,
+  .dark [data-slot="card"] {
     box-shadow: 0 8px 24px -2px var(--glow-color, rgba(74,222,128,0.14)), 0 1px 2px 0 var(--glow-color-soft, rgba(74,222,128,0.10));
   }
   .dark .bg-sidebar {
