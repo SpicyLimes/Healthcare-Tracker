@@ -90,13 +90,13 @@ export default function GuestLayout({ children, expired }: Props) {
             availableSections={allowedSections}
             token={token ?? ""}
             description="Generate a printable summary of the Patient's Records that have been shared with you."
-            triggerClassName="border-amber-500 bg-amber-400 text-amber-950 hover:bg-amber-500 hover:text-amber-950"
+            triggerClassName="border-amber-500 bg-amber-400 text-amber-950 hover:bg-amber-500 hover:text-amber-950 shadow-[0_8px_24px_-2px_rgba(0,0,0,0.14),0_1px_2px_0_rgba(0,0,0,0.10)]"
           />
         )}
       </header>
       <nav className="flex flex-wrap gap-2 mb-6">
         {allowedSections.map((s) => (
-          <Button key={s} size="sm" asChild>
+          <Button key={s} size="sm" asChild className="shadow-[0_8px_24px_-2px_rgba(0,0,0,0.14),0_1px_2px_0_rgba(0,0,0,0.10)]">
             <Link to={`/guest/sections/${s}`}>
               {SECTION_LABELS[s] ?? s}
             </Link>
