@@ -70,6 +70,10 @@ export function applyAccent(color: AccentColor, isDark: boolean) {
   }
 
   const scope = isDark ? ".dark" : ":root";
+  const glowVars = isDark
+    ? `  --glow-color: color-mix(in srgb, ${v.primary} 14%, transparent);
+  --glow-color-soft: color-mix(in srgb, ${v.primary} 10%, transparent);`
+    : "";
   el.textContent = `
 ${scope} {
   --primary: ${v.primary};
@@ -83,6 +87,7 @@ ${scope} {
   --sidebar-accent: ${v.accent};
   --sidebar-accent-foreground: ${v.accentFg};
   --chart-1: ${v.primary};
+${glowVars}
 }
   `.trim();
 }

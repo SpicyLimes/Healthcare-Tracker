@@ -251,7 +251,7 @@ export default function UsersPage() {
             onClick={closeEdit}
           >
             <div
-              className="mx-4 sm:mx-auto w-full sm:max-w-md rounded-xl border border-border bg-card p-4 sm:p-6 shadow-lg"
+              className="mx-4 sm:mx-auto w-full sm:max-w-md rounded-xl border border-border bg-card p-4 sm:p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 id="edit-user-heading" className="font-heading text-base font-semibold text-foreground mb-4">

@@ -525,7 +525,7 @@ function AppointmentsSection({ tz, isAdmin }: AppointmentsSectionProps) {
           onClick={closeEdit}
         >
           <div
-            className="mx-4 sm:mx-auto w-full sm:max-w-lg rounded-xl border border-border bg-card p-4 sm:p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+            className="mx-4 sm:mx-auto w-full sm:max-w-lg rounded-xl border border-border bg-card p-4 sm:p-6 overflow-y-auto max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="edit-appt-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Appointment</h2>

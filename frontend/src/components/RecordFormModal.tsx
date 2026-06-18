@@ -29,7 +29,7 @@ export function RecordFormModal({
       onClick={onClose}
     >
       <div
-        className="mx-4 sm:mx-auto w-full sm:w-[60vw] sm:max-w-3xl rounded-xl border border-border bg-card p-4 sm:p-6 shadow-lg overflow-y-auto max-h-[90vh]"
+        className="mx-4 sm:mx-auto w-full sm:w-[60vw] sm:max-w-3xl rounded-xl border border-border bg-card p-4 sm:p-6 overflow-y-auto max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
