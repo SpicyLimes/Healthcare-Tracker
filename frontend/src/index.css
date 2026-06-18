@@ -117,8 +117,8 @@
   --sidebar-accent-foreground: oklch(0.85 0.14 142);
   --sidebar-border: oklch(1 0 0 / 14%);
   --sidebar-ring: oklch(0.75 0.22 142);
-  --glow-color: color-mix(in srgb, oklch(0.75 0.22 142) 10%, transparent);
-  --glow-color-soft: color-mix(in srgb, oklch(0.75 0.22 142) 14%, transparent);
+  --glow-color: color-mix(in srgb, oklch(0.75 0.22 142) 25%, transparent);
+  --glow-color-soft: color-mix(in srgb, oklch(0.75 0.22 142) 29%, transparent);
 }
 
 @layer base {
@@ -148,9 +148,9 @@
   /* Dark theme: accent-colored outer glow — equal X/Y, no directional offset */
   .dark .bg-card,
   .dark [data-slot="card"] {
-    box-shadow: 0 0 12px 2px var(--glow-color, rgba(74,222,128,0.10)), 0 0 1px 2px var(--glow-color-soft, rgba(74,222,128,0.14));
+    box-shadow: 0 0 12px 3px var(--glow-color, rgba(74,222,128,0.25)), 0 0 1px 3px var(--glow-color-soft, rgba(74,222,128,0.29));
   }
   .dark .bg-sidebar {
-    box-shadow: 0 0 12px 2px var(--glow-color, rgba(74,222,128,0.10)), 0 0 1px 2px var(--glow-color-soft, rgba(74,222,128,0.14));
+    box-shadow: 0 0 12px 3px var(--glow-color, rgba(74,222,128,0.25)), 0 0 1px 3px var(--glow-color-soft, rgba(74,222,128,0.29));
   }
 }
