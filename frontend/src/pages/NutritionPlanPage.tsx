@@ -291,9 +291,9 @@ export default function NutritionPlanPage() {
 
         {/* Card 2 — Acceptable Foods */}
         <Card>
-          <CardContent className="py-6">
+          <CardContent className="py-3">
             <button
-              className="flex w-full items-center justify-between text-left"
+              className="flex w-full items-center justify-between py-1 text-left"
               onClick={() => setAcceptableOpen((o) => !o)}
               aria-expanded={acceptableOpen}
             >
@@ -460,9 +460,9 @@ export default function NutritionPlanPage() {
 
         {/* Card 3 — Unacceptable Foods */}
         <Card>
-          <CardContent className="py-6">
+          <CardContent className="py-3">
             <button
-              className="flex w-full items-center justify-between text-left"
+              className="flex w-full items-center justify-between py-1 text-left"
               onClick={() => setUnacceptableOpen((o) => !o)}
               aria-expanded={unacceptableOpen}
             >

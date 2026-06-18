@@ -37,41 +37,17 @@ function NutritionPlanGuest({ acceptable, unacceptable, error, loading }: {
             </button>
             {acceptableOpen && (
               <div className="px-4 pb-4">
-                {/* Mobile list */}
-                <div className="md:hidden space-y-2">
-                  {acceptable.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No acceptable foods added yet.</p>
-                  ) : (
-                    acceptable.map((f) => (
+                {acceptable.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No acceptable foods added yet.</p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                    {acceptable.map((f) => (
                       <div key={f.id} className="rounded-md border border-border bg-muted/20 px-3 py-2 text-sm text-foreground">
                         {f.food_name}
                       </div>
-                    ))
-                  )}
-                </div>
-                {/* Desktop table */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-muted/40">
-                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Food</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {acceptable.length === 0 ? (
-                        <tr>
-                          <td className="px-3 py-4 text-center text-xs text-muted-foreground">No acceptable foods added yet.</td>
-                        </tr>
-                      ) : (
-                        acceptable.map((f) => (
-                          <tr key={f.id} className="border-b border-border last:border-0">
-                            <td className="px-3 py-2 text-foreground">{f.food_name}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
