@@ -153,16 +153,12 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
             : day % 10 === 2 ? "nd"
             : day % 10 === 3 ? "rd" : "th";
           return (
-            <div className="mt-3 px-4 pb-3">
-              <div className="flex justify-start mb-2">
-                <div className="border-t border-sidebar-border" style={{ width: "75%" }} />
-              </div>
-              <p className="text-[0.7rem] font-bold text-sidebar-foreground/80 tracking-wide">
+            <div className="mt-3 px-4 pb-3 flex flex-col items-center">
+              <div className="border-t border-sidebar-border mb-2" style={{ width: "75%" }} />
+              <p className="text-[0.7rem] font-bold text-sidebar-foreground/80 tracking-wide text-center">
                 {weekday} | {month} {day}{suffix}, {year}
               </p>
-              <div className="flex justify-start mt-2">
-                <div className="border-t border-sidebar-border" style={{ width: "75%" }} />
-              </div>
+              <div className="border-t border-sidebar-border mt-2" style={{ width: "75%" }} />
             </div>
           );
         })()}

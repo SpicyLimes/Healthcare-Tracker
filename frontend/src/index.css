@@ -50,7 +50,7 @@
 
 /* Light theme — lime green accent */
 :root {
-  --background: oklch(0.97 0 0);
+  --background: oklch(0.66 0 0);
   --foreground: oklch(0.15 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.15 0 0);
@@ -74,14 +74,14 @@
   --chart-4: oklch(0.55 0.13 155);
   --chart-5: oklch(0.30 0.1 130);
   --radius: 0.625rem;
-  /* Sidebar + nav chrome: light grey-blue */
-  --sidebar: oklch(0.93 0.012 220);
-  --sidebar-foreground: oklch(0.2 0.01 220);
+  /* Sidebar + nav chrome: white */
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.15 0 0);
   --sidebar-primary: oklch(0.45 0.18 142);
   --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.87 0.018 220);
-  --sidebar-accent-foreground: oklch(0.2 0.01 220);
-  --sidebar-border: oklch(0.82 0.018 220);
+  --sidebar-accent: oklch(0.91 0.05 142);
+  --sidebar-accent-foreground: oklch(0.22 0.12 142);
+  --sidebar-border: oklch(0.87 0 0);
   --sidebar-ring: oklch(0.45 0.18 142);
 }
 
@@ -131,6 +131,6 @@
     background-size: 90px 52px;
   }
   :root:not(.dark) body {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='52'%3E%3Cpolygon points='60,26 45,52 15,52 0,26 15,0 45,0' fill='none' stroke='black' stroke-width='1' stroke-opacity='0.08'/%3E%3Cpolygon points='105,0 90,26 60,26 45,0 60,-26 90,-26' fill='none' stroke='black' stroke-width='1' stroke-opacity='0.08'/%3E%3Cpolygon points='105,52 90,78 60,78 45,52 60,26 90,26' fill='none' stroke='black' stroke-width='1' stroke-opacity='0.08'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='52'%3E%3Cpolygon points='60,26 45,52 15,52 0,26 15,0 45,0' fill='none' stroke='black' stroke-width='1' stroke-opacity='0.20'/%3E%3Cpolygon points='105,0 90,26 60,26 45,0 60,-26 90,-26' fill='none' stroke='black' stroke-width='1' stroke-opacity='0.20'/%3E%3Cpolygon points='105,52 90,78 60,78 45,52 60,26 90,26' fill='none' stroke='black' stroke-width='1' stroke-opacity='0.20'/%3E%3C/svg%3E");
   }
 }

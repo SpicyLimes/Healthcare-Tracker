@@ -1,9 +1,60 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { listGuestRecords } from "../api/guest";
 import { useGuest } from "../auth/GuestContext";
 import GuestLayout from "../components/GuestLayout";
 import { formatInTimezone } from "@/lib/datetime";
+
+type FoodRow = { id: string; type: "Acceptable" | "Unacceptable"; food_name: string };
+
+function CollapsibleFoodList({ title, foods, defaultOpen = false }: {
+  title: string;
+  foods: FoodRow[];
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <button
+        className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-foreground hover:bg-muted/30 transition-colors"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        <span>{title} <span className="ml-1 text-xs font-normal text-muted-foreground">({foods.length})</span></span>
+        {open ? <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
+      </button>
+      {open && (
+        <ul className="divide-y divide-border border-t border-border">
+          {foods.length === 0 ? (
+            <li className="px-4 py-3 text-sm text-muted-foreground">None listed.</li>
+          ) : (
+            foods.map((f) => (
+              <li key={f.id} className="px-4 py-2 text-sm text-foreground">{f.food_name}</li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function NutritionPlanGuest({ acceptable, unacceptable, error }: {
+  acceptable: FoodRow[];
+  unacceptable: FoodRow[];
+  error: string;
+}) {
+  return (
+    <GuestLayout>
+      <h1 className="text-2xl font-semibold mb-4">Nutrition Plan</h1>
+      {error && <p role="alert" className="text-destructive mb-4">{error}</p>}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <CollapsibleFoodList title="Acceptable Foods" foods={acceptable} />
+        <CollapsibleFoodList title="Unacceptable Foods" foods={unacceptable} />
+      </div>
+    </GuestLayout>
+  );
+}
 
 export default function GuestSectionPage() {
   const { section = "" } = useParams<{ section: string }>();
@@ -114,6 +165,21 @@ export default function GuestSectionPage() {
   const hasDetail = !NO_DETAIL_SECTIONS.has(section);
 
   if (expired) return <GuestLayout expired>{null}</GuestLayout>;
+
+  // Nutrition plan: custom two-column collapsible layout
+  if (section === "nutrition_plan") {
+    type FoodRow = { id: string; type: "Acceptable" | "Unacceptable"; food_name: string };
+    const foods = records as FoodRow[];
+    const acceptable = foods.filter((f) => f.type === "Acceptable");
+    const unacceptable = foods.filter((f) => f.type === "Unacceptable");
+    return (
+      <NutritionPlanGuest
+        acceptable={acceptable}
+        unacceptable={unacceptable}
+        error={error}
+      />
+    );
+  }
 
   const visibleKeys = sortedRecords.length > 0
     ? Object.keys(sortedRecords[0] as Record<string, unknown>)
