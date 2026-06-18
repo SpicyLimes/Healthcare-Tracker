@@ -104,31 +104,29 @@ export default function GuestLayout({ children, expired }: Props) {
         ))}
       </nav>
       {children}
-      <footer className="mt-10 pt-4 border-t border-border">
-        <p className="text-center text-xs text-muted-foreground">
+      <footer className="mt-10 pt-4 border-t border-border flex flex-col items-center gap-0.5 text-center text-[0.7rem] text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5">
+          <span>© {new Date().getFullYear()}</span>
+          <a href="https://spicylimes.io" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
+            <img src="/spicylimes.png" alt="SpicyLimes.io" className="size-4" />
+            SpicyLimes.io
+          </a>
+          <span>· All Rights Reserved ·</span>
+          <a
+            href="https://github.com/SpicyLimes/Healthcare-Tracker"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+          >
+            <img src="/github_black.svg" alt="" className="size-4" />
+            <span>GitHub ↗</span>
+          </a>
+        </div>
+        <p className="italic">For Personal Health Record Keeping ONLY - Not a substitute for Professional Medical Advice</p>
+        <p className="mt-2 text-xs not-italic">
           For your privacy, this link isn't saved in your browser. If you refresh or close this page,
           you'll need to re-enter the original link you were given to access these records again.
         </p>
-        <div className="mt-3 flex flex-col items-center gap-0.5 text-center text-[0.7rem] text-muted-foreground">
-          <div className="flex flex-wrap items-center justify-center gap-x-1 gap-y-0.5">
-            <span>© {new Date().getFullYear()}</span>
-            <a href="https://spicylimes.io" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
-              <img src="/spicylimes.png" alt="SpicyLimes.io" className="size-4" />
-              SpicyLimes.io
-            </a>
-            <span>· All Rights Reserved ·</span>
-            <a
-              href="https://github.com/SpicyLimes/Healthcare-Tracker"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-            >
-              <img src="/github.svg" alt="" className="size-4" />
-              <span>GitHub ↗</span>
-            </a>
-          </div>
-          <p className="italic">For Personal Health Record Keeping ONLY - Not a substitute for Professional Medical Advice</p>
-        </div>
       </footer>
     </main>
   );

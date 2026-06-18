@@ -302,133 +302,36 @@ export default function NutritionPlanPage() {
             </button>
             {acceptableOpen && (
               <>
-                {/* Mobile stacked layout */}
-                <div className="md:hidden mt-4 space-y-2">
+                <div className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">
                   {acceptableFoods.length === 0 && (
-                    <p className="text-xs text-muted-foreground">No acceptable foods added yet.</p>
+                    <p className="text-xs text-muted-foreground col-span-2">No acceptable foods added yet.</p>
                   )}
                   {acceptableFoods.map((food) => (
                     <div key={food.id} className="rounded-md border border-border bg-muted/20 px-3 py-2">
-                      <div className="flex items-center justify-between gap-2">
-                        {editingAcceptableId === food.id ? (
-                          <div className="flex flex-1 gap-1">
-                            <Input
-                              value={editingAcceptableValue}
-                              onChange={(e) => setEditingAcceptableValue(e.target.value)}
-                              className="h-7 text-xs"
-                              aria-label="Edit food name"
-                            />
-                            <Button size="sm" className="h-7 px-2 text-xs" onClick={() => handleAcceptableEditSave(food.id)}>Save</Button>
-                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setEditingAcceptableId(null)}>Cancel</Button>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-foreground">{food.food_name}</span>
-                        )}
-                        {editingAcceptableId !== food.id && (
-                          <div className="flex shrink-0 gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 px-2 text-xs"
-                              onClick={() => { setEditingAcceptableId(food.id); setEditingAcceptableValue(food.food_name); }}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-                              onClick={() => handleAcceptableDelete(food.id)}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                        {MEAL_TYPES.map((mt) => (
-                          <label key={mt} className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={food[MEAL_FLAG[mt]] as boolean}
-                              onChange={() => handleCheckbox(food, mt)}
-                              aria-label={`${food.food_name} for ${mt}`}
-                              className="rounded border-border"
-                            />
-                            {MEAL_LABELS[mt]}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Desktop table */}
-                <div className="hidden md:block mt-4 overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-muted/40">
-                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Food</th>
-                        {MEAL_TYPES.map((mt) => (
-                          <th key={mt} className="px-3 py-2 text-center font-medium text-muted-foreground">
-                            {MEAL_LABELS[mt]}
-                          </th>
-                        ))}
-                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {acceptableFoods.length === 0 && (
-                        <tr>
-                          <td colSpan={6} className="text-center py-4 text-muted-foreground text-xs">
-                            No acceptable foods added yet.
-                          </td>
-                        </tr>
-                      )}
-                      {acceptableFoods.map((food) => (
-                        <tr key={food.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                          <td className="px-3 py-2 text-foreground">
-                            {editingAcceptableId === food.id ? (
-                              <div className="flex gap-1">
-                                <Input
-                                  value={editingAcceptableValue}
-                                  onChange={(e) => setEditingAcceptableValue(e.target.value)}
-                                  className="h-7 text-xs"
-                                  aria-label="Edit food name"
-                                />
-                                <Button size="sm" className="h-7 px-2 text-xs" onClick={() => handleAcceptableEditSave(food.id)}>Save</Button>
-                                <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setEditingAcceptableId(null)}>Cancel</Button>
-                              </div>
-                            ) : (
-                              food.food_name
-                            )}
-                          </td>
-                          {MEAL_TYPES.map((mt) => (
-                            <td key={mt} className="px-3 py-2 text-center">
-                              <input
-                                type="checkbox"
-                                checked={food[MEAL_FLAG[mt]] as boolean}
-                                onChange={() => handleCheckbox(food, mt)}
-                                aria-label={`${food.food_name} for ${mt}`}
-                                className="rounded border-border"
-                              />
-                            </td>
-                          ))}
-                          <td className="px-3 py-2">
-                            <div className="flex items-center gap-1">
-                              {editingAcceptableId !== food.id && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-7 px-2 text-xs"
-                                  onClick={() => {
-                                    setEditingAcceptableId(food.id);
-                                    setEditingAcceptableValue(food.food_name);
-                                  }}
-                                >
-                                  Edit
-                                </Button>
-                              )}
+                      {editingAcceptableId === food.id ? (
+                        <div className="flex gap-1">
+                          <Input
+                            value={editingAcceptableValue}
+                            onChange={(e) => setEditingAcceptableValue(e.target.value)}
+                            className="h-7 text-xs flex-1"
+                            aria-label="Edit food name"
+                          />
+                          <Button size="sm" className="h-7 px-2 text-xs shrink-0" onClick={() => handleAcceptableEditSave(food.id)}>Save</Button>
+                          <Button variant="outline" size="sm" className="h-7 px-2 text-xs shrink-0" onClick={() => setEditingAcceptableId(null)}>Cancel</Button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm text-foreground truncate">{food.food_name}</span>
+                            <div className="flex shrink-0 gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => { setEditingAcceptableId(food.id); setEditingAcceptableValue(food.food_name); }}
+                              >
+                                Edit
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -438,11 +341,25 @@ export default function NutritionPlanPage() {
                                 Delete
                               </Button>
                             </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </div>
+                          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                            {MEAL_TYPES.map((mt) => (
+                              <label key={mt} className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={food[MEAL_FLAG[mt]] as boolean}
+                                  onChange={() => handleCheckbox(food, mt)}
+                                  aria-label={`${food.food_name} for ${mt}`}
+                                  className="rounded border-border"
+                                />
+                                {MEAL_LABELS[mt]}
+                              </label>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
                 </div>
                 <form onSubmit={handleCard2Add} className="mt-3 flex gap-2">
                   <Input

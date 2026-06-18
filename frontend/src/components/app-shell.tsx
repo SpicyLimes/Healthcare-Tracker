@@ -125,7 +125,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 hover:text-sidebar-foreground transition-colors"
               >
-                <img src="/github.svg" alt="" className="size-4" />
+                <img src={theme === "dark" ? "/github.svg" : "/github_black.svg"} alt="" className="size-4" />
                 <span>GitHub ↗</span>
               </a>
             </div>
