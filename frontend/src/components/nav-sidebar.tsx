@@ -141,16 +141,31 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
             </span>
           )}
         </Link>
-        {!collapsed && (
-          <div className="px-4 pb-4 leading-tight">
-            <p className="text-[0.7rem] font-medium text-muted-foreground">
-              {new Intl.DateTimeFormat("en-US", { weekday: "long", timeZone: user?.timezone ?? "America/Chicago" }).format(new Date())}
-            </p>
-            <p className="text-[0.7rem] text-muted-foreground">
-              {new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: user?.timezone ?? "America/Chicago" }).format(new Date())}
-            </p>
-          </div>
-        )}
+        {!collapsed && (() => {
+          const tz = user?.timezone ?? "America/Chicago";
+          const now = new Date();
+          const weekday = new Intl.DateTimeFormat("en-US", { weekday: "long", timeZone: tz }).format(now);
+          const month = new Intl.DateTimeFormat("en-US", { month: "long", timeZone: tz }).format(now);
+          const day = parseInt(new Intl.DateTimeFormat("en-US", { day: "numeric", timeZone: tz }).format(now), 10);
+          const year = new Intl.DateTimeFormat("en-US", { year: "numeric", timeZone: tz }).format(now);
+          const suffix = day % 100 >= 11 && day % 100 <= 13 ? "th"
+            : day % 10 === 1 ? "st"
+            : day % 10 === 2 ? "nd"
+            : day % 10 === 3 ? "rd" : "th";
+          return (
+            <div className="mt-3 px-4 pb-3">
+              <div className="flex justify-start mb-2">
+                <div className="border-t border-sidebar-border" style={{ width: "75%" }} />
+              </div>
+              <p className="text-[0.7rem] font-bold text-sidebar-foreground/80 tracking-wide">
+                {weekday} | {month} {day}{suffix}, {year}
+              </p>
+              <div className="flex justify-start mt-2">
+                <div className="border-t border-sidebar-border" style={{ width: "75%" }} />
+              </div>
+            </div>
+          );
+        })()}
 
         <div className={cn("flex flex-1 flex-col gap-5", collapsed ? "items-center px-0" : "px-3")}>
           <ul className={cn("flex flex-col gap-0.5", collapsed && "items-center")}>

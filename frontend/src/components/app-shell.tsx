@@ -112,23 +112,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Footer */}
         <footer className="shrink-0 border-t border-sidebar-border bg-sidebar px-6 py-3">
           <div className="mx-auto flex max-w-5xl flex-col items-center gap-1 text-center sm:flex-row sm:justify-between sm:text-left">
-            <p className="text-[0.7rem] text-sidebar-foreground/60">
-              © {new Date().getFullYear()}{" "}
-              <a href="https://spicylimes.io" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-sidebar-foreground transition-colors"><img src="/spicylimes.png" alt="SpicyLimes.io" className="size-4" />SpicyLimes.io</a>
-              {" "}· All Rights Reserved ·{" "}
-              <span className="italic">
-                For Personal Health Record Keeping ONLY - Not a substitute for Professional Medical Advice
-              </span>
-              {" "}
+            <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[0.7rem] text-sidebar-foreground/60">
+              <span>© {new Date().getFullYear()}</span>
+              <a href="https://spicylimes.io" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-sidebar-foreground transition-colors">
+                <img src="/spicylimes.png" alt="SpicyLimes.io" className="size-4 align-middle" />
+                SpicyLimes.io
+              </a>
+              <span>· All Rights Reserved ·</span>
+              <span className="italic">For Personal Health Record Keeping ONLY - Not a substitute for Professional Medical Advice</span>
               <a
                 href="https://github.com/SpicyLimes/Healthcare-Tracker"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[0.7rem] text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors"
+                className="inline-flex items-center gap-1 hover:text-sidebar-foreground transition-colors"
               >
-                | <img src="/github.svg" alt="" className="size-4" /> GitHub ↗
+                <span>|</span>
+                <img src="/github.svg" alt="" className="size-4" />
+                <span>GitHub ↗</span>
               </a>
-            </p>
+            </div>
           </div>
         </footer>
       </div>

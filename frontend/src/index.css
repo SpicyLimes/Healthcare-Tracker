@@ -74,15 +74,15 @@
   --chart-4: oklch(0.55 0.13 155);
   --chart-5: oklch(0.30 0.1 130);
   --radius: 0.625rem;
-  /* Sidebar + nav chrome: match dark theme values in light mode */
-  --sidebar: oklch(0.23 0 0);
-  --sidebar-foreground: oklch(0.94 0 0);
-  --sidebar-primary: oklch(0.75 0.22 142);
+  /* Sidebar + nav chrome: light grey-blue */
+  --sidebar: oklch(0.93 0.012 220);
+  --sidebar-foreground: oklch(0.2 0.01 220);
+  --sidebar-primary: oklch(0.45 0.18 142);
   --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.22 0.07 142);
-  --sidebar-accent-foreground: oklch(0.85 0.14 142);
-  --sidebar-border: oklch(1 0 0 / 14%);
-  --sidebar-ring: oklch(0.75 0.22 142);
+  --sidebar-accent: oklch(0.87 0.018 220);
+  --sidebar-accent-foreground: oklch(0.2 0.01 220);
+  --sidebar-border: oklch(0.82 0.018 220);
+  --sidebar-ring: oklch(0.45 0.18 142);
 }
 
 /* Dark theme (default) — electric lime accent */
