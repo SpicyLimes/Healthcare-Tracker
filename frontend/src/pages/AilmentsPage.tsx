@@ -109,12 +109,12 @@ export default function AilmentsPage() {
               defaultSortKey="condition"
               primaryColumns={[
                 { header: "Condition", sortKey: "condition", render: (r) => r.condition, className: "px-4 py-3 font-medium text-foreground" },
-                { header: "Status", sortKey: "status", render: (r) => <Badge variant={r.status === "active" ? "default" : "secondary"}>{r.status}</Badge> },
+                { header: "Status", sortKey: "status", render: (r) => <Badge variant={r.status === "active" ? "default" : "secondary"} className="capitalize">{r.status}</Badge> },
                 { header: "Onset Date", sortKey: "onset_date", render: (r) => r.onset_date ?? "" },
               ]}
               detailTitle={(r) => r.condition}
               detailFields={(r) => [
-                { label: "Status", value: r.status },
+                { label: "Status", value: r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : null },
                 { label: "Onset Date", value: r.onset_date },
                 { label: "Treating Doctor", value: resolveDoctorName(r.treating_doctor_id, r.treating_doctor) || null },
                 { label: "Notes", value: r.notes },
@@ -122,7 +122,7 @@ export default function AilmentsPage() {
               renderDetailExtra={(r) => <DocumentsPanel section="ailments" recordId={r.id} isAdmin={isAdmin} />}
               getHeadline={(r) => r.condition}
               getSubtitle={(r) => r.onset_date ?? null}
-              getBadge={(r) => ({ label: r.status, variant: r.status === "active" ? "default" : "secondary" })}
+              getBadge={(r) => ({ label: r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : "", variant: r.status === "active" ? "default" : "secondary" })}
               onEdit={(r) => openEdit(r)}
               onDelete={(r) => onDelete(r.id)}
               emptyMessage="No ailment records yet."

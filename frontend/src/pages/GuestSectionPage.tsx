@@ -109,6 +109,10 @@ export default function GuestSectionPage() {
       })
     : (records as Record<string, unknown>[]);
 
+  // Sections whose list rows are not individually viewable (no detail endpoint)
+  const NO_DETAIL_SECTIONS = new Set(["nutrition_plan"]);
+  const hasDetail = !NO_DETAIL_SECTIONS.has(section);
+
   if (expired) return <GuestLayout expired>{null}</GuestLayout>;
 
   const visibleKeys = sortedRecords.length > 0
@@ -145,12 +149,14 @@ export default function GuestSectionPage() {
                         </p>
                       )}
                     </div>
-                    <Link
-                      to={`/guest/sections/${section}/${row.id}`}
-                      className="shrink-0 text-sm text-primary font-medium hover:underline underline-offset-4"
-                    >
-                      View
-                    </Link>
+                    {hasDetail && (
+                      <Link
+                        to={`/guest/sections/${section}/${row.id}`}
+                        className="shrink-0 text-sm text-primary font-medium hover:underline underline-offset-4"
+                      >
+                        View
+                      </Link>
+                    )}
                   </div>
                   {rest.length > 0 && (
                     <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
@@ -174,7 +180,7 @@ export default function GuestSectionPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/40">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
+                  {hasDetail && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
                   {visibleKeys.map((k) => (
                     <th
                       key={k}
@@ -190,14 +196,16 @@ export default function GuestSectionPage() {
               <tbody>
                 {sortedRecords.map((row) => (
                   <tr key={String(row.id)} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3">
-                      <Link
-                        to={`/guest/sections/${section}/${row.id}`}
-                        className="text-primary font-medium hover:underline underline-offset-4"
-                      >
-                        View Record
-                      </Link>
-                    </td>
+                    {hasDetail && (
+                      <td className="px-4 py-3">
+                        <Link
+                          to={`/guest/sections/${section}/${row.id}`}
+                          className="text-primary font-medium hover:underline underline-offset-4"
+                        >
+                          View Record
+                        </Link>
+                      </td>
+                    )}
                     {visibleKeys.map((k) => (
                       <td key={k} className="px-4 py-3 text-foreground">
                         {formatCellValue(k, row[k])}

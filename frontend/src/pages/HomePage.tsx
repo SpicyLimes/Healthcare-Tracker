@@ -110,6 +110,16 @@ function formatEventTime(e: CalendarEvent, tz: string): string {
   );
 }
 
+function getGreeting(tz: string): string {
+  const hour = parseInt(
+    new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: tz }).format(new Date()),
+    10
+  );
+  if (hour < 12) return "Good Morning";
+  if (hour < 18) return "Good Afternoon";
+  return "Good Evening";
+}
+
 export default function HomePage() {
   const { user } = useAuth();
   const tz = user?.timezone ?? "America/Chicago";
@@ -140,7 +150,7 @@ export default function HomePage() {
         {/* Welcome header */}
         <div className="mb-8">
           <h1 className="font-heading text-2xl font-semibold text-foreground text-balance">
-            Welcome back, {user?.full_name || user?.email}
+            {getGreeting(tz)}, {user?.full_name || user?.email}
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
             Your personal health records are organized and ready to access. Use the sections below or the sidebar to navigate.

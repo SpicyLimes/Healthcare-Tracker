@@ -130,8 +130,8 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
           to="/"
           onClick={onNavigate}
           className={cn(
-            "flex items-center pb-5 transition-opacity hover:opacity-80",
-            collapsed ? "justify-center px-0" : "gap-2.5 px-4"
+            "flex items-center transition-opacity hover:opacity-80",
+            collapsed ? "justify-center px-0 pb-5" : "gap-2.5 px-4 pb-2"
           )}
         >
           <img src="/logo.png" alt="Healthcare Tracker" className="size-10 shrink-0 rounded-lg" />
@@ -141,6 +141,16 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
             </span>
           )}
         </Link>
+        {!collapsed && (
+          <div className="px-4 pb-4 leading-tight">
+            <p className="text-[0.7rem] font-medium text-muted-foreground">
+              {new Intl.DateTimeFormat("en-US", { weekday: "long", timeZone: user?.timezone ?? "America/Chicago" }).format(new Date())}
+            </p>
+            <p className="text-[0.7rem] text-muted-foreground">
+              {new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: user?.timezone ?? "America/Chicago" }).format(new Date())}
+            </p>
+          </div>
+        )}
 
         <div className={cn("flex flex-1 flex-col gap-5", collapsed ? "items-center px-0" : "px-3")}>
           <ul className={cn("flex flex-col gap-0.5", collapsed && "items-center")}>

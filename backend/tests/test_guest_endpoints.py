@@ -221,17 +221,24 @@ def test_guest_visit_logs_serializes_bp_fields(client, db_session):
     assert "pulse_bpm" in row
 
 
-def test_guest_nutrition_plan_returns_meals(client, db_session):
-    """Guest nutrition_plan section returns NutritionMeal rows."""
+def test_guest_nutrition_plan_returns_acceptable_and_unacceptable_foods(client, db_session):
+    """Guest nutrition_plan returns acceptable + unacceptable food rows, not meals."""
     csrf = _admin(client, db_session)
-    meal = client.post(
-        "/api/nutrition/meals",
+    client.post(
+        "/api/nutrition/acceptable-foods",
         headers={"X-CSRF-Token": csrf},
-        json={"food_name": "Oatmeal", "meal_type": "breakfast"},
-    ).json()
+        json={"food_name": "Broccoli"},
+    )
+    client.post(
+        "/api/nutrition/unacceptable-foods",
+        headers={"X-CSRF-Token": csrf},
+        json={"food_name": "Soda"},
+    )
     token = _create_link(client, csrf, sections=["nutrition_plan"])
     client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
     r = client.get(f"/api/guest/nutrition_plan?token={token}")
     assert r.status_code == 200
     rows = r.json()
-    assert any(x["id"] == meal["id"] for x in rows)
+    assert any(x["food_name"] == "Broccoli" and x["type"] == "Acceptable" for x in rows)
+    assert any(x["food_name"] == "Soda" and x["type"] == "Unacceptable" for x in rows)
+    assert all("meal_type" not in x for x in rows)

@@ -170,10 +170,34 @@ def list_guest_records(
     section_map = _get_section_map()
     if section not in section_map:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown section")
+
+    if section == "nutrition_plan":
+        from app.models.nutrition import NutritionAcceptableFood, NutritionUnacceptableFood
+        acceptable = db.scalars(select(NutritionAcceptableFood)).all()
+        unacceptable = db.scalars(select(NutritionUnacceptableFood)).all()
+        result = (
+            [{"id": str(r.id), "type": "Acceptable", "food_name": r.food_name} for r in acceptable]
+            + [{"id": str(r.id), "type": "Unacceptable", "food_name": r.food_name} for r in unacceptable]
+        )
+        log_event(
+            db,
+            action=AuditAction.share_link_access,
+            actor_type=ActorType.guest,
+            actor_share_link_id=ctx.share_link_id,
+            section=section,
+            detail="Guest listed nutrition_plan",
+        )
+        try:
+            db.commit()
+        except Exception:
+            logger.exception("Guest handler commit failed")
+            db.rollback()
+        return result
+
     model, schema = section_map[section]
     rows = list(db.scalars(select(model)).all())
     if section == "visit_logs":
-        from app.models.extended_records import VisitLog as _VisitLog, Vitals as _Vitals
+        from app.models.extended_records import Vitals as _Vitals
         for row in rows:
             linked = db.get(_Vitals, row.linked_vitals_id) if row.linked_vitals_id else None
             row.bp_systolic = linked.bp_systolic if linked else None
@@ -206,6 +230,8 @@ def get_guest_record(
     db: Session = Depends(get_db),
 ):
     require_guest_section_access(section, ctx)
+    if section == "nutrition_plan":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     section_map = _get_section_map()
     if section not in section_map:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown section")
