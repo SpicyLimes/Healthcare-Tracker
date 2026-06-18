@@ -138,4 +138,11 @@
   :root:not(.dark) .bg-sidebar {
     box-shadow: 0 8px 24px -2px rgba(0,0,0,0.14), 0 1px 2px 0 rgba(0,0,0,0.10);
   }
+  /* Dark theme: lime accent outer glow on cards and nav chrome */
+  .dark .bg-card {
+    box-shadow: 0 8px 24px -2px rgba(74,222,128,0.14), 0 1px 2px 0 rgba(74,222,128,0.10);
+  }
+  .dark .bg-sidebar {
+    box-shadow: 0 8px 24px -2px rgba(74,222,128,0.14), 0 1px 2px 0 rgba(74,222,128,0.10);
+  }
 }

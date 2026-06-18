@@ -21,12 +21,32 @@ def gather_section_rows(
     date_to: Optional[date],
 ) -> list[dict[str, Any]]:
     """Return validated records for a section as plain dicts, optionally filtered by created_at date."""
+    # nutrition_plan: combine acceptable + unacceptable foods (mirrors guest endpoint)
+    if section == "nutrition_plan":
+        from app.models.nutrition import NutritionAcceptableFood, NutritionUnacceptableFood
+        result = []
+        for row in db.scalars(select(NutritionAcceptableFood)).all():
+            result.append({"type": "Acceptable", "food_name": row.food_name})
+        for row in db.scalars(select(NutritionUnacceptableFood)).all():
+            result.append({"type": "Unacceptable", "food_name": row.food_name})
+        return result
+
     section_map = get_section_map()
     if section not in section_map:
         return []
     model, schema = section_map[section]
-    rows = db.scalars(select(model)).all()
-    result: list[dict[str, Any]] = []
+    rows = list(db.scalars(select(model)).all())
+
+    # visit_logs: attach BP fields from linked Vitals row
+    if section == "visit_logs":
+        from app.models.extended_records import Vitals
+        for row in rows:
+            linked = db.get(Vitals, row.linked_vitals_id) if row.linked_vitals_id else None
+            row.bp_systolic = linked.bp_systolic if linked else None
+            row.bp_diastolic = linked.bp_diastolic if linked else None
+            row.pulse_bpm = linked.pulse_bpm if linked else None
+
+    result = []
     for row in rows:
         created = getattr(row, "created_at", None)
         if created is not None:
