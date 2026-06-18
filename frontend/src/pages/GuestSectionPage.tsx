@@ -8,43 +8,15 @@ import { formatInTimezone } from "@/lib/datetime";
 
 type FoodRow = { id: string; type: "Acceptable" | "Unacceptable"; food_name: string };
 
-function CollapsibleFoodList({ title, foods, defaultOpen = false }: {
-  title: string;
-  foods: FoodRow[];
-  defaultOpen?: boolean;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
-      <button
-        className="flex w-full items-center justify-between px-4 py-3 text-sm font-semibold text-foreground hover:bg-muted/30 transition-colors"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-      >
-        <span>{title} <span className="ml-1 text-xs font-normal text-muted-foreground">({foods.length})</span></span>
-        {open ? <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
-      </button>
-      {open && (
-        <ul className="divide-y divide-border border-t border-border">
-          {foods.length === 0 ? (
-            <li className="px-4 py-3 text-sm text-muted-foreground">None listed.</li>
-          ) : (
-            foods.map((f) => (
-              <li key={f.id} className="px-4 py-2 text-sm text-foreground">{f.food_name}</li>
-            ))
-          )}
-        </ul>
-      )}
-    </div>
-  );
-}
-
 function NutritionPlanGuest({ acceptable, unacceptable, error, loading }: {
   acceptable: FoodRow[];
   unacceptable: FoodRow[];
   error: string;
   loading: boolean;
 }) {
+  const [acceptableOpen, setAcceptableOpen] = useState(false);
+  const [unacceptableOpen, setUnacceptableOpen] = useState(false);
+
   return (
     <GuestLayout>
       <h1 className="text-2xl font-semibold mb-4">Nutrition Plan</h1>
@@ -52,9 +24,84 @@ function NutritionPlanGuest({ acceptable, unacceptable, error, loading }: {
       {loading ? (
         <p className="text-muted-foreground text-sm">Loading…</p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <CollapsibleFoodList title="Acceptable Foods" foods={acceptable} />
-          <CollapsibleFoodList title="Unacceptable Foods" foods={unacceptable} />
+        <div className="flex flex-col gap-4">
+          {/* Acceptable Foods */}
+          <div className="rounded-xl border border-border bg-card">
+            <button
+              className="flex w-full items-center justify-between px-4 py-4 text-left"
+              onClick={() => setAcceptableOpen((o) => !o)}
+              aria-expanded={acceptableOpen}
+            >
+              <span className="text-base font-semibold text-foreground">Acceptable Foods</span>
+              {acceptableOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+            </button>
+            {acceptableOpen && (
+              <div className="px-4 pb-4">
+                {/* Mobile list */}
+                <div className="md:hidden space-y-2">
+                  {acceptable.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No acceptable foods added yet.</p>
+                  ) : (
+                    acceptable.map((f) => (
+                      <div key={f.id} className="rounded-md border border-border bg-muted/20 px-3 py-2 text-sm text-foreground">
+                        {f.food_name}
+                      </div>
+                    ))
+                  )}
+                </div>
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/40">
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Food</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {acceptable.length === 0 ? (
+                        <tr>
+                          <td className="px-3 py-4 text-center text-xs text-muted-foreground">No acceptable foods added yet.</td>
+                        </tr>
+                      ) : (
+                        acceptable.map((f) => (
+                          <tr key={f.id} className="border-b border-border last:border-0">
+                            <td className="px-3 py-2 text-foreground">{f.food_name}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Unacceptable Foods */}
+          <div className="rounded-xl border border-border bg-card">
+            <button
+              className="flex w-full items-center justify-between px-4 py-4 text-left"
+              onClick={() => setUnacceptableOpen((o) => !o)}
+              aria-expanded={unacceptableOpen}
+            >
+              <span className="text-base font-semibold text-foreground">Unacceptable Foods</span>
+              {unacceptableOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+            </button>
+            {unacceptableOpen && (
+              <div className="px-4 pb-4">
+                {unacceptable.length === 0 ? (
+                  <p className="text-xs text-muted-foreground col-span-2">No unacceptable foods added yet.</p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                    {unacceptable.map((f) => (
+                      <div key={f.id} className="rounded-md border border-border bg-muted/20 px-3 py-2 text-sm text-foreground">
+                        {f.food_name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </GuestLayout>
