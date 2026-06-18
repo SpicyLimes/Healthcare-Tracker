@@ -39,19 +39,24 @@ function CollapsibleFoodList({ title, foods, defaultOpen = false }: {
   );
 }
 
-function NutritionPlanGuest({ acceptable, unacceptable, error }: {
+function NutritionPlanGuest({ acceptable, unacceptable, error, loading }: {
   acceptable: FoodRow[];
   unacceptable: FoodRow[];
   error: string;
+  loading: boolean;
 }) {
   return (
     <GuestLayout>
       <h1 className="text-2xl font-semibold mb-4">Nutrition Plan</h1>
       {error && <p role="alert" className="text-destructive mb-4">{error}</p>}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <CollapsibleFoodList title="Acceptable Foods" foods={acceptable} />
-        <CollapsibleFoodList title="Unacceptable Foods" foods={unacceptable} />
-      </div>
+      {loading ? (
+        <p className="text-muted-foreground text-sm">Loading…</p>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <CollapsibleFoodList title="Acceptable Foods" foods={acceptable} />
+          <CollapsibleFoodList title="Unacceptable Foods" foods={unacceptable} />
+        </div>
+      )}
     </GuestLayout>
   );
 }
@@ -62,6 +67,7 @@ export default function GuestSectionPage() {
   const { token } = useGuest();
   const rawToken = token || searchParams.get("token") || "";
   const [records, setRecords] = useState<unknown[]>([]);
+  const [loading, setLoading] = useState(true);
   const [expired, setExpired] = useState(false);
   const [error, setError] = useState("");
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -121,6 +127,7 @@ export default function GuestSectionPage() {
 
   useEffect(() => {
     if (!rawToken) { setExpired(true); return; }
+    setLoading(true);
     listGuestRecords(section, rawToken)
       .then((rows) => {
         setRecords(rows);
@@ -135,7 +142,8 @@ export default function GuestSectionPage() {
       .catch((err: Error) => {
         if (err.message.includes("401") || err.message.includes("403")) setExpired(true);
         else setError("Failed to load records");
-      });
+      })
+      .finally(() => setLoading(false));
   }, [section, rawToken]);
 
   function handleSort(key: string) {
@@ -168,7 +176,6 @@ export default function GuestSectionPage() {
 
   // Nutrition plan: custom two-column collapsible layout
   if (section === "nutrition_plan") {
-    type FoodRow = { id: string; type: "Acceptable" | "Unacceptable"; food_name: string };
     const foods = records as FoodRow[];
     const acceptable = foods.filter((f) => f.type === "Acceptable");
     const unacceptable = foods.filter((f) => f.type === "Unacceptable");
@@ -177,6 +184,7 @@ export default function GuestSectionPage() {
         acceptable={acceptable}
         unacceptable={unacceptable}
         error={error}
+        loading={loading}
       />
     );
   }
