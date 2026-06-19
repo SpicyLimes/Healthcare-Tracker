@@ -36,3 +36,9 @@ export async function testAiConnection(): Promise<AiConnectionTest> {
   if (!res.ok) throw new Error("Failed to test connection");
   return res.json();
 }
+
+export async function listAiModels(): Promise<string[]> {
+  const res = await fetch("/api/settings/ai/models");
+  if (!res.ok) return [];
+  return res.json();
+}

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { getAiSettings, updateAiSettings, testAiConnection } from "../api/settings";
+import { getAiSettings, updateAiSettings, testAiConnection, listAiModels } from "../api/settings";
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FormField, Input } from "@/components/ui/form-field";
+import { FormField, Input, Select } from "@/components/ui/form-field";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function SettingsPage() {
@@ -15,6 +15,8 @@ export default function SettingsPage() {
   const [testStatus, setTestStatus] = useState("");
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
 
   useEffect(() => {
     getAiSettings()
@@ -22,9 +24,26 @@ export default function SettingsPage() {
         setEnabled(s.enabled);
         setBaseUrl(s.base_url ?? "");
         setModel(s.model ?? "");
+        if (s.base_url) {
+          listAiModels().then(setAvailableModels).catch(() => {});
+        }
       })
       .catch(() => setSaveStatus("Failed to load AI settings."));
   }, []);
+
+  async function handleRefreshModels() {
+    setModelsLoading(true);
+    try {
+      const models = await listAiModels();
+      setAvailableModels(models);
+      if (models.length === 0) setSaveStatus("No models returned — check Base URL.");
+      else setSaveStatus("");
+    } catch {
+      setSaveStatus("Could not fetch models.");
+    } finally {
+      setModelsLoading(false);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -64,6 +83,7 @@ export default function SettingsPage() {
             <h2 className="mb-4 text-base font-semibold text-foreground">AI Assistant</h2>
 
             <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField label="Base URL" htmlFor="ai-base-url">
                 <Input
                   id="ai-base-url"
@@ -75,14 +95,58 @@ export default function SettingsPage() {
               </FormField>
 
               <FormField label="Model" htmlFor="ai-model">
-                <Input
-                  id="ai-model"
-                  type="text"
-                  placeholder="e.g. llama-3-8b-instruct"
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                />
+                {availableModels.length > 0 ? (
+                  <div className="flex gap-2">
+                    <Select
+                      id="ai-model"
+                      value={model}
+                      onChange={(e) => setModel(e.target.value)}
+                      className="flex-1"
+                    >
+                      {!availableModels.includes(model) && model && (
+                        <option value={model}>{model}</option>
+                      )}
+                      {availableModels.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRefreshModels}
+                      disabled={modelsLoading}
+                      title="Refresh model list from provider"
+                    >
+                      {modelsLoading ? "…" : "↻"}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      id="ai-model"
+                      type="text"
+                      placeholder="e.g. llama-3-8b-instruct"
+                      value={model}
+                      onChange={(e) => setModel(e.target.value)}
+                      className="flex-1"
+                    />
+                    {baseUrl && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRefreshModels}
+                        disabled={modelsLoading}
+                        title="Fetch available models from provider"
+                      >
+                        {modelsLoading ? "…" : "Fetch models"}
+                      </Button>
+                    )}
+                  </div>
+                )}
               </FormField>
+              </div>
 
               <div className="flex items-center gap-2">
                 <Checkbox

@@ -57,3 +57,12 @@ def test_ai_connection(request: Request, response: Response, db: Session = Depen
         return AiConnectionTest(reachable=False, detail="Base URL and model are not configured.")
     ok, detail = ai_provider.ping(s.base_url, s.model)
     return AiConnectionTest(reachable=ok, detail=detail)
+
+
+@router.get("/ai/models", response_model=list[str], dependencies=[Depends(require_admin)])
+@limiter.limit("20/minute")
+def list_ai_models(request: Request, response: Response, db: Session = Depends(get_db)):
+    s = ai_settings_service.get_settings(db)
+    if not s.base_url:
+        return []
+    return ai_provider.list_models(s.base_url)

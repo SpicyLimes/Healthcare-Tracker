@@ -51,3 +51,18 @@ def ping(base_url: str, model: str) -> tuple[bool, str]:
         return (True, "Reachable.")
     except httpx.HTTPError as exc:
         return (False, f"Unreachable: {exc}")
+
+
+def list_models(base_url: str) -> list[str]:
+    """Return model IDs from the configured provider's /models endpoint.
+    Returns an empty list if the provider is unreachable or returns unexpected data."""
+    url = base_url.rstrip("/") + "/models"
+    try:
+        with httpx.Client(timeout=httpx.Timeout(5.0, connect=3.0)) as client:
+            resp = client.get(url)
+            resp.raise_for_status()
+            data = resp.json()
+        return sorted(item["id"] for item in data.get("data", []) if "id" in item)
+    except Exception as exc:
+        logger.warning("list_models failed for %s: %s", base_url, exc)
+        return []

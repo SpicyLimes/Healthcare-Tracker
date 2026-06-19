@@ -11,6 +11,10 @@ import { RecordTable } from "@/components/RecordTable";
 
 const ACTIONS = ["create", "update", "delete", "share_link_access"];
 
+function formatAction(action: string): string {
+  return action.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 type ActionBadgeVariant = "default" | "secondary" | "destructive" | "outline";
 
 function actionVariant(action: string): ActionBadgeVariant {
@@ -52,7 +56,7 @@ export default function AuditLogPage() {
               <FormField label="Action" htmlFor="al-action">
                 <Select id="al-action" onChange={(e) => set("action", e.target.value)}>
                   <option value="">All</option>
-                  {ACTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+                  {ACTIONS.map((a) => <option key={a} value={a}>{formatAction(a)}</option>)}
                 </Select>
               </FormField>
               <FormField label="Actor type" htmlFor="al-actor">
@@ -105,7 +109,7 @@ export default function AuditLogPage() {
                   header: "Action",
                   sortKey: "action",
                   render: (r) => (
-                    <Badge variant={actionVariant(r.action)}>{r.action}</Badge>
+                    <Badge variant={actionVariant(r.action)}>{formatAction(r.action)}</Badge>
                   ),
                 },
                 {
@@ -121,14 +125,14 @@ export default function AuditLogPage() {
                 { label: "Timestamp", value: formatDatetime(r.timestamp) },
                 { label: "Actor", value: r.actor_label },
                 { label: "Actor Type", value: r.actor_type },
-                { label: "Action", value: r.action },
+                { label: "Action", value: formatAction(r.action) },
                 { label: "Section", value: r.section?.replace(/_/g, " ") ?? null },
                 { label: "Record ID", value: r.record_id ?? null },
                 { label: "Detail", value: r.detail ?? null },
               ]}
               getHeadline={(r) => r.action}
               getSubtitle={(r) => `${formatDatetime(r.timestamp)} · ${r.actor_label}`}
-              getBadge={(r) => ({ label: r.action, variant: actionVariant(r.action) })}
+              getBadge={(r) => ({ label: formatAction(r.action), variant: actionVariant(r.action) })}
               emptyMessage="No audit log entries."
               pageSize={25}
             />
