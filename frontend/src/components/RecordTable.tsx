@@ -35,6 +35,7 @@ export interface RecordTableProps<T extends object> {
 
   onEdit?: (row: T) => void
   onDelete?: (row: T) => void
+  renderRowActions?: (row: T) => React.ReactNode
   emptyMessage?: string
   pageSize?: number
 }
@@ -55,6 +56,7 @@ export function RecordTable<T extends object>({
   getBadge,
   onEdit,
   onDelete,
+  renderRowActions,
   emptyMessage = "No records yet.",
   pageSize = 10,
 }: RecordTableProps<T>) {
@@ -152,6 +154,7 @@ export function RecordTable<T extends object>({
                     </td>
                   ))}
                   <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
+                    {renderRowActions?.(r)}
                     <Button variant="outline" size="sm" aria-label={`More details for ${detailTitle(r)}`} onClick={() => setDetailRow(r)}>
                       More
                     </Button>
