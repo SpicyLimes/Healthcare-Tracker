@@ -253,6 +253,19 @@ export default function ShareLinksPage() {
                   render: (r) => <span className="font-medium text-foreground">{r.label}</span>,
                 },
                 {
+                  header: "",
+                  render: (r) => (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); handleCopyRow(r.token_url, r.id); }}
+                    >
+                      {copiedId === r.id ? "Copied!" : "Copy Link"}
+                    </Button>
+                  ),
+                  className: "px-4 py-3 whitespace-nowrap",
+                },
+                {
                   header: "Sections",
                   render: (r) =>
                     r.allowed_sections.length === 0
@@ -292,13 +305,6 @@ export default function ShareLinksPage() {
               ]}
               renderDetailExtra={(r) => (
                 <div className="flex flex-wrap gap-2 pt-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleCopyRow(r.token_url, r.id)}
-                  >
-                    {copiedId === r.id ? "Copied!" : "Copy Link"}
-                  </Button>
                   {linkStatus(r) === "Active" && (
                     <Button
                       size="sm"
@@ -308,6 +314,13 @@ export default function ShareLinksPage() {
                       Revoke
                     </Button>
                   )}
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handleDelete(r)}
+                  >
+                    Delete
+                  </Button>
                 </div>
               )}
               getHeadline={(r) => r.label}
@@ -316,7 +329,6 @@ export default function ShareLinksPage() {
                 const status = linkStatus(r);
                 return { label: status, variant: status === "Active" ? "default" : "secondary" };
               }}
-              onDelete={(r) => handleDelete(r)}
               emptyMessage="No share links yet."
             />
           </CardContent>
