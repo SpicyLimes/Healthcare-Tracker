@@ -98,7 +98,7 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
       collapsed ? "size-9 justify-center" : "gap-2.5 px-2 py-1.5",
       active
         ? "bg-primary/15 text-primary font-medium"
-        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground hover:ring-1 hover:ring-[var(--primary)]"
+        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground hover:ring-1 hover:ring-[var(--nav-hover-ring)]"
     );
 
     const inner = (

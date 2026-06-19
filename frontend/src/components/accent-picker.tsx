@@ -71,8 +71,8 @@ export function applyAccent(color: AccentColor, isDark: boolean) {
 
   const scope = isDark ? ".dark" : ":root";
   const glowVars = isDark
-    ? `  --glow-color: color-mix(in srgb, ${v.primary} 8%, transparent);
-  --glow-color-soft: color-mix(in srgb, ${v.primary} 6%, transparent);`
+    ? `  --glow-color: color-mix(in srgb, ${v.primary} 9%, transparent);
+  --glow-color-soft: color-mix(in srgb, ${v.primary} 7%, transparent);`
     : "";
   // Light accents in dark mode (white, green, yellow) need dark text on primary-colored surfaces.
   const lightAccentsInDark = isDark && (color === "white" || color === "green" || color === "yellow");
@@ -82,6 +82,7 @@ ${scope} {
   --primary: ${v.primary};
   --primary-foreground: ${primaryFg};
   --ring: ${v.primary};
+  --nav-hover-ring: color-mix(in srgb, ${v.primary} 70%, transparent);
   --accent: ${v.accent};
   --accent-foreground: ${v.accentFg};
   --secondary: ${v.secondary};
