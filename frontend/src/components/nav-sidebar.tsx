@@ -12,10 +12,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useAuth } from "@/auth/useAuth";
 import { fetchHealth, type HealthStatus } from "@/api/health";
 
-const calendarGroup = {
-  label: "Calendar",
+const toolsGroup = {
+  label: "Tools",
   items: [
     { to: "/calendar", label: "Calendar", icon: Calendar },
+    { to: "/notes", label: "Notes / To-Do's", icon: StickyNote },
   ],
 };
 
@@ -62,12 +63,6 @@ const navGroups = [
       { to: "/change-password", label: "Settings", icon: KeyRound },
     ],
   },
-  {
-    label: "Tools",
-    items: [
-      { to: "/notes", label: "Notes / To-Do's", icon: StickyNote },
-    ],
-  },
 ];
 
 const adminItems = [
@@ -103,7 +98,7 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
       collapsed ? "size-9 justify-center" : "gap-2.5 px-2 py-1.5",
       active
         ? "bg-primary/15 text-primary font-medium"
-        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground hover:ring-1 hover:ring-[var(--primary)]"
     );
 
     const inner = (
@@ -168,16 +163,16 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
             <li>{navLink("/", "Dashboard", LayoutDashboard, pathname === "/")}</li>
           </ul>
 
-          <div key={calendarGroup.label} className={cn(collapsed && "flex flex-col items-center")}>
+          <div key={toolsGroup.label} className={cn(collapsed && "flex flex-col items-center")}>
             {!collapsed && (
               <p className="mb-1 px-2 text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
-                {calendarGroup.label}
+                {toolsGroup.label}
               </p>
             )}
             {collapsed && <Separator className="mb-2 w-6" />}
             <ul className={cn("flex flex-col gap-0.5", collapsed && "items-center")}>
-              {calendarGroup.items.map((item) => (
-                <li key={item.label}>{navLink(item.to, item.label, item.icon, pathname === item.to)}</li>
+              {toolsGroup.items.map((item) => (
+                <li key={item.to}>{navLink(item.to, item.label, item.icon, pathname === item.to)}</li>
               ))}
             </ul>
           </div>

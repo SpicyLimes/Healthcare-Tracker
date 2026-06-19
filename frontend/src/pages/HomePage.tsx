@@ -1,104 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  Activity,
-  User,
-  Pill,
-  Stethoscope,
-  HeartPulse,
-  Shield,
-  Building2,
-  Users,
-  Scissors,
-  Hospital,
-  Eye,
-  Smile,
-  Syringe,
-  ClipboardList,
-  CalendarDays,
-  FolderOpen,
-  KeyRound,
-  Share2,
-  ScrollText,
-  UserCog,
-  ChevronRight,
-  StickyNote,
-  Bot,
-} from "lucide-react";
+import { StickyNote } from "lucide-react";
 import { calendarApi, type CalendarEvent, EVENT_TYPE_LABELS } from "../api/calendar";
 import { useAuth } from "../auth/useAuth";
 import { formatInTimezone } from "@/lib/datetime";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-const NON_ADMIN_SECTIONS = [
-  {
-    group: "Records",
-    description: "Your personal health profile and care providers.",
-    items: [
-      { to: "/profile", label: "Profile", icon: User, desc: "Personal info & demographics" },
-      { to: "/medications", label: "Medications", icon: Pill, desc: "Current & past medications" },
-      { to: "/doctors", label: "Doctors", icon: Stethoscope, desc: "Physicians & specialists" },
-      { to: "/ailments", label: "Ailment History", icon: HeartPulse, desc: "Diagnoses & conditions" },
-    ],
-  },
-  {
-    group: "Coverage",
-    description: "Insurance plans and pharmacy contacts.",
-    items: [
-      { to: "/insurance", label: "Insurance", icon: Shield, desc: "Health insurance policies" },
-      { to: "/pharmacies", label: "Pharmacies", icon: Building2, desc: "Preferred pharmacies" },
-    ],
-  },
-  {
-    group: "History",
-    description: "Medical events and hereditary health information.",
-    items: [
-      { to: "/family-history", label: "Family History", icon: Users, desc: "Hereditary conditions" },
-      { to: "/surgeries", label: "Surgeries", icon: Scissors, desc: "Surgical procedures" },
-      { to: "/hospitalizations", label: "Hospitalizations", icon: Hospital, desc: "Hospital stays" },
-      { to: "/vision-history", label: "Vision History", icon: Eye, desc: "Eye exams & prescriptions" },
-      { to: "/dental-history", label: "Dental History", icon: Smile, desc: "Dental records" },
-      { to: "/vaccinations", label: "Vaccinations", icon: Syringe, desc: "Immunization records" },
-    ],
-  },
-  {
-    group: "Activity",
-    description: "Doctor visits, upcoming appointments, and stored documents.",
-    items: [
-      { to: "/visit-logs", label: "Visit Logs", icon: ClipboardList, desc: "Provider visit notes" },
-      { to: "/vitals", label: "Vitals", icon: Activity, desc: "Blood pressure, pulse, weight & more" },
-      { to: "/calendar", label: "Appointments", icon: CalendarDays, desc: "Scheduled appointments" },
-      { to: "/documents", label: "Documents", icon: FolderOpen, desc: "Medical documents & files" },
-    ],
-  },
-  {
-    group: "Account",
-    description: "Security settings and sharing preferences.",
-    items: [
-      { to: "/change-password", label: "Settings", icon: KeyRound, desc: "Display name & password" },
-    ],
-  },
-  {
-    group: "Tools",
-    description: "Personal notes and to-do items.",
-    items: [
-      { to: "/notes", label: "Notes / To-Do's", icon: StickyNote, desc: "Personal notes and to-do items" },
-    ],
-  },
-];
-
-const ADMIN_SECTION = {
-  group: "Admin",
-  description: "System administration and user management.",
-  items: [
-    { to: "/share-links", label: "Share Links", icon: Share2, desc: "Share records with providers" },
-    { to: "/audit-log", label: "Audit Log", icon: ScrollText, desc: "System activity log" },
-    { to: "/users", label: "Manage Users", icon: UserCog, desc: "User accounts & roles" },
-    { to: "/settings", label: "AI Settings", icon: Bot, desc: "AI assistant configuration" },
-  ],
-};
 
 function formatEventTime(e: CalendarEvent, tz: string): string {
   if (e.type === "appointment" && e.time) {
@@ -139,11 +47,6 @@ export default function HomePage() {
       .catch(() => {});
   }, []);
 
-  const sections =
-    user?.role === "admin"
-      ? [...NON_ADMIN_SECTIONS, ADMIN_SECTION]
-      : NON_ADMIN_SECTIONS;
-
   return (
     <AppShell>
       <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
@@ -153,7 +56,7 @@ export default function HomePage() {
             {getGreeting(tz)}, {user?.full_name || user?.email}
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-            Your personal health records are organized and ready to access. Use the sections below or the sidebar to navigate.
+            Your personal health records are organized and ready to access. Use the sidebar to navigate.
           </p>
         </div>
 
@@ -207,46 +110,6 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Section grid */}
-        <div className="flex flex-col gap-6">
-          {sections.map((section) => (
-            <div key={section.group}>
-              <div className="mb-3">
-                <h2 className="font-heading text-sm font-semibold text-foreground">
-                  {section.group}
-                </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {section.description}
-                </p>
-              </div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {section.items.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link key={item.to} to={item.to} className="group">
-                      <Card className="transition-all duration-150 hover:ring-primary/40 hover:ring-2 cursor-pointer">
-                        <CardContent className="flex items-center gap-3 py-3">
-                          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                            <Icon className="size-4 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground truncate">
-                              {item.label}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {item.desc}
-                            </p>
-                          </div>
-                          <ChevronRight className="size-4 shrink-0 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5" />
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     </AppShell>
   );
