@@ -4,11 +4,10 @@ import { listAuditLog, type AuditLogEntry, type AuditLogFilters } from "../api/a
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FormField, Select, Input } from "@/components/ui/form-field";
 import { formatDatetime } from "@/lib/format";
-import { MobileRecordList } from "@/components/MobileRecordList";
+import { RecordTable } from "@/components/RecordTable";
 
 const ACTIONS = ["create", "update", "delete", "share_link_access"];
 
@@ -28,7 +27,7 @@ export default function AuditLogPage() {
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [filters, setFilters] = useState<AuditLogFilters>({ page: 1 });
+  const [filters, setFilters] = useState<AuditLogFilters>({});
 
   useEffect(() => {
     setLoading(true);
@@ -39,7 +38,7 @@ export default function AuditLogPage() {
   }, [filters]);
 
   function set(key: keyof AuditLogFilters, value: string) {
-    setFilters((f) => ({ ...f, [key]: value || undefined, page: 1 }));
+    setFilters((f) => ({ ...f, [key]: value || undefined }));
   }
 
   return (
@@ -81,96 +80,60 @@ export default function AuditLogPage() {
           </CardContent>
         </Card>
 
-        <div className="md:hidden">
-          <MobileRecordList
-            records={entries}
-            getHeadline={(e) => e.action}
-            getSubtitle={(e) => `${formatDatetime(e.timestamp)} · ${e.actor_label}`}
-            getBadge={(e) => ({
-              label: e.action,
-              variant: actionVariant(e.action),
-            })}
-            getFields={(e) => [
-              { key: "Timestamp", value: formatDatetime(e.timestamp) },
-              { key: "Actor", value: e.actor_label },
-              { key: "Actor Type", value: e.actor_type },
-              { key: "Section", value: e.section?.replace(/_/g, " ") ?? null },
-              { key: "Record ID", value: e.record_id ?? null },
-              { key: "Detail", value: e.detail ?? null },
-            ]}
-            emptyMessage="No audit log entries."
-          />
-        </div>
-        <div className="hidden md:block">
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Timestamp</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actor</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Action</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Section</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Detail</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading && (
-                  <tr>
-                    <td colSpan={5} className="text-center py-6 text-muted-foreground">
-                      Loading…
-                    </td>
-                  </tr>
-                )}
-                {!loading && entries.map((e) => (
-                  <tr key={e.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                      {formatDatetime(e.timestamp)}
-                    </td>
-                    <td className="px-4 py-3 font-medium text-foreground">{e.actor_label}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant={actionVariant(e.action)}>{e.action}</Badge>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground capitalize">
-                      {e.section?.replace(/_/g, " ") ?? ""}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{e.detail ?? ""}</td>
-                  </tr>
-                ))}
-                {!loading && entries.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="text-center py-6 text-muted-foreground">
-                      No entries found.
-                    </td>
-                  </tr>
-                )}
-                </tbody>
-              </table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="mt-4 flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={(filters.page ?? 1) <= 1}
-            onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) - 1 }))}
-          >
-            Previous
-          </Button>
-          <span className="text-sm text-muted-foreground">Page {filters.page ?? 1}</span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={entries.length < 50}
-            onClick={() => setFilters((f) => ({ ...f, page: (f.page ?? 1) + 1 }))}
-          >
-            Next
-          </Button>
-        </div>
+        <Card>
+          <CardContent className="p-0">
+            <RecordTable
+              rows={entries}
+              loading={loading}
+              isAdmin={true}
+              getRowId={(r) => String(r.id)}
+              defaultSortKey="timestamp"
+              defaultSortDir="desc"
+              primaryColumns={[
+                {
+                  header: "Timestamp",
+                  sortKey: "timestamp",
+                  render: (r) => formatDatetime(r.timestamp),
+                  className: "px-4 py-3 text-muted-foreground whitespace-nowrap",
+                },
+                {
+                  header: "Actor",
+                  sortKey: "actor_label",
+                  render: (r) => <span className="font-medium text-foreground">{r.actor_label}</span>,
+                },
+                {
+                  header: "Action",
+                  sortKey: "action",
+                  render: (r) => (
+                    <Badge variant={actionVariant(r.action)}>{r.action}</Badge>
+                  ),
+                },
+                {
+                  header: "Section",
+                  sortKey: "section",
+                  render: (r) => (
+                    <span className="capitalize">{r.section?.replace(/_/g, " ") ?? ""}</span>
+                  ),
+                },
+              ]}
+              detailTitle={(r) => `${r.action} — ${r.actor_label}`}
+              detailFields={(r) => [
+                { label: "Timestamp", value: formatDatetime(r.timestamp) },
+                { label: "Actor", value: r.actor_label },
+                { label: "Actor Type", value: r.actor_type },
+                { label: "Action", value: r.action },
+                { label: "Section", value: r.section?.replace(/_/g, " ") ?? null },
+                { label: "Record ID", value: r.record_id ?? null },
+                { label: "Detail", value: r.detail ?? null },
+              ]}
+              getHeadline={(r) => r.action}
+              getSubtitle={(r) => `${formatDatetime(r.timestamp)} · ${r.actor_label}`}
+              getBadge={(r) => ({ label: r.action, variant: actionVariant(r.action) })}
+              emptyMessage="No audit log entries."
+              pageSize={25}
+            />
+          </CardContent>
+        </Card>
       </PageLayout>
     </AppShell>
   );

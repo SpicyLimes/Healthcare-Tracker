@@ -12,7 +12,6 @@ export interface AuditLogEntry {
 }
 
 export interface AuditLogFilters {
-  page?: number;
   action?: string;
   actor_type?: string;
   section?: string;
@@ -22,14 +21,13 @@ export interface AuditLogFilters {
 
 export async function listAuditLog(filters: AuditLogFilters = {}): Promise<AuditLogEntry[]> {
   const params = new URLSearchParams();
-  if (filters.page) params.set("page", String(filters.page));
+  params.set("page_size", "500");
   if (filters.action) params.set("action", filters.action);
   if (filters.actor_type) params.set("actor_type", filters.actor_type);
   if (filters.section) params.set("section", filters.section);
   if (filters.date_from) params.set("date_from", filters.date_from);
   if (filters.date_to) params.set("date_to", filters.date_to);
-  const url = `/api/audit-log${params.size ? `?${params}` : ""}`;
-  const res = await apiFetch(url);
+  const res = await apiFetch(`/api/audit-log?${params}`);
   if (!res.ok) throw new Error("Failed to load audit log");
   return res.json();
 }

@@ -6,52 +6,56 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FormField, Input, Select } from "@/components/ui/form-field";
-import { MobileRecordList } from "@/components/MobileRecordList";
+import { RecordTable } from "@/components/RecordTable";
+import { RecordFormModal } from "@/components/RecordFormModal";
+import { formatDate } from "@/lib/format";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<ManagedUser[]>([]);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [role, setRole] = useState<"admin" | "viewer">("viewer");
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [modalError, setModalError] = useState("");
+
+  // Add modal state
+  const [addOpen, setAddOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newRole, setNewRole] = useState<"admin" | "viewer">("viewer");
 
   // Edit modal state
   const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState<"admin" | "viewer">("viewer");
   const [editActive, setEditActive] = useState(true);
-  const [editError, setEditError] = useState("");
 
   async function reload() {
     setUsers(await listUsers());
   }
 
   useEffect(() => {
-    reload().catch(() => setError("Failed to load users"));
+    setLoading(true);
+    reload().catch(() => setError("Failed to load users")).finally(() => setLoading(false));
   }, []);
+
+  function openAdd() {
+    setNewEmail("");
+    setNewPassword("");
+    setNewName("");
+    setNewRole("viewer");
+    setModalError("");
+    setAddOpen(true);
+  }
 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
-    setError("");
+    setModalError("");
     try {
-      await createUser(email, password, role, name.trim() || null);
-      setEmail("");
-      setPassword("");
-      setName("");
+      await createUser(newEmail, newPassword, newRole, newName.trim() || null);
+      setAddOpen(false);
       await reload();
     } catch {
-      setError("Could not create user");
-    }
-  }
-
-  async function onDelete(id: string) {
-    setError("");
-    try {
-      await deleteUser(id);
-      await reload();
-    } catch {
-      setError("Could not delete user");
+      setModalError("Could not create user");
     }
   }
 
@@ -60,7 +64,7 @@ export default function UsersPage() {
     setEditName(u.full_name ?? "");
     setEditRole(u.role);
     setEditActive(u.is_active);
-    setEditError("");
+    setModalError("");
   }
 
   function closeEdit() {
@@ -70,7 +74,7 @@ export default function UsersPage() {
   async function onSaveEdit(e: FormEvent) {
     e.preventDefault();
     if (!editingUser) return;
-    setEditError("");
+    setModalError("");
     try {
       await updateUser(editingUser.id, {
         full_name: editName.trim() || null,
@@ -80,7 +84,17 @@ export default function UsersPage() {
       closeEdit();
       await reload();
     } catch {
-      setEditError("Could not update user");
+      setModalError("Could not update user");
+    }
+  }
+
+  async function onDelete(u: ManagedUser) {
+    setError("");
+    try {
+      await deleteUser(u.id);
+      await reload();
+    } catch {
+      setError("Could not delete user");
     }
   }
 
@@ -89,223 +103,167 @@ export default function UsersPage() {
       <PageLayout
         title="Manage Users"
         description="Admin user accounts and roles."
+        action={<Button onClick={openAdd}>+ Add</Button>}
       >
         {error && (
-          <p role="alert" className="mb-4 text-sm text-destructive">
-            {error}
-          </p>
+          <p role="alert" className="mb-4 text-sm text-destructive">{error}</p>
         )}
 
-        <div className="flex flex-col gap-6">
-          {/* Users table */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="md:hidden">
-                <MobileRecordList
-                  records={users}
-                  getHeadline={(u) => u.email}
-                  getSubtitle={(u) => u.full_name ?? null}
-                  getBadge={(u) => ({
-                    label: u.role === "admin" ? "Admin" : "Viewer",
-                    variant: u.role === "admin" ? "default" : "secondary",
-                  })}
-                  getFields={(u) => [
-                    { key: "Email", value: u.email },
-                    { key: "Name", value: u.full_name ?? null },
-                    { key: "Role", value: u.role === "admin" ? "Admin" : "Viewer" },
-                    { key: "Active", value: u.is_active ? "Yes" : "No" },
-                  ]}
-                  isAdmin={true}
-                  onEdit={(u) => openEdit(u)}
-                  onDelete={(u) => onDelete(u.id)}
-                  emptyMessage="No users found."
-                />
-              </div>
-              <div className="hidden md:block">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-muted-foreground">
-                      <th className="pb-2 font-medium">Name</th>
-                      <th className="pb-2 font-medium">Email</th>
-                      <th className="pb-2 font-medium">Role</th>
-                      <th className="pb-2 font-medium text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((u) => (
-                      <tr key={u.id} className="border-b border-border last:border-0">
-                        <td className="py-3 text-foreground">
-                          {u.full_name ?? "—"}
-                        </td>
-                        <td className="py-3 text-foreground">
-                          {u.email}
-                          {!u.is_active && (
-                            <span className="ml-2 text-xs text-muted-foreground">(inactive)</span>
-                          )}
-                        </td>
-                        <td className="py-3">
-                          <Badge variant={u.role === "admin" ? "default" : "secondary"}>
-                            {u.role === "admin" ? "Admin" : "Viewer"}
-                          </Badge>
-                        </td>
-                        <td className="py-3 text-right space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEdit(u)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => onDelete(u.id)}
-                          >
-                            Delete
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                    {users.length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="py-6 text-center text-muted-foreground">
-                          No users found.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardContent className="p-0">
+            <RecordTable
+              rows={users}
+              loading={loading}
+              isAdmin={true}
+              getRowId={(r) => r.id}
+              defaultSortKey="full_name"
+              defaultSortDir="asc"
+              primaryColumns={[
+                {
+                  header: "Name",
+                  sortKey: "full_name",
+                  render: (r) => (
+                    <span className="font-medium text-foreground">{r.full_name ?? "—"}</span>
+                  ),
+                },
+                {
+                  header: "Email",
+                  sortKey: "email",
+                  render: (r) => (
+                    <span className="text-foreground">
+                      {r.email}
+                      {!r.is_active && (
+                        <span className="ml-2 text-xs text-muted-foreground">(inactive)</span>
+                      )}
+                    </span>
+                  ),
+                },
+                {
+                  header: "Role",
+                  sortKey: "role",
+                  render: (r) => (
+                    <Badge variant={r.role === "admin" ? "default" : "secondary"}>
+                      {r.role === "admin" ? "Admin" : "Viewer"}
+                    </Badge>
+                  ),
+                },
+              ]}
+              detailTitle={(r) => r.full_name ?? r.email}
+              detailFields={(r) => [
+                { label: "Name", value: r.full_name ?? null },
+                { label: "Email", value: r.email },
+                { label: "Role", value: r.role === "admin" ? "Admin" : "Viewer" },
+                { label: "Active", value: r.is_active ? "Yes" : "No" },
+                { label: "Created", value: formatDate(r.created_at) },
+              ]}
+              getHeadline={(r) => r.email}
+              getSubtitle={(r) => r.full_name ?? null}
+              getBadge={(r) => ({
+                label: r.role === "admin" ? "Admin" : "Viewer",
+                variant: r.role === "admin" ? "default" : "secondary",
+              })}
+              onEdit={(r) => openEdit(r)}
+              onDelete={(r) => onDelete(r)}
+              emptyMessage="No users found."
+            />
+          </CardContent>
+        </Card>
 
-          {/* Create user form (admin only) */}
-          <Card>
-            <CardContent className="pt-6">
-              <h2 className="font-heading text-sm font-medium text-foreground mb-4">
-                Add user
-              </h2>
-              <form onSubmit={onCreate}>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <FormField label="Email" htmlFor="new_user_email">
-                    <Input
-                      id="new_user_email"
-                      type="email"
-                      placeholder="user@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </FormField>
-
-                  <FormField label="Name (optional)" htmlFor="new_user_name">
-                    <Input
-                      id="new_user_name"
-                      type="text"
-                      placeholder="Full name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
-                  </FormField>
-
-                  <FormField label="Password" htmlFor="new_user_password">
-                    <Input
-                      id="new_user_password"
-                      type="password"
-                      placeholder="Min 12 characters"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      minLength={12}
-                    />
-                  </FormField>
-
-                  <FormField label="Role" htmlFor="new_user_role">
-                    <Select
-                      id="new_user_role"
-                      value={role}
-                      onChange={(e) => setRole(e.target.value as "admin" | "viewer")}
-                    >
-                      <option value="viewer">Viewer</option>
-                      <option value="admin">Admin</option>
-                    </Select>
-                  </FormField>
-                </div>
-
-                <div className="mt-4 flex justify-end">
-                  <Button type="submit">Add user</Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Edit modal */}
-        {editingUser && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="edit-user-heading"
-            onKeyDown={(e) => e.key === "Escape" && closeEdit()}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-            onClick={closeEdit}
+        {/* Add user modal */}
+        {addOpen && (
+          <RecordFormModal
+            title="Add User"
+            submitLabel="Add User"
+            error={modalError || null}
+            onClose={() => setAddOpen(false)}
+            onSubmit={onCreate}
           >
-            <div
-              className="mx-4 sm:mx-auto w-full sm:max-w-md rounded-xl border border-border bg-card p-4 sm:p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h2 id="edit-user-heading" className="font-heading text-base font-semibold text-foreground mb-4">
-                Edit user
-              </h2>
-              {editError && (
-                <p role="alert" className="mb-4 text-sm text-destructive">
-                  {editError}
-                </p>
-              )}
-              <form onSubmit={onSaveEdit}>
-                <div className="flex flex-col gap-4">
-                  <FormField label="Display name" htmlFor="edit_full_name">
-                    <Input
-                      id="edit_full_name"
-                      type="text"
-                      placeholder="Name (optional)"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      autoFocus
-                    />
-                  </FormField>
-
-                  <FormField label="Role" htmlFor="edit_role">
-                    <Select
-                      id="edit_role"
-                      value={editRole}
-                      onChange={(e) => setEditRole(e.target.value as "admin" | "viewer")}
-                    >
-                      <option value="viewer">Viewer</option>
-                      <option value="admin">Admin</option>
-                    </Select>
-                  </FormField>
-
-                  <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={editActive}
-                      onChange={(e) => setEditActive(e.target.checked)}
-                      className="rounded border-border"
-                    />
-                    Active
-                  </label>
-                </div>
-
-                <div className="mt-6 flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={closeEdit}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">Save</Button>
-                </div>
-              </form>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField label="Email" htmlFor="new_user_email">
+                <Input
+                  id="new_user_email"
+                  type="email"
+                  placeholder="user@example.com"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  required
+                />
+              </FormField>
+              <FormField label="Name (optional)" htmlFor="new_user_name">
+                <Input
+                  id="new_user_name"
+                  type="text"
+                  placeholder="Full name"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                />
+              </FormField>
+              <FormField label="Password" htmlFor="new_user_password">
+                <Input
+                  id="new_user_password"
+                  type="password"
+                  placeholder="Min 12 characters"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={12}
+                />
+              </FormField>
+              <FormField label="Role" htmlFor="new_user_role">
+                <Select
+                  id="new_user_role"
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value as "admin" | "viewer")}
+                >
+                  <option value="viewer">Viewer</option>
+                  <option value="admin">Admin</option>
+                </Select>
+              </FormField>
             </div>
-          </div>
+          </RecordFormModal>
+        )}
+
+        {/* Edit user modal */}
+        {editingUser && (
+          <RecordFormModal
+            title="Edit User"
+            submitLabel="Save"
+            error={modalError || null}
+            onClose={closeEdit}
+            onSubmit={onSaveEdit}
+          >
+            <div className="flex flex-col gap-4">
+              <FormField label="Display name" htmlFor="edit_full_name">
+                <Input
+                  id="edit_full_name"
+                  type="text"
+                  placeholder="Name (optional)"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  autoFocus
+                />
+              </FormField>
+              <FormField label="Role" htmlFor="edit_role">
+                <Select
+                  id="edit_role"
+                  value={editRole}
+                  onChange={(e) => setEditRole(e.target.value as "admin" | "viewer")}
+                >
+                  <option value="viewer">Viewer</option>
+                  <option value="admin">Admin</option>
+                </Select>
+              </FormField>
+              <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editActive}
+                  onChange={(e) => setEditActive(e.target.checked)}
+                  className="rounded border-border"
+                />
+                Active
+              </label>
+            </div>
+          </RecordFormModal>
         )}
       </PageLayout>
     </AppShell>

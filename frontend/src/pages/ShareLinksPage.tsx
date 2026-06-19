@@ -13,7 +13,7 @@ import { FormField, Input } from "@/components/ui/form-field";
 import { formatDate } from "@/lib/format";
 import { formatInTimezone } from "@/lib/datetime";
 import { useAuth } from "../auth/useAuth";
-import { MobileRecordList } from "@/components/MobileRecordList";
+import { RecordTable } from "@/components/RecordTable";
 
 const ALL_SECTIONS = [
   "surgeries", "hospitalizations", "vision_history", "dental_history",
@@ -36,6 +36,21 @@ function linkStatus(link: ShareLink): string {
   if (link.revoked) return "Revoked";
   if (new Date(link.expires_at) < new Date()) return "Expired";
   return "Active";
+}
+
+async function copyToClipboard(text: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+  } else {
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.style.position = "fixed";
+    el.style.opacity = "0";
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand("copy");
+    document.body.removeChild(el);
+  }
 }
 
 export default function ShareLinksPage() {
@@ -85,19 +100,19 @@ export default function ShareLinksPage() {
     }
   }
 
-  async function handleRevoke(id: string) {
+  async function handleRevoke(link: ShareLink) {
     try {
-      await revokeShareLink(id);
+      await revokeShareLink(link.id);
       await reload();
     } catch {
       setError("Failed to revoke link");
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(link: ShareLink) {
     if (!window.confirm("Permanently delete this share link? This cannot be undone.")) return;
     try {
-      await deleteShareLink(id);
+      await deleteShareLink(link.id);
       await reload();
     } catch {
       setError("Failed to delete link");
@@ -108,21 +123,6 @@ export default function ShareLinksPage() {
     setSelectedSections((prev) =>
       prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
     );
-  }
-
-  async function copyToClipboard(text: string) {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-    } else {
-      const el = document.createElement("textarea");
-      el.value = text;
-      el.style.position = "fixed";
-      el.style.opacity = "0";
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand("copy");
-      document.body.removeChild(el);
-    }
   }
 
   async function handleCopyBanner(url: string) {
@@ -237,103 +237,90 @@ export default function ShareLinksPage() {
           </Card>
         )}
 
-        <div className="md:hidden">
-          <MobileRecordList
-            records={links}
-            getHeadline={(link) => link.label}
-            getSubtitle={(link) => `Expires: ${formatInTimezone(link.expires_at, tz)}`}
-            getBadge={(link) => {
-              const status = linkStatus(link)
-              return {
-                label: status,
-                variant: status === "Active" ? "default" : "secondary",
-              }
-            }}
-            getFields={(link) => [
-              { key: "Sections", value: link.allowed_sections.length === 0 ? "All sections" : link.allowed_sections.map(formatSection).join(", ") },
-              { key: "Expires", value: formatInTimezone(link.expires_at, tz) },
-              { key: "Created", value: formatDate(link.created_at) },
-            ]}
-            isAdmin={true}
-            onDelete={(link) => handleDelete(link.id)}
-            emptyMessage="No share links yet."
-          />
-        </div>
-
-        <div className="hidden md:block">
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Label</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Sections</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expires</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={5} className="text-center py-6 text-muted-foreground">Loading…</td>
-                </tr>
-              )}
-              {!loading && links.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="text-center py-6 text-muted-foreground">No share links yet.</td>
-                </tr>
-              )}
-              {!loading && links.map((link) => {
-                const status = linkStatus(link);
-                return (
-                  <tr key={link.id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                    <td className="px-4 py-3 font-medium text-foreground">{link.label}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {link.allowed_sections.length === 0
-                        ? "All"
-                        : link.allowed_sections.map(formatSection).join(", ")}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatInTimezone(link.expires_at, tz)}</td>
-                    <td className="px-4 py-3">
+        <Card>
+          <CardContent className="p-0">
+            <RecordTable
+              rows={links}
+              loading={loading}
+              isAdmin={true}
+              getRowId={(r) => r.id}
+              defaultSortKey="expires_at"
+              defaultSortDir="asc"
+              primaryColumns={[
+                {
+                  header: "Label",
+                  sortKey: "label",
+                  render: (r) => <span className="font-medium text-foreground">{r.label}</span>,
+                },
+                {
+                  header: "Sections",
+                  render: (r) =>
+                    r.allowed_sections.length === 0
+                      ? "All"
+                      : r.allowed_sections.map(formatSection).join(", "),
+                },
+                {
+                  header: "Expires",
+                  sortKey: "expires_at",
+                  render: (r) => formatInTimezone(r.expires_at, tz),
+                },
+                {
+                  header: "Status",
+                  sortKey: "revoked",
+                  render: (r) => {
+                    const status = linkStatus(r);
+                    return (
                       <Badge variant={status === "Active" ? "default" : "secondary"}>
                         {status}
                       </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleCopyRow(link.token_url, link.id)}
-                        >
-                          {copiedId === link.id ? "Copied!" : "Copy Link"}
-                        </Button>
-                        {status === "Active" && (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleRevoke(link.id)}
-                          >
-                            Revoke
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => handleDelete(link.id)}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        </div>
+                    );
+                  },
+                },
+              ]}
+              detailTitle={(r) => r.label}
+              detailFields={(r) => [
+                { label: "Label", value: r.label },
+                { label: "Expires", value: formatInTimezone(r.expires_at, tz) },
+                { label: "Created", value: formatDate(r.created_at) },
+                { label: "Status", value: linkStatus(r) },
+                {
+                  label: "Sections",
+                  value: r.allowed_sections.length === 0
+                    ? "All sections"
+                    : r.allowed_sections.map(formatSection).join(", "),
+                },
+              ]}
+              renderDetailExtra={(r) => (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleCopyRow(r.token_url, r.id)}
+                  >
+                    {copiedId === r.id ? "Copied!" : "Copy Link"}
+                  </Button>
+                  {linkStatus(r) === "Active" && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleRevoke(r)}
+                    >
+                      Revoke
+                    </Button>
+                  )}
+                </div>
+              )}
+              getHeadline={(r) => r.label}
+              getSubtitle={(r) => `Expires: ${formatInTimezone(r.expires_at, tz)}`}
+              getBadge={(r) => {
+                const status = linkStatus(r);
+                return { label: status, variant: status === "Active" ? "default" : "secondary" };
+              }}
+              onDelete={(r) => handleDelete(r)}
+              emptyMessage="No share links yet."
+            />
+          </CardContent>
+        </Card>
       </PageLayout>
     </AppShell>
   );

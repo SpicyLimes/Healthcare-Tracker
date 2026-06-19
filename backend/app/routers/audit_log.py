@@ -16,11 +16,13 @@ from app.security.dependencies import require_admin
 router = APIRouter(prefix="/api/audit-log", tags=["audit-log"])
 
 PAGE_SIZE = 50
+MAX_PAGE_SIZE = 500
 
 
 @router.get("", response_model=list[AuditLogEntry], dependencies=[Depends(require_admin)])
 def list_audit_log(
     page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
     action: Optional[AuditAction] = None,
     actor_type: Optional[ActorType] = None,
     section: Optional[str] = None,
@@ -42,7 +44,7 @@ def list_audit_log(
         end = datetime.combine(date_to, datetime.max.time()).replace(tzinfo=timezone.utc)
         q = q.filter(AuditLog.timestamp <= end)
 
-    entries = q.order_by(AuditLog.timestamp.desc()).offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).all()
+    entries = q.order_by(AuditLog.timestamp.desc()).offset((page - 1) * page_size).limit(page_size).all()
 
     # Batch-fetch all referenced users and share links to avoid N+1
     user_ids = {e.actor_user_id for e in entries if e.actor_user_id}
