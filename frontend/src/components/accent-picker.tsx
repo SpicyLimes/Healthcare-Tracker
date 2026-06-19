@@ -71,8 +71,8 @@ export function applyAccent(color: AccentColor, isDark: boolean) {
 
   const scope = isDark ? ".dark" : ":root";
   const glowVars = isDark
-    ? `  --glow-color: color-mix(in srgb, ${v.primary} 9%, transparent);
-  --glow-color-soft: color-mix(in srgb, ${v.primary} 12%, transparent);`
+    ? `  --glow-color: color-mix(in srgb, ${v.primary} 4%, transparent);
+  --glow-color-soft: color-mix(in srgb, ${v.primary} 6%, transparent);`
     : "";
   el.textContent = `
 ${scope} {
