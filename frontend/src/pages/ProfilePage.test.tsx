@@ -278,3 +278,105 @@ describe("Height/Weight Vitals prefill", () => {
     });
   });
 });
+
+describe("Allergy cards", () => {
+  it("shows Add Allergy button for admin with no allergies", async () => {
+    mockAuth("admin");
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    render(<ProfilePage />);
+    await waitFor(() => expect(screen.getByText("+ Add Allergy")).toBeInTheDocument());
+  });
+
+  it("renders existing allergy card from JSON", async () => {
+    mockAuth("admin");
+    const stored = JSON.stringify([
+      { medication: "Penicillin", reaction: "Hives", age_of_onset: "12" }
+    ]);
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: stored, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    render(<ProfilePage />);
+    await waitFor(() => {
+      expect((screen.getByDisplayValue("Penicillin") as HTMLInputElement).value).toBe("Penicillin");
+      expect((screen.getByDisplayValue("Hives") as HTMLInputElement).value).toBe("Hives");
+      expect((screen.getByDisplayValue("12") as HTMLInputElement).value).toBe("12");
+    });
+  });
+
+  it("viewer sees read-only allergy display, no Add button", async () => {
+    mockAuth("viewer");
+    const stored = JSON.stringify([
+      { medication: "Aspirin", reaction: "Rash", age_of_onset: "30" }
+    ]);
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: stored, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    render(<ProfilePage />);
+    await waitFor(() => expect(screen.getByText("Aspirin")).toBeInTheDocument());
+    expect(screen.queryByText("+ Add Allergy")).not.toBeInTheDocument();
+  });
+
+  it("saves allergies as JSON in allergies field", async () => {
+    mockAuth("admin");
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    const save = vi.spyOn(profileApi, "saveProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    render(<ProfilePage />);
+    fireEvent.click(await screen.findByText("+ Add Allergy"));
+    fireEvent.change(screen.getByPlaceholderText("Medication"), { target: { value: "Sulfa" } });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    await waitFor(() => {
+      const callArg = save.mock.calls[0][0];
+      const parsed = JSON.parse(callArg.allergies as string);
+      expect(parsed[0].medication).toBe("Sulfa");
+    });
+  });
+
+  it("filters out empty allergy cards on save", async () => {
+    mockAuth("admin");
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    const save = vi.spyOn(profileApi, "saveProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    render(<ProfilePage />);
+    fireEvent.click(await screen.findByText("+ Add Allergy"));
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    await waitFor(() => {
+      const callArg = save.mock.calls[0][0];
+      expect(callArg.allergies).toBeNull();
+    });
+  });
+
+  it("falls back to empty list when allergies contains legacy free-text", async () => {
+    mockAuth("viewer");
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: "Penicillin, Sulfa", emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    render(<ProfilePage />);
+    await waitFor(() => screen.getByLabelText("Full name"));
+    expect(screen.getByText("No allergies on file.")).toBeInTheDocument();
+  });
+});

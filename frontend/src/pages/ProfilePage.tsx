@@ -22,6 +22,37 @@ const RELATIONSHIP_OPTIONS = [
   "Family Member", "Caregiver", "Friend", "Other",
 ];
 
+interface Allergy {
+  medication: string;
+  reaction: string;
+  age_of_onset: string;
+}
+
+function parseAllergies(raw: string | null | undefined): Allergy[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => ({
+        medication:   typeof item.medication   === "string" ? item.medication   : "",
+        reaction:     typeof item.reaction     === "string" ? item.reaction     : "",
+        age_of_onset: typeof item.age_of_onset === "string" ? item.age_of_onset : "",
+      }));
+    }
+  } catch {
+    // legacy free-text — discard
+  }
+  return [];
+}
+
+function serializeAllergies(list: Allergy[]): string | null {
+  const nonEmpty = list.filter(
+    (a) => a.medication.trim() || a.reaction.trim() || a.age_of_onset.trim()
+  );
+  if (nonEmpty.length === 0) return null;
+  return JSON.stringify(nonEmpty);
+}
+
 function parseContacts(raw: string | null | undefined): EmergencyContact[] {
   if (!raw) return [];
   try {
@@ -82,6 +113,7 @@ export default function ProfilePage() {
   const [form, setForm] = useState<ProfileInput>(EMPTY);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+  const [allergyList, setAllergyList] = useState<Allergy[]>([]);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [vitalsHeightHint, setVitalsHeightHint] = useState<string | null>(null);
@@ -105,6 +137,7 @@ export default function ProfilePage() {
             notes: p.notes ?? null,
           }));
           setContacts(parseContacts(p.emergency_contacts));
+          setAllergyList(parseAllergies(p.allergies ?? null));
         }
       })
       .catch(() => setError("Failed to load profile"));
@@ -158,6 +191,20 @@ export default function ProfilePage() {
     );
   }
 
+  function addAllergy() {
+    setAllergyList((prev) => [...prev, { medication: "", reaction: "", age_of_onset: "" }]);
+  }
+
+  function removeAllergy(index: number) {
+    setAllergyList((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function setAllergy(index: number, field: keyof Allergy, value: string) {
+    setAllergyList((prev) =>
+      prev.map((a, i) => (i === index ? { ...a, [field]: value } : a))
+    );
+  }
+
   async function onSave(e: FormEvent) {
     e.preventDefault();
     setError("");
@@ -168,6 +215,7 @@ export default function ProfilePage() {
       ) as unknown as ProfileInput;
       payload.full_name = form.full_name;
       payload.emergency_contacts = serializeContacts(contacts);
+      payload.allergies = serializeAllergies(allergyList);
       const result = await saveProfile(payload);
       setProfileId(result.id);
       setSaved(true);
@@ -288,15 +336,70 @@ export default function ProfilePage() {
 
                 {/* Allergies */}
                 <div className="sm:col-span-2">
-                  <FormField label="Allergies" htmlFor="allergies">
-                    <Textarea
-                      id="allergies"
-                      disabled={!isAdmin}
-                      value={fieldValue(form.allergies)}
-                      onChange={(e) => set("allergies", e.target.value)}
-                      placeholder="List known allergies..."
-                    />
-                  </FormField>
+                  <p className="mb-2 text-sm font-medium text-foreground">Allergies</p>
+                  <div className="flex flex-col gap-3">
+                    {allergyList.length === 0 && !isAdmin && (
+                      <p className="text-sm text-muted-foreground">No allergies on file.</p>
+                    )}
+                    {allergyList.map((a, i) =>
+                      isAdmin ? (
+                        <div key={i} className="relative rounded-lg border border-border bg-muted/20 p-4">
+                          <button
+                            type="button"
+                            aria-label={`Remove allergy ${i + 1}`}
+                            onClick={() => removeAllergy(i)}
+                            className="absolute right-3 top-3 text-muted-foreground hover:text-destructive"
+                          >
+                            ×
+                          </button>
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            <FormField label="Medication" htmlFor={`al-med-${i}`}>
+                              <Input
+                                id={`al-med-${i}`}
+                                type="text"
+                                placeholder="Medication"
+                                value={a.medication}
+                                onChange={(e) => setAllergy(i, "medication", e.target.value)}
+                              />
+                            </FormField>
+                            <FormField label="Reaction" htmlFor={`al-rxn-${i}`}>
+                              <Input
+                                id={`al-rxn-${i}`}
+                                type="text"
+                                placeholder="Reaction"
+                                value={a.reaction}
+                                onChange={(e) => setAllergy(i, "reaction", e.target.value)}
+                              />
+                            </FormField>
+                            <FormField label="Age of Onset" htmlFor={`al-age-${i}`}>
+                              <Input
+                                id={`al-age-${i}`}
+                                type="number"
+                                min={0}
+                                max={120}
+                                placeholder="Age"
+                                value={a.age_of_onset}
+                                onChange={(e) => setAllergy(i, "age_of_onset", e.target.value)}
+                              />
+                            </FormField>
+                          </div>
+                        </div>
+                      ) : (
+                        <div key={i} className="rounded-lg border border-border bg-muted/20 p-4">
+                          <div className="grid grid-cols-1 gap-1 text-sm sm:grid-cols-3">
+                            <div><span className="text-muted-foreground">Medication: </span><span className="text-foreground">{a.medication || "—"}</span></div>
+                            <div><span className="text-muted-foreground">Reaction: </span><span className="text-foreground">{a.reaction || "—"}</span></div>
+                            <div><span className="text-muted-foreground">Age of Onset: </span><span className="text-foreground">{a.age_of_onset || "—"}</span></div>
+                          </div>
+                        </div>
+                      )
+                    )}
+                    {isAdmin && (
+                      <Button type="button" variant="outline" size="sm" onClick={addAllergy} className="self-start">
+                        + Add Allergy
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Emergency Contacts */}
