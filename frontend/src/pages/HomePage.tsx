@@ -68,6 +68,7 @@ export default function HomePage() {
   const { user } = useAuth();
   const tz = user?.timezone ?? "America/Chicago";
 
+  const [loading, setLoading] = useState(true);
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -83,59 +84,63 @@ export default function HomePage() {
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
 
-    calendarApi.list().then((events) => {
-      const upcoming = events
-        .filter((e) => e.date >= today)
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .slice(0, 5);
-      setUpcomingEvents(upcoming);
-    }).catch(() => {});
+    const fetches = [
+      calendarApi.list().then((events) => {
+        const upcoming = events
+          .filter((e) => e.date >= today)
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .slice(0, 5);
+        setUpcomingEvents(upcoming);
+      }).catch(() => {}),
 
-    getProfile().then((p) => { if (p) setProfile(p); }).catch(() => {});
+      getProfile().then((p) => { if (p) setProfile(p); }).catch(() => {}),
 
-    doctorsApi.list().then(setDoctors).catch(() => {});
+      doctorsApi.list().then(setDoctors).catch(() => {}),
 
-    vitalsApi.list().then((all) => {
-      const sorted = [...all].sort(
-        (a, b) => new Date(b.measured_at).getTime() - new Date(a.measured_at).getTime()
-      );
-      setLatestVitals(sorted[0] ?? null);
-    }).catch(() => {});
+      vitalsApi.list().then((all) => {
+        const sorted = [...all].sort(
+          (a, b) => new Date(b.measured_at).getTime() - new Date(a.measured_at).getTime()
+        );
+        setLatestVitals(sorted[0] ?? null);
+      }).catch(() => {}),
 
-    medicationsApi.list().then((all) => {
-      setActiveMeds(all.filter((m) => m.is_active));
-    }).catch(() => {});
+      medicationsApi.list().then((all) => {
+        setActiveMeds(all.filter((m) => m.is_active));
+      }).catch(() => {}),
 
-    visitLogsApi.list().then((all) => {
-      const sorted = [...all].sort((a, b) =>
-        (b.visit_date ?? "").localeCompare(a.visit_date ?? "")
-      );
-      setLatestVisit(sorted[0] ?? null);
-    }).catch(() => {});
+      visitLogsApi.list().then((all) => {
+        const sorted = [...all].sort((a, b) =>
+          (b.visit_date ?? "").localeCompare(a.visit_date ?? "")
+        );
+        setLatestVisit(sorted[0] ?? null);
+      }).catch(() => {}),
 
-    surgeriesApi.list().then((all) => {
-      const sorted = [...all].sort((a, b) =>
-        (b.surgery_date ?? "").localeCompare(a.surgery_date ?? "")
-      );
-      setLatestSurgery(sorted[0] ?? null);
-    }).catch(() => {});
+      surgeriesApi.list().then((all) => {
+        const sorted = [...all].sort((a, b) =>
+          (b.surgery_date ?? "").localeCompare(a.surgery_date ?? "")
+        );
+        setLatestSurgery(sorted[0] ?? null);
+      }).catch(() => {}),
 
-    hospitalizationsApi.list().then((all) => {
-      const sorted = [...all].sort((a, b) =>
-        (b.admission_date ?? "").localeCompare(a.admission_date ?? "")
-      );
-      setLatestHospitalization(sorted[0] ?? null);
-    }).catch(() => {});
+      hospitalizationsApi.list().then((all) => {
+        const sorted = [...all].sort((a, b) =>
+          (b.admission_date ?? "").localeCompare(a.admission_date ?? "")
+        );
+        setLatestHospitalization(sorted[0] ?? null);
+      }).catch(() => {}),
 
-    vaccinationsApi.list().then((all) => {
-      const sorted = [...all].sort((a, b) =>
-        (b.administered_date ?? "").localeCompare(a.administered_date ?? "")
-      );
-      setLatestVaccination(sorted[0] ?? null);
-    }).catch(() => {});
+      vaccinationsApi.list().then((all) => {
+        const sorted = [...all].sort((a, b) =>
+          (b.administered_date ?? "").localeCompare(a.administered_date ?? "")
+        );
+        setLatestVaccination(sorted[0] ?? null);
+      }).catch(() => {}),
 
-    insurancesApi.list().then(setInsurances).catch(() => {});
-    pharmaciesApi.list().then(setPharmacies).catch(() => {});
+      insurancesApi.list().then(setInsurances).catch(() => {}),
+      pharmaciesApi.list().then(setPharmacies).catch(() => {}),
+    ];
+
+    Promise.allSettled(fetches).then(() => setLoading(false));
   }, []);
 
   const mainDoctor = profile?.main_doctor_id
@@ -211,53 +216,59 @@ export default function HomePage() {
         {/* Row 1: Patient Info + Most Recent Events */}
         <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
           <SectionCard title="Patient Info" to="/profile">
-            <div className="flex flex-col gap-0.5">
-              <Row label="Name" value={profile?.full_name ?? ""} />
-              <Row label="Date of Birth" value={formatDate(profile?.date_of_birth)} />
-              <Row label="Blood Type" value={profile?.blood_type ?? "Not set"} />
-              <Row
-                label="Main Doctor"
-                value={mainDoctor
-                  ? `${mainDoctor.name}${mainDoctor.specialty ? ` (${mainDoctor.specialty})` : ""}`
-                  : "Not set"}
-              />
-            </div>
-            {/* Most Recent Vitals */}
-            <div className="mt-3 border-t border-border pt-3">
-              <p className="mb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">Most Recent Vitals</p>
-              {latestVitals ? (
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            ) : (
+              <>
                 <div className="flex flex-col gap-0.5">
-                  <Row label="Date" value={formatDate(latestVitals.measured_at)} />
-                  {(latestVitals.bp_systolic != null && latestVitals.bp_diastolic != null) && (
-                    <Row label="BP" value={`${latestVitals.bp_systolic}/${latestVitals.bp_diastolic}`} />
-                  )}
-                  {latestVitals.pulse_bpm != null && (
-                    <Row label="Pulse" value={`${latestVitals.pulse_bpm} bpm`} />
-                  )}
-                  {latestVitals.weight_lb != null && (
-                    <Row label="Weight" value={`${latestVitals.weight_lb} lbs`} />
+                  <Row label="Name" value={profile?.full_name ?? ""} />
+                  <Row label="Date of Birth" value={profile?.date_of_birth ? new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(profile.date_of_birth + "T00:00:00Z")) : "Not set"} />
+                  <Row label="Blood Type" value={profile?.blood_type ?? "Not set"} />
+                  <Row
+                    label="Main Doctor"
+                    value={mainDoctor
+                      ? `${mainDoctor.name}${mainDoctor.specialty ? ` (${mainDoctor.specialty})` : ""}`
+                      : "Not set"}
+                  />
+                </div>
+                {/* Most Recent Vitals */}
+                <div className="mt-3 border-t border-border pt-3">
+                  <p className="mb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">Most Recent Vitals</p>
+                  {latestVitals ? (
+                    <div className="flex flex-col gap-0.5">
+                      <Row label="Date" value={formatDate(latestVitals.measured_at)} />
+                      {(latestVitals.bp_systolic != null && latestVitals.bp_diastolic != null) && (
+                        <Row label="BP" value={`${latestVitals.bp_systolic}/${latestVitals.bp_diastolic}`} />
+                      )}
+                      {latestVitals.pulse_bpm != null && (
+                        <Row label="Pulse" value={`${latestVitals.pulse_bpm} bpm`} />
+                      )}
+                      {latestVitals.weight_lb != null && (
+                        <Row label="Weight" value={`${latestVitals.weight_lb} lbs`} />
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No vitals on file.</p>
                   )}
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">No vitals on file.</p>
-              )}
-            </div>
-            {/* Active Medications */}
-            <div className="mt-3 border-t border-border pt-3">
-              <p className="mb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">Active Medications</p>
-              {activeMeds.length > 0 ? (
-                <ul className="flex flex-col gap-0.5">
-                  {activeMeds.map((m) => (
-                    <li key={m.id} className="flex items-start gap-1 text-sm text-foreground">
-                      <span aria-hidden="true">•</span>
-                      <span>{m.name}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">None on file.</p>
-              )}
-            </div>
+                {/* Active Medications */}
+                <div className="mt-3 border-t border-border pt-3">
+                  <p className="mb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">Active Medications</p>
+                  {activeMeds.length > 0 ? (
+                    <ul className="flex flex-col gap-0.5">
+                      {activeMeds.map((m) => (
+                        <li key={m.id} className="flex items-start gap-1 text-sm text-foreground">
+                          <span aria-hidden="true">•</span>
+                          <span>{m.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">None on file.</p>
+                  )}
+                </div>
+              </>
+            )}
           </SectionCard>
 
           <Card>
@@ -265,64 +276,68 @@ export default function HomePage() {
               <div className="mb-3">
                 <h2 className="font-heading text-sm font-semibold text-foreground">Most Recent</h2>
               </div>
-              <div className="flex flex-col gap-3">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Doctor's Visit</p>
-                    <Link to="/visit-logs" className="text-xs text-muted-foreground hover:text-foreground transition-colors">View →</Link>
-                  </div>
-                  {latestVisit ? (
-                    <div className="flex flex-col gap-0.5">
-                      <Row label="Date" value={formatDate(latestVisit.visit_date)} />
-                      <Row label="Reason" value={latestVisit.reason ?? "—"} />
+              {loading ? (
+                <p className="text-sm text-muted-foreground">Loading…</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Doctor's Visit</p>
+                      <Link to="/visit-logs" className="text-xs text-muted-foreground hover:text-foreground transition-colors">View →</Link>
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Not on file.</p>
-                  )}
-                </div>
-                <div className="border-t border-border pt-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Surgery</p>
-                    <Link to="/surgeries" className="text-xs text-muted-foreground hover:text-foreground transition-colors">View →</Link>
+                    {latestVisit ? (
+                      <div className="flex flex-col gap-0.5">
+                        <Row label="Date" value={formatDate(latestVisit.visit_date)} />
+                        <Row label="Reason" value={latestVisit.reason ?? "—"} />
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Not on file.</p>
+                    )}
                   </div>
-                  {latestSurgery ? (
-                    <div className="flex flex-col gap-0.5">
-                      <Row label="Date" value={formatDate(latestSurgery.surgery_date)} />
-                      <Row label="Procedure" value={latestSurgery.procedure} />
+                  <div className="border-t border-border pt-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Surgery</p>
+                      <Link to="/surgeries" className="text-xs text-muted-foreground hover:text-foreground transition-colors">View →</Link>
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Not on file.</p>
-                  )}
-                </div>
-                <div className="border-t border-border pt-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Hospitalization</p>
-                    <Link to="/hospitalizations" className="text-xs text-muted-foreground hover:text-foreground transition-colors">View →</Link>
+                    {latestSurgery ? (
+                      <div className="flex flex-col gap-0.5">
+                        <Row label="Date" value={formatDate(latestSurgery.surgery_date)} />
+                        <Row label="Procedure" value={latestSurgery.procedure} />
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Not on file.</p>
+                    )}
                   </div>
-                  {latestHospitalization ? (
-                    <div className="flex flex-col gap-0.5">
-                      <Row label="Admitted" value={formatDate(latestHospitalization.admission_date)} />
-                      <Row label="Facility" value={latestHospitalization.facility} />
+                  <div className="border-t border-border pt-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Hospitalization</p>
+                      <Link to="/hospitalizations" className="text-xs text-muted-foreground hover:text-foreground transition-colors">View →</Link>
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Not on file.</p>
-                  )}
-                </div>
-                <div className="border-t border-border pt-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Vaccination</p>
-                    <Link to="/vaccinations" className="text-xs text-muted-foreground hover:text-foreground transition-colors">View →</Link>
+                    {latestHospitalization ? (
+                      <div className="flex flex-col gap-0.5">
+                        <Row label="Admitted" value={formatDate(latestHospitalization.admission_date)} />
+                        <Row label="Facility" value={latestHospitalization.facility} />
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Not on file.</p>
+                    )}
                   </div>
-                  {latestVaccination ? (
-                    <div className="flex flex-col gap-0.5">
-                      <Row label="Date" value={formatDate(latestVaccination.administered_date)} />
-                      <Row label="Vaccine" value={latestVaccination.vaccine} />
+                  <div className="border-t border-border pt-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Vaccination</p>
+                      <Link to="/vaccinations" className="text-xs text-muted-foreground hover:text-foreground transition-colors">View →</Link>
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Not on file.</p>
-                  )}
+                    {latestVaccination ? (
+                      <div className="flex flex-col gap-0.5">
+                        <Row label="Date" value={formatDate(latestVaccination.administered_date)} />
+                        <Row label="Vaccine" value={latestVaccination.vaccine} />
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Not on file.</p>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -330,17 +345,19 @@ export default function HomePage() {
         {/* Row 2: Allergies + Emergency Contacts */}
         <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
           <SectionCard title="Allergies" to="/profile">
-            {allergies.length === 0 ? (
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            ) : allergies.length === 0 ? (
               <p className="text-sm text-muted-foreground">No allergies on file.</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {allergies.map((a, i) => (
-                  <div key={i} className="rounded-md border border-border bg-muted/20 p-2 text-sm">
-                    <div className="font-medium text-foreground">{a.medication || "—"}</div>
-                    <div className="text-muted-foreground">{a.reaction || "—"}</div>
-                    {a.age_of_onset && (
-                      <div className="text-xs text-muted-foreground">Age of onset: {a.age_of_onset}</div>
-                    )}
+                  <div key={i} className="rounded-lg border border-border bg-muted/20 p-4">
+                    <div className="grid grid-cols-1 gap-1 text-sm sm:grid-cols-3">
+                      <div><span className="text-muted-foreground">Medication: </span><span className="text-foreground">{a.medication || "—"}</span></div>
+                      <div><span className="text-muted-foreground">Reaction: </span><span className="text-foreground">{a.reaction || "—"}</span></div>
+                      <div><span className="text-muted-foreground">Age of Onset: </span><span className="text-foreground">{a.age_of_onset || "—"}</span></div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -348,7 +365,9 @@ export default function HomePage() {
           </SectionCard>
 
           <SectionCard title="Emergency Contacts" to="/profile">
-            {contacts.length === 0 ? (
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            ) : contacts.length === 0 ? (
               <p className="text-sm text-muted-foreground">No emergency contacts on file.</p>
             ) : (
               <div className="flex flex-col gap-2">
@@ -368,7 +387,9 @@ export default function HomePage() {
         {/* Row 3: Insurance + Pharmacies */}
         <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
           <SectionCard title="Insurance" to="/insurance">
-            {insurances.length === 0 ? (
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            ) : insurances.length === 0 ? (
               <p className="text-sm text-muted-foreground">No insurance on file.</p>
             ) : (
               <div className="flex flex-col gap-2">
@@ -385,7 +406,9 @@ export default function HomePage() {
           </SectionCard>
 
           <SectionCard title="Pharmacies" to="/pharmacies">
-            {pharmacies.length === 0 ? (
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            ) : pharmacies.length === 0 ? (
               <p className="text-sm text-muted-foreground">No pharmacies on file.</p>
             ) : (
               <div className="flex flex-col gap-2">
