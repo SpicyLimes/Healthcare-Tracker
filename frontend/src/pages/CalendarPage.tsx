@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { FormField, Input, Select, Textarea } from "@/components/ui/form-field";
 import { cn } from "@/lib/utils";
 import { RecordTable } from "@/components/RecordTable";
+import { RecordFormModal } from "@/components/RecordFormModal";
 import { localToUtcIso, formatInTimezone } from "@/lib/datetime";
 
 // ─── Appointment helpers ─────────────────────────────────────────────────────
@@ -319,17 +320,18 @@ function AgendaList({ events }: AgendaListProps) {
 interface AppointmentsSectionProps {
   tz: string;
   isAdmin: boolean;
+  onRegisterOpenById?: (fn: (id: string) => void) => void;
 }
 
-function AppointmentsSection({ tz, isAdmin }: AppointmentsSectionProps) {
+function AppointmentsSection({ tz, isAdmin, onRegisterOpenById }: AppointmentsSectionProps) {
   const [rows, setRows] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [form, setForm] = useState<AppointmentInput>(EMPTY);
   const [error, setError] = useState("");
   const [editingRow, setEditingRow] = useState<Appointment | null>(null);
-  const [editForm, setEditForm] = useState<AppointmentInput>(EMPTY);
-  const [editError, setEditError] = useState("");
+  const [modalMode, setModalMode] = useState<"add" | "edit" | null>(null);
+  const [form, setForm] = useState<AppointmentInput>(EMPTY);
+  const [modalError, setModalError] = useState("");
 
   async function reload() { setRows(await appointmentsApi.list()); }
   useEffect(() => {
@@ -337,6 +339,13 @@ function AppointmentsSection({ tz, isAdmin }: AppointmentsSectionProps) {
     reload().catch(() => setError("Failed to load appointments")).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    onRegisterOpenById?.((id: string) => {
+      const r = rows.find((row) => row.id === id);
+      if (r) openEdit(r);
+    });
+  }, [rows]);
 
   function appointmentTypeLabel(t: AppointmentType | null): string {
     return APPOINTMENT_TYPES.find((x) => x.value === t)?.label ?? "";
@@ -347,15 +356,33 @@ function AppointmentsSection({ tz, isAdmin }: AppointmentsSectionProps) {
     return other ?? "";
   }
 
-  async function onAdd(e: FormEvent) {
+  function openAdd() {
+    setForm(EMPTY);
+    setEditingRow(null);
+    setModalError("");
+    setModalMode("add");
+  }
+
+  function closeModal() {
+    setModalMode(null);
+    setEditingRow(null);
+  }
+
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setError("");
+    setModalError("");
     try {
       const payload = { ...form, appointment_datetime: localToUtcIso(form.appointment_datetime, tz) };
-      await appointmentsApi.create(payload);
-      setForm(EMPTY);
+      if (modalMode === "edit" && editingRow) {
+        await appointmentsApi.update(editingRow.id, payload);
+      } else {
+        await appointmentsApi.create(payload);
+      }
+      closeModal();
       await reload();
-    } catch { setError("Could not add record"); }
+    } catch {
+      setModalError(modalMode === "edit" ? "Could not update record" : "Could not add record");
+    }
   }
 
   async function onDelete(id: string) {
@@ -365,7 +392,7 @@ function AppointmentsSection({ tz, isAdmin }: AppointmentsSectionProps) {
 
   function openEdit(r: Appointment) {
     setEditingRow(r);
-    setEditForm({
+    setForm({
       appointment_datetime: toLocalInputValue(r.appointment_datetime, tz),
       appointment_type: r.appointment_type,
       doctor_id: r.doctor_id,
@@ -375,23 +402,17 @@ function AppointmentsSection({ tz, isAdmin }: AppointmentsSectionProps) {
       status: r.status,
       notes: r.notes,
     });
-    setEditError("");
-  }
-  function closeEdit() { setEditingRow(null); }
-  async function onSaveEdit(e: FormEvent) {
-    e.preventDefault();
-    if (!editingRow) return;
-    setEditError("");
-    try {
-      const payload = { ...editForm, appointment_datetime: localToUtcIso(editForm.appointment_datetime ?? "", tz) };
-      await appointmentsApi.update(editingRow.id, payload);
-      setEditingRow(null);
-      await reload();
-    } catch { setEditError("Could not update record"); }
+    setModalError("");
+    setModalMode("edit");
   }
 
   return (
     <>
+      {isAdmin && (
+        <div className="mb-3 flex justify-end">
+          <Button onClick={openAdd}>+ Add</Button>
+        </div>
+      )}
       <Card>
         <CardContent className="p-0">
           <RecordTable
@@ -428,161 +449,90 @@ function AppointmentsSection({ tz, isAdmin }: AppointmentsSectionProps) {
 
       {error && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
 
-      {isAdmin && (
-        <Card>
-          <CardContent className="pt-6">
-            <form onSubmit={onAdd}>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <FormField label="Date / Time" htmlFor="appointment_datetime">
-                  <Input
-                    id="appointment_datetime"
-                    required
-                    type="datetime-local"
-                    value={form.appointment_datetime}
-                    onChange={(e) => setForm((s) => ({ ...s, appointment_datetime: e.target.value }))}
-                  />
-                </FormField>
-
-                <FormField label="Appointment Type" htmlFor="appointment_type">
-                  <Select
-                    id="appointment_type"
-                    value={form.appointment_type ?? ""}
-                    onChange={(e) => setForm((s) => ({ ...s, appointment_type: (e.target.value as AppointmentType) || null }))}
-                  >
-                    <option value="">Select…</option>
-                    {APPOINTMENT_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
-                    ))}
-                  </Select>
-                </FormField>
-
-                <div className="sm:col-span-2">
-                  <FormField label="Doctor" htmlFor="appt-doctor">
-                    <DoctorPicker
-                      doctorId={form.doctor_id ?? null}
-                      doctorOther={form.doctor_other ?? null}
-                      onChange={(id, other) => setForm((s) => ({ ...s, doctor_id: id, doctor_other: other }))}
-                    />
-                  </FormField>
-                </div>
-
-                <FormField label="Location" htmlFor="location">
-                  <Input
-                    id="location"
-                    value={form.location ?? ""}
-                    onChange={(e) => setForm((s) => ({ ...s, location: e.target.value || null }))}
-                    placeholder="e.g. Main Street Clinic"
-                  />
-                </FormField>
-
-                <FormField label="Reason" htmlFor="reason">
-                  <Input
-                    id="reason"
-                    value={form.reason ?? ""}
-                    onChange={(e) => setForm((s) => ({ ...s, reason: e.target.value || null }))}
-                    placeholder="e.g. Annual physical"
-                  />
-                </FormField>
-
-                <FormField label="Status" htmlFor="status">
-                  <Select
-                    id="status"
-                    value={form.status ?? "upcoming"}
-                    onChange={(e) => setForm((s) => ({ ...s, status: e.target.value as AppointmentStatus }))}
-                  >
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s} className="capitalize">{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                    ))}
-                  </Select>
-                </FormField>
-
-                <div className="sm:col-span-2">
-                  <FormField label="Notes" htmlFor="appt-notes">
-                    <Textarea
-                      id="appt-notes"
-                      placeholder="Additional notes…"
-                      value={form.notes ?? ""}
-                      onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value || null }))}
-                    />
-                  </FormField>
-                </div>
-              </div>
-
-              <div className="mt-4 flex justify-end">
-                <Button type="submit">Add Appointment</Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {editingRow && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="edit-appt-heading"
-          onKeyDown={(e) => e.key === "Escape" && closeEdit()}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-          onClick={closeEdit}
+      {modalMode && (
+        <RecordFormModal
+          title={modalMode === "edit" ? "Edit Appointment" : "Add Appointment"}
+          submitLabel={modalMode === "edit" ? "Save" : "Add Appointment"}
+          error={modalError || null}
+          onClose={closeModal}
+          onSubmit={onSubmit}
         >
-          <div
-            className="mx-4 sm:mx-auto w-full sm:max-w-lg rounded-xl border border-border bg-card p-4 sm:p-6 overflow-y-auto max-h-[90vh]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 id="edit-appt-heading" className="font-heading text-base font-semibold text-foreground mb-4">Edit Appointment</h2>
-            {editError && <p role="alert" className="mb-4 text-sm text-destructive">{editError}</p>}
-            <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <FormField label="Date / Time" htmlFor="edit-appt-datetime">
-                  <Input id="edit-appt-datetime" required type="datetime-local" value={editForm.appointment_datetime}
-                    onChange={(e) => setEditForm((s) => ({ ...s, appointment_datetime: e.target.value }))} />
-                </FormField>
-                <FormField label="Appointment Type" htmlFor="edit-appt-type">
-                  <Select id="edit-appt-type" value={editForm.appointment_type ?? ""}
-                    onChange={(e) => setEditForm((s) => ({ ...s, appointment_type: (e.target.value as AppointmentType) || null }))}>
-                    <option value="">Select…</option>
-                    {APPOINTMENT_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
-                    ))}
-                  </Select>
-                </FormField>
-                <div className="sm:col-span-2">
-                  <FormField label="Doctor" htmlFor="edit-appt-doctor">
-                    <DoctorPicker
-                      doctorId={editForm.doctor_id ?? null}
-                      doctorOther={editForm.doctor_other ?? null}
-                      onChange={(id, other) => setEditForm((s) => ({ ...s, doctor_id: id, doctor_other: other }))}
-                    />
-                  </FormField>
-                </div>
-                <FormField label="Location" htmlFor="edit-appt-location">
-                  <Input id="edit-appt-location" value={editForm.location ?? ""}
-                    onChange={(e) => setEditForm((s) => ({ ...s, location: e.target.value || null }))} />
-                </FormField>
-                <FormField label="Reason" htmlFor="edit-appt-reason">
-                  <Input id="edit-appt-reason" value={editForm.reason ?? ""}
-                    onChange={(e) => setEditForm((s) => ({ ...s, reason: e.target.value || null }))} />
-                </FormField>
-                <FormField label="Status" htmlFor="edit-appt-status">
-                  <Select id="edit-appt-status" value={editForm.status ?? "upcoming"}
-                    onChange={(e) => setEditForm((s) => ({ ...s, status: e.target.value as AppointmentStatus }))}>
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                    ))}
-                  </Select>
-                </FormField>
-              </div>
-              <FormField label="Notes" htmlFor="edit-appt-notes">
-                <Textarea id="edit-appt-notes" value={editForm.notes ?? ""}
-                  onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value || null }))} />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField label="Date / Time" htmlFor="appointment_datetime">
+              <Input
+                id="appointment_datetime"
+                required
+                type="datetime-local"
+                value={form.appointment_datetime}
+                onChange={(e) => setForm((s) => ({ ...s, appointment_datetime: e.target.value }))}
+              />
+            </FormField>
+
+            <FormField label="Appointment Type" htmlFor="appointment_type">
+              <Select
+                id="appointment_type"
+                value={form.appointment_type ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, appointment_type: (e.target.value as AppointmentType) || null }))}
+              >
+                <option value="">Select…</option>
+                {APPOINTMENT_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </Select>
+            </FormField>
+
+            <div className="sm:col-span-2">
+              <FormField label="Doctor" htmlFor="appt-doctor">
+                <DoctorPicker
+                  doctorId={form.doctor_id ?? null}
+                  doctorOther={form.doctor_other ?? null}
+                  onChange={(id, other) => setForm((s) => ({ ...s, doctor_id: id, doctor_other: other }))}
+                />
               </FormField>
-              <div className="mt-2 flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={closeEdit}>Cancel</Button>
-                <Button type="submit">Save</Button>
-              </div>
-            </form>
+            </div>
+
+            <FormField label="Location" htmlFor="location">
+              <Input
+                id="location"
+                value={form.location ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, location: e.target.value || null }))}
+                placeholder="e.g. Main Street Clinic"
+              />
+            </FormField>
+
+            <FormField label="Reason" htmlFor="reason">
+              <Input
+                id="reason"
+                value={form.reason ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, reason: e.target.value || null }))}
+                placeholder="e.g. Annual physical"
+              />
+            </FormField>
+
+            <FormField label="Status" htmlFor="status">
+              <Select
+                id="status"
+                value={form.status ?? "upcoming"}
+                onChange={(e) => setForm((s) => ({ ...s, status: e.target.value as AppointmentStatus }))}
+              >
+                {STATUSES.map((s) => (
+                  <option key={s} value={s} className="capitalize">{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                ))}
+              </Select>
+            </FormField>
+
+            <div className="sm:col-span-2">
+              <FormField label="Notes" htmlFor="appt-notes">
+                <Textarea
+                  id="appt-notes"
+                  placeholder="Additional notes…"
+                  value={form.notes ?? ""}
+                  onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value || null }))}
+                />
+              </FormField>
+            </div>
           </div>
-        </div>
+        </RecordFormModal>
       )}
     </>
   );
@@ -669,89 +619,92 @@ export default function CalendarPage() {
         {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
-        {/* Mobile: always show mobile nav + AgendaList */}
-        {!loading && !error && (
-          <div className="md:hidden">
-            <Card>
-              <CardContent className="p-4 flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={prevMonth}
-                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                    aria-label="Previous month"
-                  >
-                    <ChevronLeft className="size-4" />
-                  </button>
-                  <span className="text-sm font-semibold text-foreground">
-                    {MONTH_NAMES[month]} {year}
-                  </span>
-                  <button
-                    onClick={nextMonth}
-                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                    aria-label="Next month"
-                  >
-                    <ChevronRight className="size-4" />
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="mt-4">
-              <CardContent className="p-0 max-h-[420px] overflow-y-auto">
-                <AgendaList events={events} />
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Desktop: show month grid or agenda based on view toggle */}
-        {!loading && !error && view === "month" && (
-          <div className="hidden md:block">
-            <Card>
-              <CardContent className="p-4 flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={prevMonth}
-                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                    aria-label="Previous month"
-                  >
-                    <ChevronLeft className="size-4" />
-                  </button>
-                  <span className="text-sm font-semibold text-foreground">
-                    {MONTH_NAMES[month]} {year}
-                  </span>
-                  <button
-                    onClick={nextMonth}
-                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                    aria-label="Next month"
-                  >
-                    <ChevronRight className="size-4" />
-                  </button>
-                </div>
-                <MonthGrid events={monthEvents} year={year} month={month} />
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {!loading && !error && view === "agenda" && (
-          <div className="hidden md:block">
-            <Card>
-              <CardContent className="p-0">
-                <AgendaList events={events} />
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
+        {/* Appointments — above calendar */}
         {!loading && (
           <>
-            <div className="mt-8 mb-3">
+            <div className="mb-3">
               <h2 className="font-heading text-base font-semibold text-foreground">Appointments</h2>
               <p className="text-sm text-muted-foreground mt-0.5">Manage upcoming and past healthcare appointments.</p>
             </div>
             <AppointmentsSection tz={tz} isAdmin={isAdmin} />
           </>
         )}
+
+        <div className="mt-8">
+          {/* Mobile: always show mobile nav + AgendaList */}
+          {!loading && !error && (
+            <div className="md:hidden">
+              <Card>
+                <CardContent className="p-4 flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={prevMonth}
+                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      aria-label="Previous month"
+                    >
+                      <ChevronLeft className="size-4" />
+                    </button>
+                    <span className="text-sm font-semibold text-foreground">
+                      {MONTH_NAMES[month]} {year}
+                    </span>
+                    <button
+                      onClick={nextMonth}
+                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      aria-label="Next month"
+                    >
+                      <ChevronRight className="size-4" />
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="mt-4">
+                <CardContent className="p-0 max-h-[420px] overflow-y-auto">
+                  <AgendaList events={events} />
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Desktop: show month grid or agenda based on view toggle */}
+          {!loading && !error && view === "month" && (
+            <div className="hidden md:block">
+              <Card>
+                <CardContent className="p-4 flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={prevMonth}
+                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      aria-label="Previous month"
+                    >
+                      <ChevronLeft className="size-4" />
+                    </button>
+                    <span className="text-sm font-semibold text-foreground">
+                      {MONTH_NAMES[month]} {year}
+                    </span>
+                    <button
+                      onClick={nextMonth}
+                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      aria-label="Next month"
+                    >
+                      <ChevronRight className="size-4" />
+                    </button>
+                  </div>
+                  <MonthGrid events={monthEvents} year={year} month={month} />
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {!loading && !error && view === "agenda" && (
+            <div className="hidden md:block">
+              <Card>
+                <CardContent className="p-0">
+                  <AgendaList events={events} />
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
       </PageLayout>
     </AppShell>
   );

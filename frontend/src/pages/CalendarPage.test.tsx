@@ -5,6 +5,7 @@ import CalendarPage from "./CalendarPage";
 import * as calApi from "../api/calendar";
 import * as useAuthModule from "../auth/useAuth";
 import type { CalendarEvent } from "../api/calendar";
+import * as apptApiModule from "../api/appointments";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -79,5 +80,31 @@ describe("CalendarPage", () => {
     await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     fireEvent.click(screen.getByText("Agenda"));
     expect((await screen.findAllByText("Appointment")).length).toBeGreaterThan(0);
+  });
+
+  it("renders Appointments section before the calendar month/agenda controls", async () => {
+    mockAuth();
+    vi.spyOn(calApi.calendarApi, "list").mockResolvedValue([]);
+    vi.spyOn(apptApiModule.appointmentsApi, "list").mockResolvedValue([]);
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
+    // "Appointments" heading should appear before the calendar weekday headers (Sun/Mon/…)
+    const allText = document.body.textContent ?? "";
+    const apptIdx = allText.indexOf("Appointments");
+    // "Sun" appears in the MonthGrid weekday header row — a reliable marker for the calendar body
+    const sunIdx = allText.indexOf("Sun");
+    expect(apptIdx).toBeGreaterThanOrEqual(0);
+    expect(sunIdx).toBeGreaterThanOrEqual(0);
+    expect(apptIdx).toBeLessThan(sunIdx);
+  });
+
+  it("opens Add Appointment modal when + Add is clicked", async () => {
+    mockAuth();
+    vi.spyOn(calApi.calendarApi, "list").mockResolvedValue([]);
+    vi.spyOn(apptApiModule.appointmentsApi, "list").mockResolvedValue([]);
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /\+ add/i }));
+    expect(await screen.findByRole("dialog", { name: /add appointment/i })).toBeInTheDocument();
   });
 });
