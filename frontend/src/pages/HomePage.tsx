@@ -43,11 +43,14 @@ function SectionCard({ title, to, children }: { title: string; to: string; child
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-heading text-sm font-semibold text-foreground">{title}</h2>
-          <Link to={to} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-            View →
-          </Link>
+        <div className="mb-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading text-sm font-semibold text-foreground">{title}</h2>
+            <Link to={to} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              View →
+            </Link>
+          </div>
+          <div className="mt-2 border-t border-border/40" />
         </div>
         {children}
       </CardContent>
@@ -274,7 +277,8 @@ export default function HomePage() {
           <Card>
             <CardContent className="p-4">
               <div className="mb-3">
-                <h2 className="font-heading text-sm font-semibold text-foreground">Most Recent</h2>
+                <h2 className="font-heading text-sm font-semibold text-foreground">Recent Activity</h2>
+                <div className="mt-2 border-t border-border/40" />
               </div>
               {loading ? (
                 <p className="text-sm text-muted-foreground">Loading…</p>
