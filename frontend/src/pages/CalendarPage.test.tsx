@@ -1,6 +1,7 @@
 // frontend/src/pages/CalendarPage.test.tsx
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import CalendarPage from "./CalendarPage";
 import * as calApi from "../api/calendar";
 import * as useAuthModule from "../auth/useAuth";
@@ -31,21 +32,21 @@ describe("CalendarPage", () => {
   it("shows loading state initially", () => {
     mockAuth();
     vi.spyOn(calApi.calendarApi, "list").mockReturnValue(new Promise(() => {}));
-    render(<CalendarPage />);
+    render(<MemoryRouter><CalendarPage /></MemoryRouter>);
     expect(screen.getByText("Loading…")).toBeInTheDocument();
   });
 
   it("shows error state on fetch failure", async () => {
     mockAuth();
     vi.spyOn(calApi.calendarApi, "list").mockRejectedValue(new Error("fail"));
-    render(<CalendarPage />);
+    render(<MemoryRouter><CalendarPage /></MemoryRouter>);
     expect(await screen.findByRole("alert")).toHaveTextContent("Failed to load calendar events");
   });
 
   it("renders month view by default with event chips", async () => {
     mockAuth();
     vi.spyOn(calApi.calendarApi, "list").mockResolvedValue(ALL_EVENTS);
-    render(<CalendarPage />);
+    render(<MemoryRouter><CalendarPage /></MemoryRouter>);
     await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     expect(screen.getByText("Sun")).toBeInTheDocument();
     expect(screen.getByText("Mon")).toBeInTheDocument();
@@ -54,7 +55,7 @@ describe("CalendarPage", () => {
   it("switches to agenda view and shows event rows", async () => {
     mockAuth();
     vi.spyOn(calApi.calendarApi, "list").mockResolvedValue(ALL_EVENTS);
-    render(<CalendarPage />);
+    render(<MemoryRouter><CalendarPage /></MemoryRouter>);
     await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     fireEvent.click(screen.getByText("Agenda"));
     expect((await screen.findAllByText("Annual physical")).length).toBeGreaterThan(0);
@@ -65,7 +66,7 @@ describe("CalendarPage", () => {
   it("shows empty state in agenda view when no events", async () => {
     mockAuth();
     vi.spyOn(calApi.calendarApi, "list").mockResolvedValue([]);
-    render(<CalendarPage />);
+    render(<MemoryRouter><CalendarPage /></MemoryRouter>);
     await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     fireEvent.click(screen.getByText("Agenda"));
     expect((await screen.findAllByText("No events to show")).length).toBeGreaterThan(0);
@@ -76,7 +77,7 @@ describe("CalendarPage", () => {
     vi.spyOn(calApi.calendarApi, "list").mockResolvedValue([
       { id: "1", type: "appointment", title: "Annual physical", date: "2026-07-15", color: "#3b82f6" },
     ]);
-    render(<CalendarPage />);
+    render(<MemoryRouter><CalendarPage /></MemoryRouter>);
     await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     fireEvent.click(screen.getByText("Agenda"));
     expect((await screen.findAllByText("Appointment")).length).toBeGreaterThan(0);
@@ -86,7 +87,7 @@ describe("CalendarPage", () => {
     mockAuth();
     vi.spyOn(calApi.calendarApi, "list").mockResolvedValue([]);
     vi.spyOn(apptApiModule.appointmentsApi, "list").mockResolvedValue([]);
-    render(<CalendarPage />);
+    render(<MemoryRouter><CalendarPage /></MemoryRouter>);
     await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     // "Appointments" heading should appear before the calendar weekday headers (Sun/Mon/…)
     const allText = document.body.textContent ?? "";
@@ -102,9 +103,25 @@ describe("CalendarPage", () => {
     mockAuth();
     vi.spyOn(calApi.calendarApi, "list").mockResolvedValue([]);
     vi.spyOn(apptApiModule.appointmentsApi, "list").mockResolvedValue([]);
-    render(<CalendarPage />);
+    render(<MemoryRouter><CalendarPage /></MemoryRouter>);
     await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: /\+ add/i }));
     expect(await screen.findByRole("dialog", { name: /add appointment/i })).toBeInTheDocument();
+  });
+
+  it("agenda rows have click handlers after events load", async () => {
+    mockAuth();
+    vi.spyOn(calApi.calendarApi, "list").mockResolvedValue([
+      { id: "vl1", type: "visit_log", title: "Checkup", date: "2026-07-20", color: "#8b5cf6" },
+    ]);
+    vi.spyOn(apptApiModule.appointmentsApi, "list").mockResolvedValue([]);
+    render(<MemoryRouter><CalendarPage /></MemoryRouter>);
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
+    fireEvent.click(screen.getByText("Agenda"));
+    const rows = await screen.findAllByText("Checkup");
+    // At least one row should be wrapped in a clickable element with data-testid or cursor-pointer class
+    expect(
+      rows.some((row) => row.closest("[data-testid='agenda-row']") !== null || row.closest(".cursor-pointer") !== null)
+    ).toBe(true);
   });
 });

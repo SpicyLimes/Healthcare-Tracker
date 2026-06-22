@@ -1,7 +1,8 @@
 // frontend/src/pages/CalendarPage.tsx
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { calendarApi, type CalendarEvent, EVENT_TYPE_LABELS } from "../api/calendar";
+import { calendarApi, type CalendarEvent, type CalendarEventType, EVENT_TYPE_LABELS } from "../api/calendar";
 import {
   appointmentsApi,
   type Appointment,
@@ -23,6 +24,16 @@ import { cn } from "@/lib/utils";
 import { RecordTable } from "@/components/RecordTable";
 import { RecordFormModal } from "@/components/RecordFormModal";
 import { localToUtcIso, formatInTimezone } from "@/lib/datetime";
+
+// ─── Event routing ───────────────────────────────────────────────────────────
+
+const EVENT_ROUTES: Partial<Record<CalendarEventType, string>> = {
+  visit_log: "/visit-logs",
+  surgery: "/surgeries",
+  hospitalization: "/hospitalizations",
+  vaccination: "/vaccinations",
+  medication: "/medications",
+};
 
 // ─── Appointment helpers ─────────────────────────────────────────────────────
 
@@ -127,9 +138,10 @@ interface DayCellProps {
   events: CalendarEvent[];
   isToday: boolean;
   isCurrentMonth: boolean;
+  onEventClick: (e: CalendarEvent) => void;
 }
 
-function DayCell({ dateStr, events, isToday, isCurrentMonth }: DayCellProps) {
+function DayCell({ dateStr, events, isToday, isCurrentMonth, onEventClick }: DayCellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const day = Number(dateStr.slice(8));
@@ -168,14 +180,15 @@ function DayCell({ dateStr, events, isToday, isCurrentMonth }: DayCellProps) {
 
       <div className="flex flex-col gap-0.5">
         {visible.map((e) => (
-          <div
+          <button
             key={`${e.type}-${e.id}`}
-            className="truncate rounded px-1 py-0.5 text-[10px] font-medium text-white"
+            onClick={() => onEventClick(e)}
+            className="w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium text-white hover:opacity-80 transition-opacity"
             style={{ backgroundColor: e.color }}
             title={e.title}
           >
             {e.title}
-          </div>
+          </button>
         ))}
         {overflow > 0 && (
           <button
@@ -211,9 +224,10 @@ interface MonthGridProps {
   events: CalendarEvent[];
   year: number;
   month: number;
+  onEventClick: (e: CalendarEvent) => void;
 }
 
-function MonthGrid({ events, year, month }: MonthGridProps) {
+function MonthGrid({ events, year, month, onEventClick }: MonthGridProps) {
   const byDate = groupByDate(events);
   const daysInMonth = getDaysInMonth(year, month);
   const firstDow = getFirstDayOfWeek(year, month);
@@ -243,6 +257,7 @@ function MonthGrid({ events, year, month }: MonthGridProps) {
               events={byDate[cell.dateStr] ?? []}
               isToday={cell.dateStr === today}
               isCurrentMonth
+              onEventClick={onEventClick}
             />
           ) : (
             <div key={`blank-${i}`} className="min-h-[80px] border-b border-r border-border bg-muted/30" />
@@ -257,9 +272,10 @@ function MonthGrid({ events, year, month }: MonthGridProps) {
 
 interface AgendaListProps {
   events: CalendarEvent[];
+  onEventClick: (e: CalendarEvent) => void;
 }
 
-function AgendaList({ events }: AgendaListProps) {
+function AgendaList({ events, onEventClick }: AgendaListProps) {
   if (events.length === 0) {
     return (
       <div className="py-16 text-center text-sm text-muted-foreground">No events to show</div>
@@ -276,7 +292,12 @@ function AgendaList({ events }: AgendaListProps) {
     );
 
   const renderRow = (e: CalendarEvent) => (
-    <div key={`${e.type}-${e.id}`} className="flex items-center gap-3 py-2">
+    <div
+      key={`${e.type}-${e.id}`}
+      data-testid="agenda-row"
+      onClick={() => onEventClick(e)}
+      className="flex cursor-pointer items-center gap-3 py-2 hover:bg-muted/40 rounded transition-colors"
+    >
       <div className="w-1 self-stretch rounded-full shrink-0" style={{ backgroundColor: e.color }} />
       <span className="w-14 shrink-0 text-xs text-muted-foreground">{formatAgendaDate(e.date)}</span>
       <span className="flex-1 truncate text-sm text-foreground">{e.title}</span>
@@ -551,6 +572,8 @@ export default function CalendarPage() {
   const { user } = useAuth();
   const tz = user?.timezone ?? "America/Chicago";
   const isAdmin = user?.role === "admin";
+  const navigate = useNavigate();
+  const openApptById = useRef<((id: string) => void) | null>(null);
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [error, setError] = useState("");
@@ -568,6 +591,15 @@ export default function CalendarPage() {
       .catch(() => setError("Failed to load calendar events"))
       .finally(() => setLoading(false));
   }, []);
+
+  function handleEventClick(e: CalendarEvent) {
+    if (e.type === "appointment") {
+      openApptById.current?.(e.id);
+      return;
+    }
+    const route = EVENT_ROUTES[e.type];
+    if (route) navigate(`${route}?open=${e.id}`);
+  }
 
   function prevMonth() {
     if (month === 0) { setYear((y) => y - 1); setMonth(11); }
@@ -626,7 +658,11 @@ export default function CalendarPage() {
               <h2 className="font-heading text-base font-semibold text-foreground">Appointments</h2>
               <p className="text-sm text-muted-foreground mt-0.5">Manage upcoming and past healthcare appointments.</p>
             </div>
-            <AppointmentsSection tz={tz} isAdmin={isAdmin} />
+            <AppointmentsSection
+              tz={tz}
+              isAdmin={isAdmin}
+              onRegisterOpenById={(fn) => { openApptById.current = fn; }}
+            />
           </>
         )}
 
@@ -659,7 +695,7 @@ export default function CalendarPage() {
               </Card>
               <Card className="mt-4">
                 <CardContent className="p-0 max-h-[420px] overflow-y-auto">
-                  <AgendaList events={events} />
+                  <AgendaList events={events} onEventClick={handleEventClick} />
                 </CardContent>
               </Card>
             </div>
@@ -689,7 +725,7 @@ export default function CalendarPage() {
                       <ChevronRight className="size-4" />
                     </button>
                   </div>
-                  <MonthGrid events={monthEvents} year={year} month={month} />
+                  <MonthGrid events={monthEvents} year={year} month={month} onEventClick={handleEventClick} />
                 </CardContent>
               </Card>
             </div>
@@ -699,7 +735,7 @@ export default function CalendarPage() {
             <div className="hidden md:block">
               <Card>
                 <CardContent className="p-0">
-                  <AgendaList events={events} />
+                  <AgendaList events={events} onEventClick={handleEventClick} />
                 </CardContent>
               </Card>
             </div>
