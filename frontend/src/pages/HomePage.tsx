@@ -56,7 +56,7 @@ export default function HomePage() {
             {getGreeting(tz)}, {user?.full_name || user?.email}
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-            Your personal health records are organized and ready to access. Use the sidebar to navigate.
+            Personal health records are organized and ready to access. Use the sidebar to navigate.
           </p>
         </div>
 
@@ -84,7 +84,7 @@ export default function HomePage() {
           <div className="mb-8">
             <div className="mb-3">
               <h2 className="font-heading text-sm font-semibold text-foreground">Upcoming Events</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Your next scheduled health events.</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Upcoming scheduled health events.</p>
             </div>
             <Card>
               <CardContent className="py-2 px-4 divide-y divide-border">
