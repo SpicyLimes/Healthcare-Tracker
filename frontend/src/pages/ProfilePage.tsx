@@ -84,18 +84,18 @@ export default function ProfilePage() {
       .then((p) => {
         if (p) {
           setProfileId(p.id);
-          setForm({
+          setForm((prev) => ({
             full_name: p.full_name,
             date_of_birth: p.date_of_birth ?? null,
             blood_type: p.blood_type ?? null,
             allergies: p.allergies ?? null,
             emergency_contacts: p.emergency_contacts ?? null,
             primary_language: p.primary_language ?? null,
-            height: p.height ?? null,
-            weight: p.weight ?? null,
+            height: p.height ?? prev.height,
+            weight: p.weight ?? prev.weight,
             phone: p.phone ?? null,
             notes: p.notes ?? null,
-          });
+          }));
           setContacts(parseContacts(p.emergency_contacts));
         }
       })
