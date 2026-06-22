@@ -9,41 +9,12 @@ import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea, Select } from "@/components/ui/form-field";
-
-interface EmergencyContact {
-  name: string;
-  relationship: string;
-  phone: string;
-  email: string;
-}
+import { parseContacts, parseAllergies, type EmergencyContact, type Allergy } from "@/lib/profile-parsers";
 
 const RELATIONSHIP_OPTIONS = [
   "Spouse/Partner", "Parent", "Child", "Sibling",
   "Family Member", "Caregiver", "Friend", "Other",
 ];
-
-interface Allergy {
-  medication: string;
-  reaction: string;
-  age_of_onset: string;
-}
-
-function parseAllergies(raw: string | null | undefined): Allergy[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed.map((item) => ({
-        medication:   typeof item.medication   === "string" ? item.medication   : "",
-        reaction:     typeof item.reaction     === "string" ? item.reaction     : "",
-        age_of_onset: typeof item.age_of_onset === "string" ? item.age_of_onset : "",
-      }));
-    }
-  } catch {
-    // legacy free-text — discard
-  }
-  return [];
-}
 
 function serializeAllergies(list: Allergy[]): string | null {
   const nonEmpty = list.filter(
@@ -51,24 +22,6 @@ function serializeAllergies(list: Allergy[]): string | null {
   );
   if (nonEmpty.length === 0) return null;
   return JSON.stringify(nonEmpty);
-}
-
-function parseContacts(raw: string | null | undefined): EmergencyContact[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed.map((item) => ({
-        name:         typeof item.name         === "string" ? item.name         : "",
-        relationship: typeof item.relationship === "string" ? item.relationship : "",
-        phone:        typeof item.phone        === "string" ? item.phone        : "",
-        email:        typeof item.email        === "string" ? item.email        : "",
-      }));
-    }
-  } catch {
-    // legacy free-text — discard
-  }
-  return [];
 }
 
 function serializeContacts(contacts: EmergencyContact[]): string | null {
