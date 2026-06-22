@@ -214,6 +214,7 @@ export default function ProfilePage() {
         Object.entries(form).filter(([, v]) => v !== null && v !== ""),
       ) as unknown as ProfileInput;
       payload.full_name = form.full_name;
+      // These override the raw JSON strings that form state carries from load:
       payload.emergency_contacts = serializeContacts(contacts);
       payload.allergies = serializeAllergies(allergyList);
       const result = await saveProfile(payload);
