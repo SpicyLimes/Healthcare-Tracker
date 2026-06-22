@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { getProfile, saveProfile, type ProfileInput } from "../api/profile";
+import { vitalsApi } from "../api/vitals";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
 import { AppShell } from "@/components/app-shell";
@@ -7,6 +8,37 @@ import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea, Select } from "@/components/ui/form-field";
+
+interface EmergencyContact {
+  name: string;
+  relationship: string;
+  phone: string;
+  email: string;
+}
+
+const RELATIONSHIP_OPTIONS = [
+  "Spouse/Partner", "Parent", "Child", "Sibling",
+  "Family Member", "Caregiver", "Friend", "Other",
+];
+
+function parseContacts(raw: string | null | undefined): EmergencyContact[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed as EmergencyContact[];
+  } catch {
+    // legacy free-text — discard
+  }
+  return [];
+}
+
+function serializeContacts(contacts: EmergencyContact[]): string | null {
+  const nonEmpty = contacts.filter(
+    (c) => c.name.trim() || c.phone.trim() || c.email.trim()
+  );
+  if (nonEmpty.length === 0) return null;
+  return JSON.stringify(nonEmpty);
+}
 
 const EMPTY: ProfileInput = {
   full_name: "",
@@ -30,8 +62,11 @@ export default function ProfilePage() {
   const isAdmin = user?.role === "admin";
   const [form, setForm] = useState<ProfileInput>(EMPTY);
   const [profileId, setProfileId] = useState<string | null>(null);
+  const [contacts, setContacts] = useState<EmergencyContact[]>([]);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [vitalsHeightHint, setVitalsHeightHint] = useState<string | null>(null);
+  const [vitalsWeightHint, setVitalsWeightHint] = useState<string | null>(null);
 
   useEffect(() => {
     getProfile()
@@ -50,13 +85,33 @@ export default function ProfilePage() {
             phone: p.phone ?? null,
             notes: p.notes ?? null,
           });
+          setContacts(parseContacts(p.emergency_contacts));
         }
       })
       .catch(() => setError("Failed to load profile"));
+
+    // Vitals prefill stub — used in Task 2 (setVitalsHeightHint / setVitalsWeightHint wired there)
+    vitalsApi.list().catch(() => {});
+    void setVitalsHeightHint;
+    void setVitalsWeightHint;
   }, []);
 
   function set<K extends keyof ProfileInput>(key: K, value: string) {
     setForm((s) => ({ ...s, [key]: value === "" ? null : value }));
+  }
+
+  function addContact() {
+    setContacts((prev) => [...prev, { name: "", relationship: "", phone: "", email: "" }]);
+  }
+
+  function removeContact(index: number) {
+    setContacts((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function setContact(index: number, field: keyof EmergencyContact, value: string) {
+    setContacts((prev) =>
+      prev.map((c, i) => (i === index ? { ...c, [field]: value } : c))
+    );
   }
 
   async function onSave(e: FormEvent) {
@@ -68,6 +123,7 @@ export default function ProfilePage() {
         Object.entries(form).filter(([, v]) => v !== null && v !== ""),
       ) as unknown as ProfileInput;
       payload.full_name = form.full_name;
+      payload.emergency_contacts = serializeContacts(contacts);
       const result = await saveProfile(payload);
       setProfileId(result.id);
       setSaved(true);
@@ -92,7 +148,7 @@ export default function ProfilePage() {
           <Card>
             <CardContent className="pt-6">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {/* Row 1: Full Name (full width) */}
+                {/* Full Name */}
                 <div className="sm:col-span-2">
                   <FormField label="Full name" htmlFor="full_name">
                     <Input
@@ -107,7 +163,7 @@ export default function ProfilePage() {
                   </FormField>
                 </div>
 
-                {/* Row 2: Date of Birth | Blood Type */}
+                {/* Date of Birth | Blood Type */}
                 <FormField label="Date of Birth" htmlFor="date_of_birth">
                   <Input
                     id="date_of_birth"
@@ -136,7 +192,7 @@ export default function ProfilePage() {
                   </Select>
                 </FormField>
 
-                {/* Row 3: Height | Weight */}
+                {/* Height | Weight — Vitals prefill wired in Task 2 */}
                 <FormField label="Height" htmlFor="height">
                   <Input
                     id="height"
@@ -146,6 +202,9 @@ export default function ProfilePage() {
                     onChange={(e) => set("height", e.target.value)}
                     placeholder={`e.g. 5'10"`}
                   />
+                  {vitalsHeightHint && (
+                    <p className="mt-1 text-xs text-muted-foreground">{vitalsHeightHint}</p>
+                  )}
                 </FormField>
                 <FormField label="Weight" htmlFor="weight">
                   <Input
@@ -156,9 +215,12 @@ export default function ProfilePage() {
                     onChange={(e) => set("weight", e.target.value)}
                     placeholder="e.g. 170 lbs"
                   />
+                  {vitalsWeightHint && (
+                    <p className="mt-1 text-xs text-muted-foreground">{vitalsWeightHint}</p>
+                  )}
                 </FormField>
 
-                {/* Row 4: Phone | Primary Language */}
+                {/* Phone | Primary Language */}
                 <FormField label="Phone" htmlFor="phone">
                   <Input
                     id="phone"
@@ -180,7 +242,7 @@ export default function ProfilePage() {
                   />
                 </FormField>
 
-                {/* Row 5: Allergies (full width) */}
+                {/* Allergies */}
                 <div className="sm:col-span-2">
                   <FormField label="Allergies" htmlFor="allergies">
                     <Textarea
@@ -193,20 +255,87 @@ export default function ProfilePage() {
                   </FormField>
                 </div>
 
-                {/* Row 6: Emergency Contacts (full width) */}
+                {/* Emergency Contacts */}
                 <div className="sm:col-span-2">
-                  <FormField label="Emergency Contacts" htmlFor="emergency_contacts">
-                    <Textarea
-                      id="emergency_contacts"
-                      disabled={!isAdmin}
-                      value={fieldValue(form.emergency_contacts)}
-                      onChange={(e) => set("emergency_contacts", e.target.value)}
-                      placeholder="Name, relationship, phone number..."
-                    />
-                  </FormField>
+                  <p className="mb-2 text-sm font-medium text-foreground">Emergency Contacts</p>
+                  <div className="flex flex-col gap-3">
+                    {contacts.length === 0 && !isAdmin && (
+                      <p className="text-sm text-muted-foreground">No emergency contacts on file.</p>
+                    )}
+                    {contacts.map((c, i) =>
+                      isAdmin ? (
+                        <div key={i} className="relative rounded-lg border border-border bg-muted/20 p-4">
+                          <button
+                            type="button"
+                            aria-label={`Remove contact ${i + 1}`}
+                            onClick={() => removeContact(i)}
+                            className="absolute right-3 top-3 text-muted-foreground hover:text-destructive"
+                          >
+                            ×
+                          </button>
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <FormField label="Name" htmlFor={`ec-name-${i}`}>
+                              <Input
+                                id={`ec-name-${i}`}
+                                type="text"
+                                placeholder="Name"
+                                value={c.name}
+                                onChange={(e) => setContact(i, "name", e.target.value)}
+                              />
+                            </FormField>
+                            <FormField label="Relationship" htmlFor={`ec-rel-${i}`}>
+                              <Select
+                                id={`ec-rel-${i}`}
+                                value={c.relationship}
+                                onChange={(e) => setContact(i, "relationship", e.target.value)}
+                              >
+                                <option value="">— Select —</option>
+                                {RELATIONSHIP_OPTIONS.map((r) => (
+                                  <option key={r} value={r}>{r}</option>
+                                ))}
+                              </Select>
+                            </FormField>
+                            <FormField label="Phone" htmlFor={`ec-phone-${i}`}>
+                              <Input
+                                id={`ec-phone-${i}`}
+                                type="text"
+                                placeholder="Phone"
+                                value={c.phone}
+                                onChange={(e) => setContact(i, "phone", e.target.value)}
+                              />
+                            </FormField>
+                            <FormField label="Email" htmlFor={`ec-email-${i}`}>
+                              <Input
+                                id={`ec-email-${i}`}
+                                type="text"
+                                placeholder="Email"
+                                value={c.email}
+                                onChange={(e) => setContact(i, "email", e.target.value)}
+                              />
+                            </FormField>
+                          </div>
+                        </div>
+                      ) : (
+                        // Viewer: read-only card
+                        <div key={i} className="rounded-lg border border-border bg-muted/20 p-4">
+                          <div className="grid grid-cols-1 gap-1 text-sm sm:grid-cols-2">
+                            <div><span className="text-muted-foreground">Name: </span><span className="text-foreground">{c.name || "—"}</span></div>
+                            <div><span className="text-muted-foreground">Relationship: </span><span className="text-foreground">{c.relationship || "—"}</span></div>
+                            <div><span className="text-muted-foreground">Phone: </span><span className="text-foreground">{c.phone || "—"}</span></div>
+                            <div><span className="text-muted-foreground">Email: </span><span className="text-foreground">{c.email || "—"}</span></div>
+                          </div>
+                        </div>
+                      )
+                    )}
+                    {isAdmin && (
+                      <Button type="button" variant="outline" size="sm" onClick={addContact} className="self-start">
+                        + Add Contact
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
-                {/* Row 7: Notes (full width) */}
+                {/* Notes */}
                 <div className="sm:col-span-2">
                   <FormField label="Notes" htmlFor="notes">
                     <Textarea

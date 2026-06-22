@@ -11,6 +11,10 @@ vi.mock("../api/documents", () => ({
   getDownloadUrl: vi.fn().mockReturnValue("#"),
 }));
 
+vi.mock("../api/vitals", () => ({
+  vitalsApi: { list: vi.fn().mockResolvedValue([]) },
+}));
+
 afterEach(() => vi.restoreAllMocks());
 
 function mockAuth(role: "admin" | "viewer") {
@@ -28,6 +32,7 @@ describe("ProfilePage", () => {
     vi.spyOn(profileApi, "getProfile").mockResolvedValue({
       id: "1", full_name: "Jane Doe", date_of_birth: null, blood_type: "O+",
       allergies: null, emergency_contacts: null, primary_language: null, notes: null,
+      height: null, weight: null, phone: null,
     });
     render(<ProfilePage />);
     await waitFor(() => expect((screen.getByLabelText("Full name") as HTMLInputElement).value).toBe("Jane Doe"));
@@ -47,10 +52,101 @@ describe("ProfilePage", () => {
     const save = vi.spyOn(profileApi, "saveProfile").mockResolvedValue({
       id: "1", full_name: "Jane Doe", date_of_birth: null, blood_type: null,
       allergies: null, emergency_contacts: null, primary_language: null, notes: null,
+      height: null, weight: null, phone: null,
     });
     render(<ProfilePage />);
     fireEvent.change(await screen.findByLabelText("Full name"), { target: { value: "Jane Doe" } });
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
     await waitFor(() => expect(save).toHaveBeenCalledWith(expect.objectContaining({ full_name: "Jane Doe" })));
+  });
+});
+
+describe("Emergency contact cards", () => {
+  it("shows Add Contact button for admin with no contacts", async () => {
+    mockAuth("admin");
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    render(<ProfilePage />);
+    await waitFor(() => expect(screen.getByText("+ Add Contact")).toBeInTheDocument());
+  });
+
+  it("renders existing contact card from JSON", async () => {
+    mockAuth("admin");
+    const contacts = JSON.stringify([
+      { name: "Alice Smith", relationship: "Spouse/Partner", phone: "555-1234", email: "alice@example.com" }
+    ]);
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: contacts, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    render(<ProfilePage />);
+    await waitFor(() => {
+      expect((screen.getByDisplayValue("Alice Smith") as HTMLInputElement).value).toBe("Alice Smith");
+      expect((screen.getByDisplayValue("555-1234") as HTMLInputElement).value).toBe("555-1234");
+    });
+  });
+
+  it("viewer sees read-only contact display, no Add button", async () => {
+    mockAuth("viewer");
+    const contacts = JSON.stringify([
+      { name: "Bob", relationship: "Parent", phone: "555-0000", email: "" }
+    ]);
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: contacts, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    render(<ProfilePage />);
+    await waitFor(() => expect(screen.getByText("Bob")).toBeInTheDocument());
+    expect(screen.queryByText("+ Add Contact")).not.toBeInTheDocument();
+  });
+
+  it("saves contacts as JSON in emergency_contacts field", async () => {
+    mockAuth("admin");
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    const save = vi.spyOn(profileApi, "saveProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    render(<ProfilePage />);
+    fireEvent.click(await screen.findByText("+ Add Contact"));
+    fireEvent.change(screen.getAllByPlaceholderText("Name")[0], { target: { value: "Carol" } });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    await waitFor(() => {
+      const callArg = save.mock.calls[0][0];
+      const parsed = JSON.parse(callArg.emergency_contacts as string);
+      expect(parsed[0].name).toBe("Carol");
+    });
+  });
+
+  it("filters out empty contacts on save", async () => {
+    mockAuth("admin");
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    const save = vi.spyOn(profileApi, "saveProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    render(<ProfilePage />);
+    // Add a blank contact and immediately save — blank card should not appear in payload
+    fireEvent.click(await screen.findByText("+ Add Contact"));
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    await waitFor(() => {
+      const callArg = save.mock.calls[0][0];
+      expect(callArg.emergency_contacts).toBeNull();
+    });
   });
 });
