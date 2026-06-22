@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import ProfilePage from "./ProfilePage";
 import * as profileApi from "../api/profile";
 import * as useAuthModule from "../auth/useAuth";
+import * as vitalsApiModule from "../api/vitals";
 
 vi.mock("../api/documents", () => ({
   listDocumentsForRecord: vi.fn().mockResolvedValue([]),
@@ -148,5 +149,88 @@ describe("Emergency contact cards", () => {
       const callArg = save.mock.calls[0][0];
       expect(callArg.emergency_contacts).toBeNull();
     });
+  });
+});
+
+describe("Height/Weight Vitals prefill", () => {
+  it("shows vitals hint when profile has no height and vitals has height_in", async () => {
+    mockAuth("admin");
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    vi.spyOn(vitalsApiModule.vitalsApi, "list").mockResolvedValue([
+      {
+        id: "v1", measured_at: "2026-06-18T10:00:00Z",
+        bp_systolic: null, bp_diastolic: null, pulse_bpm: null,
+        height_in: 70, weight_lb: 175,
+        temperature_f: null, respiratory_rate: null, spo2: null, blood_glucose: null,
+        notes: null, visit_log_id: null, bmi: null,
+      },
+    ]);
+    render(<ProfilePage />);
+    await waitFor(() => {
+      expect(screen.getByText(/Latest from Vitals:.*5'10"/i)).toBeInTheDocument();
+      expect(screen.getByText(/Latest from Vitals:.*175 lbs/i)).toBeInTheDocument();
+    });
+  });
+
+  it("prefills height field from vitals when profile height is null", async () => {
+    mockAuth("admin");
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    vi.spyOn(vitalsApiModule.vitalsApi, "list").mockResolvedValue([
+      {
+        id: "v1", measured_at: "2026-06-18T10:00:00Z",
+        bp_systolic: null, bp_diastolic: null, pulse_bpm: null,
+        height_in: 66, weight_lb: null,
+        temperature_f: null, respiratory_rate: null, spo2: null, blood_glucose: null,
+        notes: null, visit_log_id: null, bmi: null,
+      },
+    ]);
+    render(<ProfilePage />);
+    await waitFor(() => {
+      expect((screen.getByLabelText("Height") as HTMLInputElement).value).toBe("5'6\"");
+    });
+  });
+
+  it("keeps profile height value and still shows hint when profile already has height", async () => {
+    mockAuth("admin");
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: "5'9\"", weight: null, phone: null, notes: null,
+    });
+    vi.spyOn(vitalsApiModule.vitalsApi, "list").mockResolvedValue([
+      {
+        id: "v1", measured_at: "2026-06-18T10:00:00Z",
+        bp_systolic: null, bp_diastolic: null, pulse_bpm: null,
+        height_in: 70, weight_lb: null,
+        temperature_f: null, respiratory_rate: null, spo2: null, blood_glucose: null,
+        notes: null, visit_log_id: null, bmi: null,
+      },
+    ]);
+    render(<ProfilePage />);
+    await waitFor(() => {
+      expect((screen.getByLabelText("Height") as HTMLInputElement).value).toBe("5'9\"");
+      expect(screen.getByText(/Latest from Vitals:.*5'10"/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows no hint when no vitals entry has height or weight", async () => {
+    mockAuth("admin");
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    vi.spyOn(vitalsApiModule.vitalsApi, "list").mockResolvedValue([]);
+    render(<ProfilePage />);
+    await waitFor(() => screen.getByLabelText("Height"));
+    expect(screen.queryByText(/Latest from Vitals/i)).not.toBeInTheDocument();
   });
 });

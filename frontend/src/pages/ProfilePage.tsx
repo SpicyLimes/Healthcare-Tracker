@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { getProfile, saveProfile, type ProfileInput } from "../api/profile";
 import { vitalsApi } from "../api/vitals";
+import { formatDate } from "@/lib/format";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
 import { AppShell } from "@/components/app-shell";
@@ -38,6 +39,16 @@ function serializeContacts(contacts: EmergencyContact[]): string | null {
   );
   if (nonEmpty.length === 0) return null;
   return JSON.stringify(nonEmpty);
+}
+
+function inchesToDisplay(inches: number): string {
+  const ft = Math.floor(inches / 12);
+  const remaining = Math.round(inches % 12);
+  return `${ft}'${remaining}"`;
+}
+
+function lbsToDisplay(lbs: number): string {
+  return `${Math.round(lbs)} lbs`;
 }
 
 const EMPTY: ProfileInput = {
@@ -90,10 +101,33 @@ export default function ProfilePage() {
       })
       .catch(() => setError("Failed to load profile"));
 
-    // Vitals prefill stub — used in Task 2 (setVitalsHeightHint / setVitalsWeightHint wired there)
-    vitalsApi.list().catch(() => {});
-    void setVitalsHeightHint;
-    void setVitalsWeightHint;
+    vitalsApi.list().then((allVitals) => {
+      // find most recent entry with height_in
+      const withHeight = [...allVitals].reverse().find((v) => v.height_in != null);
+      if (withHeight?.height_in != null) {
+        const display = inchesToDisplay(withHeight.height_in);
+        const dateStr = formatDate(withHeight.measured_at);
+        setVitalsHeightHint(`Latest from Vitals: ${display} (${dateStr})`);
+        setForm((prev) => ({
+          ...prev,
+          height: prev.height ?? display,
+        }));
+      }
+
+      // find most recent entry with weight_lb
+      const withWeight = [...allVitals].reverse().find((v) => v.weight_lb != null);
+      if (withWeight?.weight_lb != null) {
+        const display = lbsToDisplay(withWeight.weight_lb);
+        const dateStr = formatDate(withWeight.measured_at);
+        setVitalsWeightHint(`Latest from Vitals: ${display} (${dateStr})`);
+        setForm((prev) => ({
+          ...prev,
+          weight: prev.weight ?? display,
+        }));
+      }
+    }).catch(() => {
+      // Vitals fetch failure is non-fatal — profile still loads
+    });
   }, []);
 
   function set<K extends keyof ProfileInput>(key: K, value: string) {
