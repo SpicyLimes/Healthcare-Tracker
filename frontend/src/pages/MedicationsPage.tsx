@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import { medicationsApi, type Medication, type MedicationInput, type MedicationKind } from "../api/medications";
 import { doctorsApi, type Doctor } from "../api/doctors";
 import DoctorPicker from "../components/DoctorPicker";
@@ -37,6 +38,7 @@ export default function MedicationsPage() {
   const [editingRow, setEditingRow] = useState<Medication | null>(null);
   const [form, setForm] = useState<MedicationInput>(EMPTY);
   const [modalError, setModalError] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
 
   async function reload() {
     setRows(await medicationsApi.list());
@@ -46,6 +48,16 @@ export default function MedicationsPage() {
     reload().catch(() => { setError("Failed to load medications"); setRows([]); }).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const openId = searchParams.get("open");
+    if (!openId || rows.length === 0) return;
+    const record = rows.find((r) => r.id === openId);
+    if (record) {
+      openEdit(record);
+      setSearchParams({}, { replace: true });
+    }
+  }, [rows, searchParams]);
 
   function openAdd() {
     setForm(EMPTY);

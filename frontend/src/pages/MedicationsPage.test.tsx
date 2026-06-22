@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import MedicationsPage from "./MedicationsPage";
 import * as medsApi from "../api/medications";
 import * as useAuthModule from "../auth/useAuth";
@@ -29,24 +30,24 @@ describe("MedicationsPage", () => {
       { id: "1", name: "Aspirin", kind: "medication", dose: "81mg", frequency: null,
         prescribing_doctor: null, start_date: null, end_date: null, is_active: true, notes: null },
     ]);
-    render(<MedicationsPage />);
+    render(<MemoryRouter><MedicationsPage /></MemoryRouter>);
     expect((await screen.findAllByText("Aspirin")).length).toBeGreaterThan(0);
   });
 
   it("viewer sees no Add button", async () => {
     mockAuth("viewer");
     vi.spyOn(medsApi.medicationsApi, "list").mockResolvedValue([]);
-    render(<MedicationsPage />);
+    render(<MemoryRouter><MedicationsPage /></MemoryRouter>);
     // allow the effect to resolve
-    await screen.findByText("Medications");
+    await screen.findByRole("heading", { name: "Medications" });
     expect(screen.queryByRole("button", { name: /add/i })).not.toBeInTheDocument();
   });
 
   it("admin opens an empty Add modal via the + Add button", async () => {
     mockAuth("admin");
     vi.spyOn(medsApi.medicationsApi, "list").mockResolvedValue([]);
-    render(<MedicationsPage />);
-    await screen.findByText("Medications");
+    render(<MemoryRouter><MedicationsPage /></MemoryRouter>);
+    await screen.findByRole("heading", { name: "Medications" });
     // no dialog until the button is clicked
     expect(screen.queryByRole("dialog")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /\+ add/i }));
@@ -62,12 +63,26 @@ describe("MedicationsPage", () => {
       { id: "1", name: "Aspirin", kind: "medication", dose: "81mg", frequency: null,
         prescribing_doctor: null, start_date: null, end_date: null, is_active: true, notes: null },
     ]);
-    render(<MedicationsPage />);
+    render(<MemoryRouter><MedicationsPage /></MemoryRouter>);
     await screen.findAllByText("Aspirin");
     // the desktop row renders an Edit button per row
     fireEvent.click(screen.getAllByRole("button", { name: /^edit /i })[0]);
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveAttribute("aria-label", "Edit Medication");
     expect(within(dialog).getByLabelText(/medication name/i)).toHaveValue("Aspirin");
+  });
+
+  it("auto-opens edit modal when ?open=<id> is in the URL", async () => {
+    mockAuth("admin");
+    vi.spyOn(medsApi.medicationsApi, "list").mockResolvedValue([
+      { id: "med1", name: "Aspirin", kind: "medication", dose: "81mg", frequency: null,
+        prescribing_doctor: null, start_date: null, end_date: null, is_active: true, notes: null },
+    ]);
+    render(
+      <MemoryRouter initialEntries={["/medications?open=med1"]}>
+        <MedicationsPage />
+      </MemoryRouter>
+    );
+    expect(await screen.findByRole("dialog", { name: /edit medication/i })).toBeInTheDocument();
   });
 });

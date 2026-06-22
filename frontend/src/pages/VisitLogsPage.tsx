@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import { visitLogsApi, type VisitLog, type VisitLogInput } from "../api/visitLogs";
 import { doctorsApi, type Doctor } from "../api/doctors";
 import DoctorPicker from "../components/DoctorPicker";
@@ -59,6 +60,7 @@ export default function VisitLogsPage() {
   const [modalError, setModalError] = useState("");
   const [heightFt, setHeightFt] = useState<number | null>(null);
   const [heightIn, setHeightIn] = useState<number | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   async function reload() { setRows(await visitLogsApi.list()); }
   useEffect(() => {
@@ -70,6 +72,16 @@ export default function VisitLogsPage() {
   useEffect(() => {
     setForm((s) => ({ ...s, height_in: feetInchesToIn(heightFt, heightIn) }));
   }, [heightFt, heightIn]);
+
+  useEffect(() => {
+    const openId = searchParams.get("open");
+    if (!openId || rows.length === 0) return;
+    const record = rows.find((r) => r.id === openId);
+    if (record) {
+      openEdit(record);
+      setSearchParams({}, { replace: true });
+    }
+  }, [rows, searchParams]);
 
   function openAdd() {
     setForm(EMPTY);

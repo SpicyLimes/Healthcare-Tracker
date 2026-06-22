@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import { vaccinationsApi, type Vaccination, type VaccinationInput } from "../api/vaccinations";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -30,12 +31,23 @@ export default function VaccinationsPage() {
   const [editingRow, setEditingRow] = useState<Vaccination | null>(null);
   const [form, setForm] = useState<VaccinationInput>(EMPTY);
   const [modalError, setModalError] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
 
   async function reload() { setRows(await vaccinationsApi.list()); }
   useEffect(() => {
     setLoading(true);
     reload().catch(() => { setError("Failed to load vaccinations"); setRows([]); }).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    const openId = searchParams.get("open");
+    if (!openId || rows.length === 0) return;
+    const record = rows.find((r) => r.id === openId);
+    if (record) {
+      openEdit(record);
+      setSearchParams({}, { replace: true });
+    }
+  }, [rows, searchParams]);
 
   function openAdd() {
     setForm(EMPTY);
