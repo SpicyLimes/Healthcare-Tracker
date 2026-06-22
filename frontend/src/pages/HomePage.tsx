@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { StickyNote } from "lucide-react";
+import { StickyNote, User, Activity, AlertTriangle, Phone, Shield, Pill } from "lucide-react";
 import { calendarApi, type CalendarEvent, EVENT_TYPE_LABELS } from "../api/calendar";
 import { getProfile, type Profile } from "../api/profile";
 import { vitalsApi, type Vitals } from "../api/vitals";
@@ -39,18 +39,21 @@ function getGreeting(tz: string): string {
   return "Good Evening";
 }
 
-function SectionCard({ title, to, children }: { title: string; to: string; children: React.ReactNode }) {
+function SectionCard({ title, to, icon: Icon, children }: { title: string; to: string; icon: React.ElementType; children: React.ReactNode }) {
   return (
     <Card>
       <CardContent className="p-4">
         <div className="mb-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-heading text-sm font-semibold text-foreground">{title}</h2>
+            <h2 className="font-heading text-base font-semibold text-foreground flex items-center gap-2">
+              <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+              {title}
+            </h2>
             <Link to={to} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               View →
             </Link>
           </div>
-          <div className="mt-2 border-t border-border/40" />
+          <div className="mt-2 border-t border-border" />
         </div>
         {children}
       </CardContent>
@@ -218,7 +221,7 @@ export default function HomePage() {
 
         {/* Row 1: Patient Info + Most Recent Events */}
         <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <SectionCard title="Patient Info" to="/profile">
+          <SectionCard title="Patient Info" to="/profile" icon={User}>
             {loading ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : (
@@ -277,8 +280,11 @@ export default function HomePage() {
           <Card>
             <CardContent className="p-4">
               <div className="mb-3">
-                <h2 className="font-heading text-sm font-semibold text-foreground">Recent Activity</h2>
-                <div className="mt-2 border-t border-border/40" />
+                <h2 className="font-heading text-base font-semibold text-foreground flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-muted-foreground shrink-0" />
+                  Recent Activity
+                </h2>
+                <div className="mt-2 border-t border-border" />
               </div>
               {loading ? (
                 <p className="text-sm text-muted-foreground">Loading…</p>
@@ -348,7 +354,7 @@ export default function HomePage() {
 
         {/* Row 2: Allergies + Emergency Contacts */}
         <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <SectionCard title="Allergies" to="/profile">
+          <SectionCard title="Allergies" to="/profile" icon={AlertTriangle}>
             {loading ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : allergies.length === 0 ? (
@@ -368,7 +374,7 @@ export default function HomePage() {
             )}
           </SectionCard>
 
-          <SectionCard title="Emergency Contacts" to="/profile">
+          <SectionCard title="Emergency Contacts" to="/profile" icon={Phone}>
             {loading ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : contacts.length === 0 ? (
@@ -390,7 +396,7 @@ export default function HomePage() {
 
         {/* Row 3: Insurance + Pharmacies */}
         <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <SectionCard title="Insurance" to="/insurance">
+          <SectionCard title="Insurance" to="/insurance" icon={Shield}>
             {loading ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : insurances.length === 0 ? (
@@ -409,7 +415,7 @@ export default function HomePage() {
             )}
           </SectionCard>
 
-          <SectionCard title="Pharmacies" to="/pharmacies">
+          <SectionCard title="Pharmacies" to="/pharmacies" icon={Pill}>
             {loading ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : pharmacies.length === 0 ? (
