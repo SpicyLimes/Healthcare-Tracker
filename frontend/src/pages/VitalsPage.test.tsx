@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -55,8 +55,39 @@ describe("VitalsPage", () => {
     await waitFor(() => expect(list).toHaveBeenCalled());
     await userEvent.click(screen.getByText(/\+ add/i));
     const dialog = await screen.findByRole("dialog");
-    await userEvent.type(within(dialog).getByLabelText(/height/i), "65");
+    // Enter 5 ft + 5 in = 65 total inches; weight 150 lb → BMI 25.0
+    await userEvent.type(within(dialog).getByPlaceholderText(/^ft$/i), "5");
+    await userEvent.type(within(dialog).getByPlaceholderText(/^in$/i), "5");
     await userEvent.type(within(dialog).getByLabelText(/weight/i), "150");
     expect(within(dialog).getByText(/25(\.0)?/)).toBeInTheDocument();
+  });
+
+  it("height fields combine to total inches on submit", async () => {
+    list.mockResolvedValue([]);
+    create.mockResolvedValue({ id: "v2" });
+    render(<VitalsPage />);
+    await waitFor(() => expect(list).toHaveBeenCalled());
+    await userEvent.click(screen.getByText(/\+ add/i));
+    const dialog = await screen.findByRole("dialog");
+    // Fill required datetime field (fireEvent.change works reliably with datetime-local in jsdom)
+    const dtInput = within(dialog).getByLabelText(/date.*time/i);
+    fireEvent.change(dtInput, { target: { value: "2026-06-22T10:00" } });
+    // Enter 5 ft 4 in = 64 total inches
+    await userEvent.type(within(dialog).getByPlaceholderText(/^ft$/i), "5");
+    await userEvent.type(within(dialog).getByPlaceholderText(/^in$/i), "4");
+    await userEvent.click(within(dialog).getByRole("button", { name: /add vitals/i }));
+    await waitFor(() => expect(create).toHaveBeenCalled());
+    const payload = create.mock.calls[0][0];
+    expect(payload.height_in).toBe(64);
+  });
+
+  it("displays height as feet and inches in detail view", async () => {
+    list.mockResolvedValue([SAMPLE]); // SAMPLE has height_in: 65
+    render(<VitalsPage />);
+    await waitFor(() => expect(list).toHaveBeenCalled());
+    // SAMPLE height_in is 65 → 5'5"
+    // RecordTable More button has aria-label "More details for <detailTitle>"
+    await userEvent.click(screen.getAllByRole("button", { name: /more details for/i })[0]);
+    expect(await screen.findByText(/5'5"/)).toBeInTheDocument();
   });
 });

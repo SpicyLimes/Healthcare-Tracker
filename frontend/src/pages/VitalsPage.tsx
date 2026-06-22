@@ -9,6 +9,7 @@ import { FormField, Input, Textarea } from "@/components/ui/form-field";
 import { RecordTable } from "@/components/RecordTable";
 import { RecordFormModal } from "@/components/RecordFormModal";
 import { localToUtcIso, formatInTimezone } from "@/lib/datetime";
+import { feetInchesToIn, inToFeetInches, formatHeight } from "@/lib/format";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -92,6 +93,8 @@ export default function VitalsPage() {
   const [editingRow, setEditingRow] = useState<Vitals | null>(null);
   const [form, setForm] = useState<VitalsFormState>(EMPTY);
   const [modalError, setModalError] = useState("");
+  const [heightFt, setHeightFt] = useState<number | null>(null);
+  const [heightIn, setHeightIn] = useState<number | null>(null);
 
   async function reload() {
     setRows(await vitalsApi.list());
@@ -106,6 +109,8 @@ export default function VitalsPage() {
 
   function openAdd() {
     setForm({ ...EMPTY, measured_at: nowLocal(tz) });
+    setHeightFt(null);
+    setHeightIn(null);
     setEditingRow(null);
     setModalError("");
     setModalMode("add");
@@ -113,6 +118,9 @@ export default function VitalsPage() {
 
   function openEdit(r: Vitals) {
     setEditingRow(r);
+    const { ft, inches } = inToFeetInches(r.height_in);
+    setHeightFt(ft);
+    setHeightIn(inches);
     setForm({
       measured_at: toLocalInputValue(r.measured_at, tz),
       bp_systolic: r.bp_systolic,
@@ -219,7 +227,7 @@ export default function VitalsPage() {
                     : null,
                 },
                 { label: "Pulse", value: r.pulse_bpm != null ? `${r.pulse_bpm} bpm` : null },
-                { label: "Height", value: r.height_in != null ? `${r.height_in} in` : null },
+                { label: "Height", value: r.height_in != null ? formatHeight(r.height_in) : null },
                 { label: "Weight", value: r.weight_lb != null ? `${r.weight_lb} lb` : null },
                 { label: "BMI", value: r.bmi != null ? String(r.bmi) : null },
                 { label: "Temperature", value: r.temperature_f != null ? `${r.temperature_f} °F` : null },
@@ -297,16 +305,44 @@ export default function VitalsPage() {
               />
             </FormField>
 
-            {/* Height */}
-            <FormField label="Height (in)" htmlFor="vt-height">
-              <Input
-                id="vt-height"
-                type="number"
-                step="0.1"
-                value={form.height_in ?? ""}
-                onChange={(e) => setForm((s) => ({ ...s, height_in: num(e.target.value) }))}
-                placeholder="e.g. 65"
-              />
+            {/* Height — ft/in two-field input */}
+            <FormField label="Height" htmlFor="vt-height-ft">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  <Input
+                    id="vt-height-ft"
+                    type="number"
+                    min={0}
+                    max={8}
+                    className="w-16"
+                    placeholder="ft"
+                    value={heightFt ?? ""}
+                    onChange={(e) => {
+                      const ft = e.target.value === "" ? null : Math.max(0, Math.floor(Number(e.target.value)));
+                      setHeightFt(ft);
+                      setForm((s) => ({ ...s, height_in: feetInchesToIn(ft, heightIn) }));
+                    }}
+                  />
+                  <span className="text-sm text-muted-foreground">ft</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Input
+                    id="vt-height-in"
+                    type="number"
+                    min={0}
+                    max={11}
+                    className="w-16"
+                    placeholder="in"
+                    value={heightIn ?? ""}
+                    onChange={(e) => {
+                      const inches = e.target.value === "" ? null : Math.min(11, Math.max(0, Math.floor(Number(e.target.value))));
+                      setHeightIn(inches);
+                      setForm((s) => ({ ...s, height_in: feetInchesToIn(heightFt, inches) }));
+                    }}
+                  />
+                  <span className="text-sm text-muted-foreground">in</span>
+                </div>
+              </div>
             </FormField>
 
             {/* Weight */}
