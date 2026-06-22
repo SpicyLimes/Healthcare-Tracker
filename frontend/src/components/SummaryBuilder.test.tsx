@@ -98,12 +98,12 @@ describe("AppShell summary trigger", () => {
     );
   }
 
-  it("shows Patient Summary Report for admins", () => {
+  it("shows Patient Summary for admins", () => {
     renderShell("admin");
     expect(screen.getByRole("button", { name: /patient summary/i })).toBeInTheDocument();
   });
 
-  it("shows Patient Summary Report for viewers too", () => {
+  it("shows Patient Summary for viewers too", () => {
     renderShell("viewer");
     expect(screen.getByRole("button", { name: /patient summary/i })).toBeInTheDocument();
   });

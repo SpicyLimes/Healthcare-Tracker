@@ -12,6 +12,7 @@ import { vaccinationsApi, type Vaccination } from "../api/vaccinations";
 import { insurancesApi, type Insurance } from "../api/insurances";
 import { pharmaciesApi, type Pharmacy } from "../api/pharmacies";
 import { doctorsApi, type Doctor } from "../api/doctors";
+import { openSummaryInNewTab } from "../api/summary";
 import { parseAllergies, parseContacts, type Allergy, type EmergencyContact } from "@/lib/profile-parsers";
 import { useAuth } from "../auth/useAuth";
 import { formatDate } from "@/lib/format";
@@ -99,7 +100,7 @@ function buildPrintHtml(opts: {
 
   const vitalsHtml = latestVitals
     ? `<ul>
-        <li><b>Date:</b> ${escapeHtml(new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(latestVitals.measured_at)))}</li>
+        <li><b>Date:</b> ${escapeHtml(formatDate(latestVitals.measured_at))}</li>
         ${latestVitals.bp_systolic != null && latestVitals.bp_diastolic != null ? `<li><b>BP:</b> ${escapeHtml(String(latestVitals.bp_systolic))}/${escapeHtml(String(latestVitals.bp_diastolic))}</li>` : ""}
         ${latestVitals.pulse_bpm != null ? `<li><b>Pulse:</b> ${escapeHtml(String(latestVitals.pulse_bpm))} bpm</li>` : ""}
         ${latestVitals.weight_lb != null ? `<li><b>Weight:</b> ${escapeHtml(String(latestVitals.weight_lb))} lbs</li>` : ""}
@@ -260,11 +261,7 @@ export default function HomePage() {
 
   function openPrintSummary() {
     const html = buildPrintHtml({ profile, mainDoctor, latestVitals, activeMeds, allergies, contacts, insurances, pharmacies });
-    const win = window.open("", "_blank");
-    if (win) {
-      win.document.write(html);
-      win.document.close();
-    }
+    openSummaryInNewTab(html);
   }
 
   return (
