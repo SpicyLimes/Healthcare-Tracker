@@ -57,7 +57,7 @@ describe("GuestLayout", () => {
         </MemoryRouter>
       </GuestProvider>
     );
-    expect(screen.getByRole("button", { name: /patient summary report/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /patient summary/i })).toBeInTheDocument();
   });
 
   it("shows re-enter-URL guidance on the expired page", () => {

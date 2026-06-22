@@ -73,7 +73,7 @@ export default function SummaryBuilder({ mode, availableSections, token, descrip
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <div className="flex flex-col items-end gap-1">
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm" className={triggerClassName}>Patient Summary Report</Button>
+          <Button variant={triggerClassName ? undefined : "outline"} size="sm" className={triggerClassName}>Patient Summary</Button>
         </DialogTrigger>
         {description && (
           <p className="max-w-xs text-right text-xs text-muted-foreground">{description}</p>

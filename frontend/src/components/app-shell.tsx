@@ -88,7 +88,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           {/* Summary trigger (admin + viewer) */}
           {user && (
-            <SummaryBuilder mode="admin" availableSections={ALL_SECTIONS} />
+            <SummaryBuilder
+              mode="admin"
+              availableSections={ALL_SECTIONS}
+              triggerClassName="flex items-center rounded-lg px-2 py-1.5 text-sm bg-primary/15 text-primary font-medium hover:bg-primary/20 transition-colors"
+            />
           )}
 
           {/* Accent color picker */}

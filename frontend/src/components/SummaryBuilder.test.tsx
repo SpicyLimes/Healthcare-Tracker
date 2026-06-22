@@ -16,13 +16,13 @@ describe("SummaryBuilder", () => {
 
   it("renders a trigger button and opens the modal", () => {
     render(<SummaryBuilder mode="admin" availableSections={["doctors", "medications"]} />);
-    fireEvent.click(screen.getByRole("button", { name: /patient summary report/i }));
+    fireEvent.click(screen.getByRole("button", { name: /patient summary/i }));
     expect(screen.getByText(/build a summary/i)).toBeInTheDocument();
   });
 
   it("only offers the sections it was given (guest scoping)", () => {
     render(<SummaryBuilder mode="guest" token="t" availableSections={["doctors"]} />);
-    fireEvent.click(screen.getByRole("button", { name: /patient summary report/i }));
+    fireEvent.click(screen.getByRole("button", { name: /patient summary/i }));
     expect(screen.getByLabelText(/doctors/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/medications/i)).not.toBeInTheDocument();
   });
@@ -30,7 +30,7 @@ describe("SummaryBuilder", () => {
   it("calls the guest API with the token when in guest mode", async () => {
     const { generateGuestSummary } = await import("../api/summary");
     render(<SummaryBuilder mode="guest" token="tok123" availableSections={["doctors"]} />);
-    fireEvent.click(screen.getByRole("button", { name: /patient summary report/i }));
+    fireEvent.click(screen.getByRole("button", { name: /patient summary/i }));
     fireEvent.click(screen.getByLabelText(/doctors/i));
     fireEvent.click(screen.getByRole("button", { name: /^generate$/i }));
     expect(generateGuestSummary).toHaveBeenCalledWith(
@@ -42,7 +42,7 @@ describe("SummaryBuilder", () => {
   it("passes the selected date range through to the API", async () => {
     const { generateSummary } = await import("../api/summary");
     render(<SummaryBuilder mode="admin" availableSections={["doctors"]} />);
-    fireEvent.click(screen.getByRole("button", { name: /patient summary report/i }));
+    fireEvent.click(screen.getByRole("button", { name: /patient summary/i }));
     fireEvent.click(screen.getByLabelText(/doctors/i));
     fireEvent.change(screen.getByLabelText(/from date/i), { target: { value: "2026-01-01" } });
     fireEvent.change(screen.getByLabelText(/to date/i), { target: { value: "2026-06-30" } });
@@ -55,7 +55,7 @@ describe("SummaryBuilder", () => {
   it("sends null dates when the range is left empty", async () => {
     const { generateSummary } = await import("../api/summary");
     render(<SummaryBuilder mode="admin" availableSections={["doctors"]} />);
-    fireEvent.click(screen.getByRole("button", { name: /patient summary report/i }));
+    fireEvent.click(screen.getByRole("button", { name: /patient summary/i }));
     fireEvent.click(screen.getByLabelText(/doctors/i));
     fireEvent.click(screen.getByRole("button", { name: /^generate$/i }));
     expect(generateSummary).toHaveBeenCalledWith(
@@ -65,7 +65,7 @@ describe("SummaryBuilder", () => {
 
   it("All Records checkbox selects and deselects all sections", () => {
     render(<SummaryBuilder mode="admin" availableSections={["doctors", "medications"]} />);
-    fireEvent.click(screen.getByRole("button", { name: /patient summary report/i }));
+    fireEvent.click(screen.getByRole("button", { name: /patient summary/i }));
     fireEvent.click(screen.getByLabelText(/all records/i));
     expect(screen.getByLabelText(/doctors/i)).toBeChecked();
     expect(screen.getByLabelText(/medications/i)).toBeChecked();
@@ -76,7 +76,7 @@ describe("SummaryBuilder", () => {
   it("All time checkbox hides the date inputs and sends null dates", async () => {
     const { generateSummary } = await import("../api/summary");
     render(<SummaryBuilder mode="admin" availableSections={["doctors"]} />);
-    fireEvent.click(screen.getByRole("button", { name: /patient summary report/i }));
+    fireEvent.click(screen.getByRole("button", { name: /patient summary/i }));
     fireEvent.click(screen.getByLabelText(/all time/i));
     expect(screen.queryByLabelText(/from date/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByLabelText(/doctors/i));
@@ -100,11 +100,11 @@ describe("AppShell summary trigger", () => {
 
   it("shows Patient Summary Report for admins", () => {
     renderShell("admin");
-    expect(screen.getByRole("button", { name: /patient summary report/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /patient summary/i })).toBeInTheDocument();
   });
 
   it("shows Patient Summary Report for viewers too", () => {
     renderShell("viewer");
-    expect(screen.getByRole("button", { name: /patient summary report/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /patient summary/i })).toBeInTheDocument();
   });
 });
