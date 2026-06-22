@@ -9,7 +9,7 @@ import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
-import { formatDate } from "@/lib/format";
+import { formatDate, feetInchesToIn, inToFeetInches, formatHeight } from "@/lib/format";
 import { RecordTable } from "@/components/RecordTable";
 import { RecordFormModal } from "@/components/RecordFormModal";
 
@@ -38,6 +38,12 @@ const EMPTY: VisitLogInput = {
   bp_systolic: null,
   bp_diastolic: null,
   pulse_bpm: null,
+  height_in: null,
+  weight_lb: null,
+  temperature_f: null,
+  respiratory_rate: null,
+  spo2: null,
+  blood_glucose: null,
 };
 
 export default function VisitLogsPage() {
@@ -51,6 +57,8 @@ export default function VisitLogsPage() {
   const [editingRow, setEditingRow] = useState<VisitLog | null>(null);
   const [form, setForm] = useState<VisitLogInput>(EMPTY);
   const [modalError, setModalError] = useState("");
+  const [heightFt, setHeightFt] = useState<number | null>(null);
+  const [heightIn, setHeightIn] = useState<number | null>(null);
 
   async function reload() { setRows(await visitLogsApi.list()); }
   useEffect(() => {
@@ -61,6 +69,8 @@ export default function VisitLogsPage() {
 
   function openAdd() {
     setForm(EMPTY);
+    setHeightFt(null);
+    setHeightIn(null);
     setEditingRow(null);
     setModalError("");
     setModalMode("add");
@@ -68,7 +78,29 @@ export default function VisitLogsPage() {
 
   function openEdit(r: VisitLog) {
     setEditingRow(r);
-    setForm({ visit_date: r.visit_date, visit_time: r.visit_time, doctor_id: r.doctor_id, doctor_other: r.doctor_other, reason: r.reason, summary: r.summary, follow_up: r.follow_up, follow_up_date: r.follow_up_date, notes: r.notes, bp_systolic: r.bp_systolic, bp_diastolic: r.bp_diastolic, pulse_bpm: r.pulse_bpm });
+    const { ft, inches } = inToFeetInches(r.height_in);
+    setHeightFt(ft);
+    setHeightIn(inches);
+    setForm({
+      visit_date: r.visit_date,
+      visit_time: r.visit_time,
+      doctor_id: r.doctor_id,
+      doctor_other: r.doctor_other,
+      reason: r.reason,
+      summary: r.summary,
+      follow_up: r.follow_up,
+      follow_up_date: r.follow_up_date,
+      notes: r.notes,
+      bp_systolic: r.bp_systolic,
+      bp_diastolic: r.bp_diastolic,
+      pulse_bpm: r.pulse_bpm,
+      height_in: r.height_in,
+      weight_lb: r.weight_lb,
+      temperature_f: r.temperature_f,
+      respiratory_rate: r.respiratory_rate,
+      spo2: r.spo2,
+      blood_glucose: r.blood_glucose,
+    });
     setModalError("");
     setModalMode("edit");
   }
@@ -132,6 +164,12 @@ export default function VisitLogsPage() {
                 { label: "Reason", value: r.reason },
                 { label: "Blood Pressure", value: (r.bp_systolic != null && r.bp_diastolic != null) ? `${r.bp_systolic}/${r.bp_diastolic} mmHg` : null },
                 { label: "Pulse", value: r.pulse_bpm != null ? `${r.pulse_bpm} bpm` : null },
+                { label: "Height", value: r.height_in != null ? formatHeight(r.height_in) : null },
+                { label: "Weight", value: r.weight_lb != null ? `${r.weight_lb} lb` : null },
+                { label: "Temperature", value: r.temperature_f != null ? `${r.temperature_f}°F` : null },
+                { label: "Respiratory Rate", value: r.respiratory_rate != null ? `${r.respiratory_rate} breaths/min` : null },
+                { label: "SpO2", value: r.spo2 != null ? `${r.spo2}%` : null },
+                { label: "Blood Glucose", value: r.blood_glucose != null ? `${r.blood_glucose} mg/dL` : null },
                 { label: "Summary", value: r.summary },
                 { label: "Follow-up", value: r.follow_up },
                 { label: "Follow-up Date", value: r.follow_up_date },
@@ -259,6 +297,107 @@ export default function VisitLogsPage() {
             <FormField label="Pulse (bpm)" htmlFor="vl-pulse">
               <Input id="vl-pulse" type="number" value={form.pulse_bpm ?? ""}
                 onChange={(e) => setForm((s) => ({ ...s, pulse_bpm: e.target.value === "" ? null : Number(e.target.value) }))} />
+            </FormField>
+
+            {/* Height — ft/in two-field input */}
+            <div className="sm:col-span-2">
+              <FormField label="Height" htmlFor="vl-height-ft">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1">
+                    <Input
+                      id="vl-height-ft"
+                      type="number"
+                      min={0}
+                      max={8}
+                      className="w-16"
+                      placeholder="ft"
+                      value={heightFt ?? ""}
+                      onChange={(e) => {
+                        const ft = e.target.value === "" ? null : Math.max(0, Math.floor(Number(e.target.value)));
+                        setHeightFt(ft);
+                        setForm((s) => ({ ...s, height_in: feetInchesToIn(ft, heightIn) }));
+                      }}
+                    />
+                    <span className="text-sm text-muted-foreground">ft</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      id="vl-height-in"
+                      type="number"
+                      min={0}
+                      max={11}
+                      className="w-16"
+                      placeholder="in"
+                      value={heightIn ?? ""}
+                      onChange={(e) => {
+                        const inches = e.target.value === "" ? null : Math.min(11, Math.max(0, Math.floor(Number(e.target.value))));
+                        setHeightIn(inches);
+                        setForm((s) => ({ ...s, height_in: feetInchesToIn(heightFt, inches) }));
+                      }}
+                    />
+                    <span className="text-sm text-muted-foreground">in</span>
+                  </div>
+                </div>
+              </FormField>
+            </div>
+
+            {/* Weight */}
+            <FormField label="Weight (lb)" htmlFor="vl-weight">
+              <Input
+                id="vl-weight"
+                type="number"
+                step="0.1"
+                value={form.weight_lb ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, weight_lb: e.target.value === "" ? null : Number(e.target.value) }))}
+                placeholder="e.g. 150"
+              />
+            </FormField>
+
+            {/* Temperature */}
+            <FormField label="Temperature (°F)" htmlFor="vl-temp">
+              <Input
+                id="vl-temp"
+                type="number"
+                step="0.1"
+                value={form.temperature_f ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, temperature_f: e.target.value === "" ? null : Number(e.target.value) }))}
+                placeholder="e.g. 98.6"
+              />
+            </FormField>
+
+            {/* Respiratory Rate */}
+            <FormField label="Respiratory Rate (/min)" htmlFor="vl-resp">
+              <Input
+                id="vl-resp"
+                type="number"
+                value={form.respiratory_rate ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, respiratory_rate: e.target.value === "" ? null : Number(e.target.value) }))}
+                placeholder="e.g. 16"
+              />
+            </FormField>
+
+            {/* SpO2 */}
+            <FormField label="SpO2 (%)" htmlFor="vl-spo2">
+              <Input
+                id="vl-spo2"
+                type="number"
+                min={0}
+                max={100}
+                value={form.spo2 ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, spo2: e.target.value === "" ? null : Number(e.target.value) }))}
+                placeholder="e.g. 98"
+              />
+            </FormField>
+
+            {/* Blood Glucose */}
+            <FormField label="Blood Glucose (mg/dL)" htmlFor="vl-glucose">
+              <Input
+                id="vl-glucose"
+                type="number"
+                value={form.blood_glucose ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, blood_glucose: e.target.value === "" ? null : Number(e.target.value) }))}
+                placeholder="e.g. 95"
+              />
             </FormField>
           </div>
         </RecordFormModal>
