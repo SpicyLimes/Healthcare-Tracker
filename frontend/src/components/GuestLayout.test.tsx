@@ -48,7 +48,7 @@ describe("GuestLayout", () => {
     expect(screen.getByText("Hello guest")).toBeInTheDocument();
   });
 
-  it("offers a Patient Summary Report button scoped to allowed sections", () => {
+  it("offers a Patient Summary button scoped to allowed sections", () => {
     render(
       <GuestProvider>
         <MemoryRouter>
