@@ -366,7 +366,7 @@ function AppointmentsSection({ tz, isAdmin, onRegisterOpenById }: AppointmentsSe
       const r = rows.find((row) => row.id === id);
       if (r) openEdit(r);
     });
-  }, [rows]);
+  }, [rows, onRegisterOpenById]);
 
   function appointmentTypeLabel(t: AppointmentType | null): string {
     return APPOINTMENT_TYPES.find((x) => x.value === t)?.label ?? "";

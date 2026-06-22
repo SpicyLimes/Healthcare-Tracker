@@ -74,6 +74,7 @@ export default function VisitLogsPage() {
   }, [heightFt, heightIn]);
 
   useEffect(() => {
+    if (!isAdmin) return;
     const openId = searchParams.get("open");
     if (!openId || rows.length === 0) return;
     const record = rows.find((r) => r.id === openId);
