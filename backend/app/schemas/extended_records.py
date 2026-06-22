@@ -261,6 +261,12 @@ class VisitLogCreate(BaseModel):
     bp_systolic: int | None = None
     bp_diastolic: int | None = None
     pulse_bpm: int | None = None
+    height_in: float | None = None
+    weight_lb: float | None = None
+    temperature_f: float | None = None
+    respiratory_rate: int | None = None
+    spo2: int | None = None
+    blood_glucose: int | None = None
 
 class VisitLogUpdate(BaseModel):
     visit_date: date | None = None
@@ -275,6 +281,12 @@ class VisitLogUpdate(BaseModel):
     bp_systolic: int | None = None
     bp_diastolic: int | None = None
     pulse_bpm: int | None = None
+    height_in: float | None = None
+    weight_lb: float | None = None
+    temperature_f: float | None = None
+    respiratory_rate: int | None = None
+    spo2: int | None = None
+    blood_glucose: int | None = None
 
 class VisitLogResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

@@ -119,3 +119,36 @@ def test_editing_only_visit_time_resyncs_linked_vitals_measured_at(client, db_se
     assert len(after) == 1  # no duplicate row
     assert after[0]["measured_at"].startswith("2026-05-19T19:30")  # re-stamped to 14:30 CDT
     assert after[0]["bp_systolic"] == 120  # BP untouched
+
+
+def test_create_visit_with_all_vitals_syncs_all_fields(client, db_session):
+    csrf = _admin(client, db_session)
+    h = {"X-CSRF-Token": csrf}
+    res = client.post("/api/visit-logs", headers=h, json=_visit(
+        bp_systolic=120, bp_diastolic=80, pulse_bpm=72,
+        height_in=64.0, weight_lb=150.0,
+        temperature_f=98.6, respiratory_rate=16,
+        spo2=98, blood_glucose=95,
+    ))
+    assert res.status_code == 201, res.text
+    vitals = client.get("/api/vitals").json()
+    assert len(vitals) == 1
+    v = vitals[0]
+    assert v["height_in"] == 64.0
+    assert v["weight_lb"] == 150.0
+    assert v["temperature_f"] == 98.6
+    assert v["respiratory_rate"] == 16
+    assert v["spo2"] == 98
+    assert v["blood_glucose"] == 95
+
+
+def test_update_visit_height_updates_linked_vitals(client, db_session):
+    csrf = _admin(client, db_session)
+    h = {"X-CSRF-Token": csrf}
+    vid = client.post("/api/visit-logs", headers=h, json=_visit(
+        bp_systolic=120, bp_diastolic=80, height_in=64.0,
+    )).json()["id"]
+    client.put(f"/api/visit-logs/{vid}", headers=h, json={"height_in": 65.0})
+    vitals = client.get("/api/vitals").json()
+    assert len(vitals) == 1
+    assert vitals[0]["height_in"] == 65.0

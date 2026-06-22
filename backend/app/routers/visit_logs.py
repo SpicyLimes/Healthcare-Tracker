@@ -22,7 +22,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/visit-logs", tags=["visit-logs"])
 service = CRUDService(VisitLog)
 
-_VITALS_FIELDS = ("bp_systolic", "bp_diastolic", "pulse_bpm")
+_VITALS_FIELDS = (
+    "bp_systolic", "bp_diastolic", "pulse_bpm",
+    "height_in", "weight_lb", "temperature_f",
+    "respiratory_rate", "spo2", "blood_glucose",
+)
 _VISIT_LOG_COLUMNS = (
     "visit_date", "visit_time", "doctor_id", "doctor_other",
     "reason", "summary", "follow_up", "follow_up_date", "notes",
@@ -79,24 +83,23 @@ def _resync_measured_at(db: Session, record: VisitLog, tz: str):
         db.flush()
 
 
-def _attach_bp(record: VisitLog, db: Session) -> VisitLog:
+def _attach_vitals(record: VisitLog, db: Session) -> VisitLog:
     linked = db.get(Vitals, record.linked_vitals_id) if record.linked_vitals_id else None
-    record.bp_systolic = linked.bp_systolic if linked else None
-    record.bp_diastolic = linked.bp_diastolic if linked else None
-    record.pulse_bpm = linked.pulse_bpm if linked else None
+    for f in _VITALS_FIELDS:
+        setattr(record, f, getattr(linked, f) if linked else None)
     return record
 
 
 @router.get("", response_model=list[VisitLogResponse], dependencies=[Depends(get_current_user)])
 def list_records(db: Session = Depends(get_db)):
     rows = list(db.scalars(select(VisitLog).order_by(VisitLog.created_at)))
-    return [_attach_bp(r, db) for r in rows]
+    return [_attach_vitals(r, db) for r in rows]
 
 
 @router.get("/{record_id}", response_model=VisitLogResponse, dependencies=[Depends(get_current_user)])
 def get_record(record_id: uuid.UUID, db: Session = Depends(get_db)):
     try:
-        return _attach_bp(service.get(db, record_id), db)
+        return _attach_vitals(service.get(db, record_id), db)
     except NotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
@@ -113,7 +116,7 @@ def create_record(
     current: User = Depends(require_admin),
 ):
     data = payload.model_dump()
-    vitals_data = {f: data.pop(f) for f in _VITALS_FIELDS}
+    vitals_data = {f: data.pop(f, None) for f in _VITALS_FIELDS}
     record = service.create(db, {k: data[k] for k in _VISIT_LOG_COLUMNS if k in data}, created_by=current.id)
     _sync_vitals(db, record, vitals_data, current.id, current.timezone)
     try:
@@ -128,7 +131,7 @@ def create_record(
         )
     except Exception:
         logger.exception("Audit log failed for create in visit-logs — ignoring")
-    return _attach_bp(record, db)
+    return _attach_vitals(record, db)
 
 
 @router.put(
@@ -168,7 +171,7 @@ def update_record(
         )
     except Exception:
         logger.exception("Audit log failed for update in visit-logs — ignoring")
-    return _attach_bp(record, db)
+    return _attach_vitals(record, db)
 
 
 @router.delete(
