@@ -70,6 +70,10 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c] ?? c));
+}
+
 function buildPrintHtml(opts: {
   profile: Profile | null;
   mainDoctor: Doctor | null;
@@ -81,7 +85,8 @@ function buildPrintHtml(opts: {
   pharmacies: Pharmacy[];
 }): string {
   const { profile, mainDoctor, latestVitals, activeMeds, allergies, contacts, insurances, pharmacies } = opts;
-  const name = profile?.full_name || "Patient";
+  const name = profile?.full_name || "";
+  const pageTitle = name ? `Patient Summary — ${name}` : "Patient Summary";
   const dob = profile?.date_of_birth
     ? new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(
         new Date(profile.date_of_birth + "T00:00:00Z")
@@ -94,38 +99,38 @@ function buildPrintHtml(opts: {
 
   const vitalsHtml = latestVitals
     ? `<ul>
-        <li><b>Date:</b> ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(latestVitals.measured_at))}</li>
-        ${latestVitals.bp_systolic != null && latestVitals.bp_diastolic != null ? `<li><b>BP:</b> ${latestVitals.bp_systolic}/${latestVitals.bp_diastolic}</li>` : ""}
-        ${latestVitals.pulse_bpm != null ? `<li><b>Pulse:</b> ${latestVitals.pulse_bpm} bpm</li>` : ""}
-        ${latestVitals.weight_lb != null ? `<li><b>Weight:</b> ${latestVitals.weight_lb} lbs</li>` : ""}
+        <li><b>Date:</b> ${escapeHtml(new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(latestVitals.measured_at)))}</li>
+        ${latestVitals.bp_systolic != null && latestVitals.bp_diastolic != null ? `<li><b>BP:</b> ${escapeHtml(String(latestVitals.bp_systolic))}/${escapeHtml(String(latestVitals.bp_diastolic))}</li>` : ""}
+        ${latestVitals.pulse_bpm != null ? `<li><b>Pulse:</b> ${escapeHtml(String(latestVitals.pulse_bpm))} bpm</li>` : ""}
+        ${latestVitals.weight_lb != null ? `<li><b>Weight:</b> ${escapeHtml(String(latestVitals.weight_lb))} lbs</li>` : ""}
       </ul>`
     : "<p>No vitals on file.</p>";
 
   const medsHtml = activeMeds.length > 0
-    ? `<ul>${activeMeds.map((m) => `<li>${m.name}</li>`).join("")}</ul>`
+    ? `<ul>${activeMeds.map((m) => `<li>${escapeHtml(m.name)}</li>`).join("")}</ul>`
     : "<p>None on file.</p>";
 
   const allergiesHtml = allergies.length > 0
-    ? allergies.map((a) => `<div class="item"><b>${a.medication || "—"}</b> · ${a.reaction || "—"} · Age of onset: ${a.age_of_onset || "—"}</div>`).join("")
+    ? allergies.map((a) => `<div class="item"><b>${escapeHtml(a.medication || "—")}</b> · ${escapeHtml(a.reaction || "—")} · Age of onset: ${escapeHtml(a.age_of_onset || "—")}</div>`).join("")
     : "<p>No allergies on file.</p>";
 
   const contactsHtml = contacts.length > 0
-    ? contacts.map((c) => `<div class="item"><b>${c.name || "—"}</b> · ${c.relationship || "—"}${c.phone ? ` · ${c.phone}` : ""}${c.email ? ` · ${c.email}` : ""}</div>`).join("")
+    ? contacts.map((c) => `<div class="item"><b>${escapeHtml(c.name || "—")}</b> · ${escapeHtml(c.relationship || "—")}${c.phone ? ` · ${escapeHtml(c.phone)}` : ""}${c.email ? ` · ${escapeHtml(c.email)}` : ""}</div>`).join("")
     : "<p>No emergency contacts on file.</p>";
 
   const insuranceHtml = insurances.length > 0
-    ? insurances.map((i) => `<div class="item"><b>${i.insurer_name}</b>${i.policy_number ? ` · Policy: ${i.policy_number}` : ""}${i.group_number ? ` · Group: ${i.group_number}` : ""}${i.contact_phone ? ` · ${i.contact_phone}` : ""}</div>`).join("")
+    ? insurances.map((i) => `<div class="item"><b>${escapeHtml(i.insurer_name)}</b>${i.policy_number ? ` · Policy: ${escapeHtml(i.policy_number)}` : ""}${i.group_number ? ` · Group: ${escapeHtml(i.group_number)}` : ""}${i.contact_phone ? ` · ${escapeHtml(i.contact_phone)}` : ""}</div>`).join("")
     : "<p>No insurance on file.</p>";
 
   const pharmaciesHtml = pharmacies.length > 0
-    ? pharmacies.map((p) => `<div class="item"><b>${p.name}</b>${p.address ? ` · ${p.address}` : ""}${p.phone ? ` · ${p.phone}` : ""}</div>`).join("")
+    ? pharmacies.map((p) => `<div class="item"><b>${escapeHtml(p.name)}</b>${p.address ? ` · ${escapeHtml(p.address)}` : ""}${p.phone ? ` · ${escapeHtml(p.phone)}` : ""}</div>`).join("")
     : "<p>No pharmacies on file.</p>";
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Patient Summary — ${name}</title>
+  <title>${escapeHtml(pageTitle)}</title>
   <style>
     body { font-family: Georgia, serif; max-width: 800px; margin: 40px auto; color: #111; font-size: 14px; line-height: 1.6; }
     h1 { font-size: 22px; margin-bottom: 4px; }
@@ -139,11 +144,11 @@ function buildPrintHtml(opts: {
   <script>window.onload = function() { window.print(); }</script>
 </head>
 <body>
-  <h1>${name}</h1>
+  <h1>${escapeHtml(name || "Patient")}</h1>
   <div class="meta">
-    <span><b>DOB:</b> ${dob}</span> &nbsp;·&nbsp;
-    <span><b>Blood Type:</b> ${bloodType}</span> &nbsp;·&nbsp;
-    <span><b>Main Doctor:</b> ${doctorLine}</span>
+    <span><b>DOB:</b> ${escapeHtml(dob)}</span> &nbsp;·&nbsp;
+    <span><b>Blood Type:</b> ${escapeHtml(bloodType)}</span> &nbsp;·&nbsp;
+    <span><b>Main Doctor:</b> ${escapeHtml(doctorLine)}</span>
   </div>
 
   <h2>Most Recent Vitals</h2>
