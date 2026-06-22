@@ -266,7 +266,8 @@ function AgendaList({ events }: AgendaListProps) {
   }
 
   const today = isoToday();
-  const groups = groupByMonth(events);
+  const sorted = [...events].sort((a, b) => b.date.localeCompare(a.date));
+  const groups = groupByMonth(sorted).reverse();
 
   const formatAgendaDate = (iso: string) =>
     new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(
@@ -695,7 +696,7 @@ export default function CalendarPage() {
               </CardContent>
             </Card>
             <Card className="mt-4">
-              <CardContent className="p-0">
+              <CardContent className="p-0 max-h-[420px] overflow-y-auto">
                 <AgendaList events={events} />
               </CardContent>
             </Card>
