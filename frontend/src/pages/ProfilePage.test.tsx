@@ -129,6 +129,28 @@ describe("Emergency contact cards", () => {
     });
   });
 
+  it("handles malformed JSON contact objects without crashing on save", async () => {
+    mockAuth("admin");
+    // Stored JSON has a contact missing the phone field
+    const malformed = JSON.stringify([{ name: "Alice", relationship: "Parent" }]);
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: malformed, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    const save = vi.spyOn(profileApi, "saveProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    render(<ProfilePage />);
+    await waitFor(() => expect(screen.getByDisplayValue("Alice")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    // No error shown — save succeeded
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("filters out empty contacts on save", async () => {
     mockAuth("admin");
     vi.spyOn(profileApi, "getProfile").mockResolvedValue({
@@ -232,5 +254,27 @@ describe("Height/Weight Vitals prefill", () => {
     render(<ProfilePage />);
     await waitFor(() => screen.getByLabelText("Height"));
     expect(screen.queryByText(/Latest from Vitals/i)).not.toBeInTheDocument();
+  });
+
+  it("converts fractional inches correctly at foot boundary", async () => {
+    mockAuth("admin");
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    vi.spyOn(vitalsApiModule.vitalsApi, "list").mockResolvedValue([
+      {
+        id: "v1", measured_at: "2026-06-18T10:00:00Z",
+        bp_systolic: null, bp_diastolic: null, pulse_bpm: null,
+        height_in: 71.5, weight_lb: null,
+        temperature_f: null, respiratory_rate: null, spo2: null, blood_glucose: null,
+        notes: null, visit_log_id: null, bmi: null,
+      },
+    ]);
+    render(<ProfilePage />);
+    await waitFor(() => {
+      expect((screen.getByLabelText("Height") as HTMLInputElement).value).toBe("6'0\"");
+    });
   });
 });

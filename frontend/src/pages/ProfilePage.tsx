@@ -26,7 +26,14 @@ function parseContacts(raw: string | null | undefined): EmergencyContact[] {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed as EmergencyContact[];
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => ({
+        name:         typeof item.name         === "string" ? item.name         : "",
+        relationship: typeof item.relationship === "string" ? item.relationship : "",
+        phone:        typeof item.phone        === "string" ? item.phone        : "",
+        email:        typeof item.email        === "string" ? item.email        : "",
+      }));
+    }
   } catch {
     // legacy free-text — discard
   }
@@ -42,8 +49,9 @@ function serializeContacts(contacts: EmergencyContact[]): string | null {
 }
 
 function inchesToDisplay(inches: number): string {
-  const ft = Math.floor(inches / 12);
-  const remaining = Math.round(inches % 12);
+  const totalInches = Math.round(inches);
+  const ft = Math.floor(totalInches / 12);
+  const remaining = totalInches % 12;
   return `${ft}'${remaining}"`;
 }
 
@@ -102,8 +110,11 @@ export default function ProfilePage() {
       .catch(() => setError("Failed to load profile"));
 
     vitalsApi.list().then((allVitals) => {
-      // find most recent entry with height_in
-      const withHeight = [...allVitals].reverse().find((v) => v.height_in != null);
+      const sorted = [...allVitals].sort(
+        (a, b) => new Date(b.measured_at).getTime() - new Date(a.measured_at).getTime()
+      );
+
+      const withHeight = sorted.find((v) => v.height_in != null);
       if (withHeight?.height_in != null) {
         const display = inchesToDisplay(withHeight.height_in);
         const dateStr = formatDate(withHeight.measured_at);
@@ -114,8 +125,7 @@ export default function ProfilePage() {
         }));
       }
 
-      // find most recent entry with weight_lb
-      const withWeight = [...allVitals].reverse().find((v) => v.weight_lb != null);
+      const withWeight = sorted.find((v) => v.weight_lb != null);
       if (withWeight?.weight_lb != null) {
         const display = lbsToDisplay(withWeight.weight_lb);
         const dateStr = formatDate(withWeight.measured_at);
