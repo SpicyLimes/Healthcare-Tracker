@@ -95,8 +95,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             />
           )}
 
-          {/* Accent color picker */}
-          <AccentPicker isDark={theme === "dark"} />
+          {/* Accent color picker — hidden on portrait mobile (< sm), visible sm+ */}
+          <div className="hidden sm:flex">
+            <AccentPicker isDark={theme === "dark"} />
+          </div>
 
           {/* Theme toggle */}
           <Button variant="ghost" size="icon-sm" className="h-9 w-9 lg:h-8 lg:w-8 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" onClick={toggleTheme}>
