@@ -176,4 +176,12 @@ describe("Dashboard sections", () => {
     expect(screen.getByText(/No insurance on file\./)).toBeInTheDocument();
     expect(screen.getByText(/No pharmacies on file\./)).toBeInTheDocument();
   });
+
+  it("renders Print Summary button", async () => {
+    mockAuth();
+    mockAllApis();
+    render(<MemoryRouter><HomePage /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByText("Jane Doe")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: /print summary/i })).toBeInTheDocument();
+  });
 });

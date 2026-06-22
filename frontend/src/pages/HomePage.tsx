@@ -12,7 +12,7 @@ import { vaccinationsApi, type Vaccination } from "../api/vaccinations";
 import { insurancesApi, type Insurance } from "../api/insurances";
 import { pharmaciesApi, type Pharmacy } from "../api/pharmacies";
 import { doctorsApi, type Doctor } from "../api/doctors";
-import { parseAllergies, parseContacts } from "@/lib/profile-parsers";
+import { parseAllergies, parseContacts, type Allergy, type EmergencyContact } from "@/lib/profile-parsers";
 import { useAuth } from "../auth/useAuth";
 import { formatDate } from "@/lib/format";
 import { formatInTimezone } from "@/lib/datetime";
@@ -68,6 +68,103 @@ function Row({ label, value }: { label: string; value: string }) {
       <span className="text-foreground">{value || "—"}</span>
     </div>
   );
+}
+
+function buildPrintHtml(opts: {
+  profile: Profile | null;
+  mainDoctor: Doctor | null;
+  latestVitals: Vitals | null;
+  activeMeds: Medication[];
+  allergies: Allergy[];
+  contacts: EmergencyContact[];
+  insurances: Insurance[];
+  pharmacies: Pharmacy[];
+}): string {
+  const { profile, mainDoctor, latestVitals, activeMeds, allergies, contacts, insurances, pharmacies } = opts;
+  const name = profile?.full_name || "Patient";
+  const dob = profile?.date_of_birth
+    ? new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(
+        new Date(profile.date_of_birth + "T00:00:00Z")
+      )
+    : "Not set";
+  const bloodType = profile?.blood_type || "Not set";
+  const doctorLine = mainDoctor
+    ? `${mainDoctor.name}${mainDoctor.specialty ? ` (${mainDoctor.specialty})` : ""}`
+    : "Not set";
+
+  const vitalsHtml = latestVitals
+    ? `<ul>
+        <li><b>Date:</b> ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(latestVitals.measured_at))}</li>
+        ${latestVitals.bp_systolic != null && latestVitals.bp_diastolic != null ? `<li><b>BP:</b> ${latestVitals.bp_systolic}/${latestVitals.bp_diastolic}</li>` : ""}
+        ${latestVitals.pulse_bpm != null ? `<li><b>Pulse:</b> ${latestVitals.pulse_bpm} bpm</li>` : ""}
+        ${latestVitals.weight_lb != null ? `<li><b>Weight:</b> ${latestVitals.weight_lb} lbs</li>` : ""}
+      </ul>`
+    : "<p>No vitals on file.</p>";
+
+  const medsHtml = activeMeds.length > 0
+    ? `<ul>${activeMeds.map((m) => `<li>${m.name}</li>`).join("")}</ul>`
+    : "<p>None on file.</p>";
+
+  const allergiesHtml = allergies.length > 0
+    ? allergies.map((a) => `<div class="item"><b>${a.medication || "—"}</b> · ${a.reaction || "—"} · Age of onset: ${a.age_of_onset || "—"}</div>`).join("")
+    : "<p>No allergies on file.</p>";
+
+  const contactsHtml = contacts.length > 0
+    ? contacts.map((c) => `<div class="item"><b>${c.name || "—"}</b> · ${c.relationship || "—"}${c.phone ? ` · ${c.phone}` : ""}${c.email ? ` · ${c.email}` : ""}</div>`).join("")
+    : "<p>No emergency contacts on file.</p>";
+
+  const insuranceHtml = insurances.length > 0
+    ? insurances.map((i) => `<div class="item"><b>${i.insurer_name}</b>${i.policy_number ? ` · Policy: ${i.policy_number}` : ""}${i.group_number ? ` · Group: ${i.group_number}` : ""}${i.contact_phone ? ` · ${i.contact_phone}` : ""}</div>`).join("")
+    : "<p>No insurance on file.</p>";
+
+  const pharmaciesHtml = pharmacies.length > 0
+    ? pharmacies.map((p) => `<div class="item"><b>${p.name}</b>${p.address ? ` · ${p.address}` : ""}${p.phone ? ` · ${p.phone}` : ""}</div>`).join("")
+    : "<p>No pharmacies on file.</p>";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Patient Summary — ${name}</title>
+  <style>
+    body { font-family: Georgia, serif; max-width: 800px; margin: 40px auto; color: #111; font-size: 14px; line-height: 1.6; }
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    h2 { font-size: 15px; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-top: 24px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .meta { color: #555; font-size: 13px; margin-bottom: 16px; }
+    ul { margin: 4px 0 0 20px; padding: 0; }
+    li { margin-bottom: 2px; }
+    .item { margin-bottom: 6px; }
+    p { margin: 4px 0; }
+  </style>
+  <script>window.onload = function() { window.print(); }</script>
+</head>
+<body>
+  <h1>${name}</h1>
+  <div class="meta">
+    <span><b>DOB:</b> ${dob}</span> &nbsp;·&nbsp;
+    <span><b>Blood Type:</b> ${bloodType}</span> &nbsp;·&nbsp;
+    <span><b>Main Doctor:</b> ${doctorLine}</span>
+  </div>
+
+  <h2>Most Recent Vitals</h2>
+  ${vitalsHtml}
+
+  <h2>Active Medications</h2>
+  ${medsHtml}
+
+  <h2>Allergies</h2>
+  ${allergiesHtml}
+
+  <h2>Emergency Contacts</h2>
+  ${contactsHtml}
+
+  <h2>Insurance</h2>
+  ${insuranceHtml}
+
+  <h2>Pharmacies</h2>
+  ${pharmaciesHtml}
+</body>
+</html>`;
 }
 
 export default function HomePage() {
@@ -156,6 +253,15 @@ export default function HomePage() {
   const allergies = parseAllergies(profile?.allergies);
   const contacts = parseContacts(profile?.emergency_contacts);
 
+  function openPrintSummary() {
+    const html = buildPrintHtml({ profile, mainDoctor, latestVitals, activeMeds, allergies, contacts, insurances, pharmacies });
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+    }
+  }
+
   return (
     <AppShell>
       <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
@@ -187,6 +293,16 @@ export default function HomePage() {
             </div>
           </div>
         )}
+
+        {/* Print Summary */}
+        <div className="mb-6 flex justify-end">
+          <button
+            onClick={openPrintSummary}
+            className="rounded-lg bg-orange-500/10 px-3 py-1.5 text-sm font-medium text-orange-600 transition-colors hover:bg-orange-500/15 dark:text-orange-400"
+          >
+            Print Summary
+          </button>
+        </div>
 
         {/* Upcoming Events */}
         {upcomingEvents.length > 0 && (
