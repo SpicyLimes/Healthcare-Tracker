@@ -19,6 +19,7 @@ class ProfileWrite(BaseModel):
     weight: str | None = None
     phone: str | None = None
     notes: str | None = None
+    main_doctor_id: uuid.UUID | None = None
 
 
 class ProfileResponse(BaseModel):
@@ -35,6 +36,7 @@ class ProfileResponse(BaseModel):
     weight: str | None
     phone: str | None
     notes: str | None
+    main_doctor_id: uuid.UUID | None
     created_at: datetime
     updated_at: datetime
 
