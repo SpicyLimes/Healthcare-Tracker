@@ -34,3 +34,21 @@ export function formatDate(iso: string | null | undefined): string {
     return iso;
   }
 }
+
+export function feetInchesToIn(ft: number | null, inches: number | null): number | null {
+  if (ft == null && inches == null) return null;
+  return (ft ?? 0) * 12 + (inches ?? 0);
+}
+
+export function inToFeetInches(totalIn: number | null): { ft: number | null; inches: number | null } {
+  if (totalIn == null) return { ft: null, inches: null };
+  const ft = Math.floor(totalIn / 12);
+  const inches = Math.round(totalIn % 12);
+  return { ft, inches };
+}
+
+export function formatHeight(totalIn: number | null): string {
+  if (totalIn == null) return "—";
+  const { ft, inches } = inToFeetInches(totalIn);
+  return `${ft}'${inches}"`;
+}
