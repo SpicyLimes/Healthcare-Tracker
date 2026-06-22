@@ -13,6 +13,7 @@ export interface Profile {
   weight: string | null;
   phone: string | null;
   notes: string | null;
+  main_doctor_id: string | null;
 }
 
 export interface ProfileInput {
@@ -26,6 +27,7 @@ export interface ProfileInput {
   weight?: string | null;
   phone?: string | null;
   notes?: string | null;
+  main_doctor_id?: string | null;
 }
 
 /** Returns the profile, or null if it has not been set yet (404). */

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { getProfile, saveProfile, type ProfileInput } from "../api/profile";
 import { vitalsApi } from "../api/vitals";
+import { doctorsApi, type Doctor } from "../api/doctors";
 import { formatDate } from "@/lib/format";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -54,6 +55,7 @@ const EMPTY: ProfileInput = {
   weight: null,
   phone: null,
   notes: null,
+  main_doctor_id: null,
 };
 
 function fieldValue(v: string | null | undefined): string {
@@ -67,6 +69,8 @@ export default function ProfilePage() {
   const [profileId, setProfileId] = useState<string | null>(null);
   const [contacts, setContacts] = useState<EmergencyContact[]>([]);
   const [allergyList, setAllergyList] = useState<Allergy[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [mainDoctorId, setMainDoctorId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [vitalsHeightHint, setVitalsHeightHint] = useState<string | null>(null);
@@ -88,12 +92,16 @@ export default function ProfilePage() {
             weight: p.weight ?? prev.weight,
             phone: p.phone ?? null,
             notes: p.notes ?? null,
+            main_doctor_id: p.main_doctor_id ?? null,
           }));
           setContacts(parseContacts(p.emergency_contacts));
           setAllergyList(parseAllergies(p.allergies ?? null));
+          setMainDoctorId(p.main_doctor_id ?? null);
         }
       })
       .catch(() => setError("Failed to load profile"));
+
+    doctorsApi.list().then(setDoctors).catch(() => {});
 
     vitalsApi.list().then((allVitals) => {
       const sorted = [...allVitals].sort(
@@ -170,6 +178,7 @@ export default function ProfilePage() {
       // These override the raw JSON strings that form state carries from load:
       payload.emergency_contacts = serializeContacts(contacts);
       payload.allergies = serializeAllergies(allergyList);
+      payload.main_doctor_id = mainDoctorId;
       const result = await saveProfile(payload);
       setProfileId(result.id);
       setSaved(true);
@@ -236,6 +245,32 @@ export default function ProfilePage() {
                     <option value="O+">O+</option>
                     <option value="O-">O-</option>
                   </Select>
+                </FormField>
+
+                {/* Main Doctor */}
+                <FormField label="Main Doctor" htmlFor="main_doctor">
+                  {isAdmin ? (
+                    <Select
+                      id="main_doctor"
+                      value={mainDoctorId ?? ""}
+                      onChange={(e) => setMainDoctorId(e.target.value === "" ? null : e.target.value)}
+                    >
+                      <option value="">— Not set —</option>
+                      {doctors.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}{d.specialty ? ` (${d.specialty})` : ""}
+                        </option>
+                      ))}
+                    </Select>
+                  ) : (
+                    <p className="text-sm text-foreground">
+                      {(() => {
+                        const d = doctors.find((doc) => doc.id === mainDoctorId);
+                        if (!d) return "Not set";
+                        return d.specialty ? `${d.name} (${d.specialty})` : d.name;
+                      })()}
+                    </p>
+                  )}
                 </FormField>
 
                 {/* Height | Weight — Vitals prefill wired in Task 2 */}

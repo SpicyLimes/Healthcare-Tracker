@@ -4,6 +4,7 @@ import ProfilePage from "./ProfilePage";
 import * as profileApi from "../api/profile";
 import * as useAuthModule from "../auth/useAuth";
 import * as vitalsApiModule from "../api/vitals";
+import * as doctorsApiModule from "../api/doctors";
 
 vi.mock("../api/documents", () => ({
   listDocumentsForRecord: vi.fn().mockResolvedValue([]),
@@ -14,6 +15,10 @@ vi.mock("../api/documents", () => ({
 
 vi.mock("../api/vitals", () => ({
   vitalsApi: { list: vi.fn().mockResolvedValue([]) },
+}));
+
+vi.mock("../api/doctors", () => ({
+  doctorsApi: { list: vi.fn().mockResolvedValue([]) },
 }));
 
 afterEach(() => vi.restoreAllMocks());
@@ -378,5 +383,64 @@ describe("Allergy cards", () => {
     render(<ProfilePage />);
     await waitFor(() => screen.getByLabelText("Full name"));
     expect(screen.getByText("No allergies on file.")).toBeInTheDocument();
+  });
+});
+
+describe("Main Doctor field", () => {
+  it("admin sees Main Doctor dropdown with doctor options", async () => {
+    mockAuth("admin");
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null, main_doctor_id: null,
+    });
+    vi.spyOn(doctorsApiModule.doctorsApi, "list").mockResolvedValue([
+      { id: "d1", name: "Dr. Smith", specialty: "Cardiology", practice: null,
+        phone: null, fax: null, address: null, patient_portal_url: null, notes: null },
+    ]);
+    render(<ProfilePage />);
+    await waitFor(() => expect(screen.getByLabelText("Main Doctor")).toBeInTheDocument());
+    expect(screen.getByRole("option", { name: /Dr\. Smith/ })).toBeInTheDocument();
+  });
+
+  it("viewer sees Main Doctor as read-only text", async () => {
+    mockAuth("viewer");
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null, main_doctor_id: "d1",
+    });
+    vi.spyOn(doctorsApiModule.doctorsApi, "list").mockResolvedValue([
+      { id: "d1", name: "Dr. Smith", specialty: "Cardiology", practice: null,
+        phone: null, fax: null, address: null, patient_portal_url: null, notes: null },
+    ]);
+    render(<ProfilePage />);
+    await waitFor(() => expect(screen.getByText(/Dr\. Smith/)).toBeInTheDocument());
+    expect(screen.queryByLabelText("Main Doctor")).not.toBeInTheDocument();
+  });
+
+  it("saving profile includes main_doctor_id in payload", async () => {
+    mockAuth("admin");
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null, main_doctor_id: null,
+    });
+    vi.spyOn(doctorsApiModule.doctorsApi, "list").mockResolvedValue([
+      { id: "d1", name: "Dr. Smith", specialty: "Cardiology", practice: null,
+        phone: null, fax: null, address: null, patient_portal_url: null, notes: null },
+    ]);
+    const save = vi.spyOn(profileApi, "saveProfile").mockResolvedValue({
+      id: "1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null, main_doctor_id: "d1",
+    });
+    render(<ProfilePage />);
+    const select = await screen.findByLabelText("Main Doctor");
+    fireEvent.change(select, { target: { value: "d1" } });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    await waitFor(() => {
+      expect(save.mock.calls[0][0].main_doctor_id).toBe("d1");
+    });
   });
 });
