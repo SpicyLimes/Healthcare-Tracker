@@ -107,6 +107,10 @@ export default function VitalsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    setForm((s) => ({ ...s, height_in: feetInchesToIn(heightFt, heightIn) }));
+  }, [heightFt, heightIn]);
+
   function openAdd() {
     setForm({ ...EMPTY, measured_at: nowLocal(tz) });
     setHeightFt(null);
@@ -318,9 +322,7 @@ export default function VitalsPage() {
                     placeholder="ft"
                     value={heightFt ?? ""}
                     onChange={(e) => {
-                      const ft = e.target.value === "" ? null : Math.max(0, Math.floor(Number(e.target.value)));
-                      setHeightFt(ft);
-                      setForm((s) => ({ ...s, height_in: feetInchesToIn(ft, heightIn) }));
+                      setHeightFt(e.target.value === "" ? null : Math.max(0, Math.floor(Number(e.target.value))));
                     }}
                   />
                   <span className="text-sm text-muted-foreground">ft</span>
@@ -335,9 +337,7 @@ export default function VitalsPage() {
                     placeholder="in"
                     value={heightIn ?? ""}
                     onChange={(e) => {
-                      const inches = e.target.value === "" ? null : Math.min(11, Math.max(0, Math.floor(Number(e.target.value))));
-                      setHeightIn(inches);
-                      setForm((s) => ({ ...s, height_in: feetInchesToIn(heightFt, inches) }));
+                      setHeightIn(e.target.value === "" ? null : Math.min(11, Math.max(0, Math.floor(Number(e.target.value)))));
                     }}
                   />
                   <span className="text-sm text-muted-foreground">in</span>

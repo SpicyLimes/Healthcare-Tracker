@@ -67,6 +67,10 @@ export default function VisitLogsPage() {
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    setForm((s) => ({ ...s, height_in: feetInchesToIn(heightFt, heightIn) }));
+  }, [heightFt, heightIn]);
+
   function openAdd() {
     setForm(EMPTY);
     setHeightFt(null);
@@ -313,9 +317,7 @@ export default function VisitLogsPage() {
                       placeholder="ft"
                       value={heightFt ?? ""}
                       onChange={(e) => {
-                        const ft = e.target.value === "" ? null : Math.max(0, Math.floor(Number(e.target.value)));
-                        setHeightFt(ft);
-                        setForm((s) => ({ ...s, height_in: feetInchesToIn(ft, heightIn) }));
+                        setHeightFt(e.target.value === "" ? null : Math.max(0, Math.floor(Number(e.target.value))));
                       }}
                     />
                     <span className="text-sm text-muted-foreground">ft</span>
@@ -330,9 +332,7 @@ export default function VisitLogsPage() {
                       placeholder="in"
                       value={heightIn ?? ""}
                       onChange={(e) => {
-                        const inches = e.target.value === "" ? null : Math.min(11, Math.max(0, Math.floor(Number(e.target.value))));
-                        setHeightIn(inches);
-                        setForm((s) => ({ ...s, height_in: feetInchesToIn(heightFt, inches) }));
+                        setHeightIn(e.target.value === "" ? null : Math.min(11, Math.max(0, Math.floor(Number(e.target.value)))));
                       }}
                     />
                     <span className="text-sm text-muted-foreground">in</span>

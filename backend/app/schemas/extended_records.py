@@ -303,6 +303,12 @@ class VisitLogResponse(BaseModel):
     bp_systolic: int | None
     bp_diastolic: int | None
     pulse_bpm: int | None
+    height_in: float | None
+    weight_lb: float | None
+    temperature_f: float | None
+    respiratory_rate: int | None
+    spo2: int | None
+    blood_glucose: int | None
     linked_vitals_id: uuid.UUID | None
     created_at: datetime
     updated_at: datetime
