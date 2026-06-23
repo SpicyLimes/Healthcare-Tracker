@@ -195,20 +195,20 @@ def list_guest_records(
         return result
 
     model, schema = section_map[section]
-    rows = list(db.scalars(select(model)).all())
     if section == "visit_logs":
-        from app.models.extended_records import Vitals as _Vitals
-        for row in rows:
-            linked = db.get(_Vitals, row.linked_vitals_id) if row.linked_vitals_id else None
-            row.bp_systolic = linked.bp_systolic if linked else None
-            row.bp_diastolic = linked.bp_diastolic if linked else None
-            row.pulse_bpm = linked.pulse_bpm if linked else None
-            row.height_in = linked.height_in if linked else None
-            row.weight_lb = linked.weight_lb if linked else None
-            row.temperature_f = linked.temperature_f if linked else None
-            row.respiratory_rate = linked.respiratory_rate if linked else None
-            row.spo2 = linked.spo2 if linked else None
-            row.blood_glucose = linked.blood_glucose if linked else None
+        from app.models.extended_records import Appointment, VisitLog as _VisitLog
+        from app.routers.visit_logs import _attach_vitals
+        auto_vl_ids = db.scalars(
+            select(Appointment.visit_log_id).where(Appointment.visit_log_id.is_not(None))
+        ).all()
+        auto_vl_id_set = set(auto_vl_ids)
+        rows = [
+            _attach_vitals(r, db)
+            for r in db.scalars(select(_VisitLog)).all()
+            if r.id not in auto_vl_id_set
+        ]
+    else:
+        rows = list(db.scalars(select(model)).all())
     log_event(
         db,
         action=AuditAction.share_link_access,
@@ -246,17 +246,8 @@ def get_guest_record(
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     if section == "visit_logs":
-        from app.models.extended_records import Vitals as _Vitals
-        linked = db.get(_Vitals, row.linked_vitals_id) if row.linked_vitals_id else None
-        row.bp_systolic = linked.bp_systolic if linked else None
-        row.bp_diastolic = linked.bp_diastolic if linked else None
-        row.pulse_bpm = linked.pulse_bpm if linked else None
-        row.height_in = linked.height_in if linked else None
-        row.weight_lb = linked.weight_lb if linked else None
-        row.temperature_f = linked.temperature_f if linked else None
-        row.respiratory_rate = linked.respiratory_rate if linked else None
-        row.spo2 = linked.spo2 if linked else None
-        row.blood_glucose = linked.blood_glucose if linked else None
+        from app.routers.visit_logs import _attach_vitals
+        _attach_vitals(row, db)
     log_event(
         db,
         action=AuditAction.share_link_access,

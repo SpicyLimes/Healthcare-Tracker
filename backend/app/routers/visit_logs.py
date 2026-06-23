@@ -71,6 +71,10 @@ def _sync_vitals(db: Session, record: VisitLog, vitals_data: dict, created_by: u
         for f in _VITALS_FIELDS:
             setattr(linked, f, vitals_data.get(f))
         linked.measured_at = _measured_at_from_visit(record, tz)
+        # Keep both sides of the circular FK in sync: Vitals.visit_log_id must
+        # point back to this VisitLog, otherwise the two pointers have drifted.
+        if linked.visit_log_id != record.id:
+            linked.visit_log_id = record.id
         db.flush()
 
 
