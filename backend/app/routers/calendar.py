@@ -78,10 +78,12 @@ def get_calendar_events(
             "time": time_str,
         })
 
-    # Visit Logs
+    # Visit Logs — exclude any that were auto-created from a completed appointment
+    auto_vl_ids = select(Appointment.visit_log_id).where(Appointment.visit_log_id.is_not(None)).scalar_subquery()
     visits = db.execute(
         select(VisitLog).where(
             VisitLog.visit_date.is_not(None),
+            ~VisitLog.id.in_(auto_vl_ids),
         )
     ).scalars().all()
     for v in visits:

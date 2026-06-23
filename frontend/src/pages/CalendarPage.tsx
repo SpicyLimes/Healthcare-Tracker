@@ -622,7 +622,10 @@ export default function CalendarPage() {
         title="Calendar"
         description="A unified view of all time-based health records."
         action={
-          <div className="hidden md:flex">
+          <div className="hidden md:flex items-center gap-2">
+            {isAdmin && (
+              <Button onClick={() => openApptAdd.current?.()}>+ Add</Button>
+            )}
             <div className="flex rounded-lg border border-border overflow-hidden">
               <button
                 onClick={() => setView("month")}
@@ -655,19 +658,12 @@ export default function CalendarPage() {
 
         {/* Appointments section */}
         {!loading && (
-          <div>
-            {isAdmin && (
-              <div className="mb-3 flex justify-end">
-                <Button onClick={() => openApptAdd.current?.()}>+ Add</Button>
-              </div>
-            )}
-            <AppointmentsSection
-              tz={tz}
-              isAdmin={isAdmin}
-              onRegisterOpenById={(fn) => { openApptById.current = fn; }}
-              onRegisterOpenAdd={(fn) => { openApptAdd.current = fn; }}
-            />
-          </div>
+          <AppointmentsSection
+            tz={tz}
+            isAdmin={isAdmin}
+            onRegisterOpenById={(fn) => { openApptById.current = fn; }}
+            onRegisterOpenAdd={(fn) => { openApptAdd.current = fn; }}
+          />
         )}
 
         {/* Calendar section */}

@@ -203,6 +203,12 @@ def list_guest_records(
             row.bp_systolic = linked.bp_systolic if linked else None
             row.bp_diastolic = linked.bp_diastolic if linked else None
             row.pulse_bpm = linked.pulse_bpm if linked else None
+            row.height_in = linked.height_in if linked else None
+            row.weight_lb = linked.weight_lb if linked else None
+            row.temperature_f = linked.temperature_f if linked else None
+            row.respiratory_rate = linked.respiratory_rate if linked else None
+            row.spo2 = linked.spo2 if linked else None
+            row.blood_glucose = linked.blood_glucose if linked else None
     log_event(
         db,
         action=AuditAction.share_link_access,
@@ -245,6 +251,12 @@ def get_guest_record(
         row.bp_systolic = linked.bp_systolic if linked else None
         row.bp_diastolic = linked.bp_diastolic if linked else None
         row.pulse_bpm = linked.pulse_bpm if linked else None
+        row.height_in = linked.height_in if linked else None
+        row.weight_lb = linked.weight_lb if linked else None
+        row.temperature_f = linked.temperature_f if linked else None
+        row.respiratory_rate = linked.respiratory_rate if linked else None
+        row.spo2 = linked.spo2 if linked else None
+        row.blood_glucose = linked.blood_glucose if linked else None
     log_event(
         db,
         action=AuditAction.share_link_access,
