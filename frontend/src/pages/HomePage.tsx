@@ -277,6 +277,16 @@ export default function HomePage() {
           </p>
         </div>
 
+        {/* Print Summary */}
+        <div className="mb-6 flex justify-end">
+          <button
+            onClick={openPrintSummary}
+            className="rounded-lg bg-orange-500/10 px-3 py-1.5 text-sm font-medium text-orange-600 transition-colors hover:bg-orange-500/15 dark:text-orange-400"
+          >
+            Print Summary
+          </button>
+        </div>
+
         {/* Viewer notice */}
         {user?.role !== "admin" && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-400 bg-amber-50 px-4 py-3 dark:bg-amber-950/30">
@@ -295,16 +305,6 @@ export default function HomePage() {
             </div>
           </div>
         )}
-
-        {/* Print Summary */}
-        <div className="mb-6 flex justify-end">
-          <button
-            onClick={openPrintSummary}
-            className="rounded-lg bg-orange-500/10 px-3 py-1.5 text-sm font-medium text-orange-600 transition-colors hover:bg-orange-500/15 dark:text-orange-400"
-          >
-            Print Summary
-          </button>
-        </div>
 
         {/* Upcoming Events */}
         {upcomingEvents.length > 0 && (

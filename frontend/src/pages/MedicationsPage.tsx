@@ -129,7 +129,7 @@ export default function MedicationsPage() {
               loading={loading}
               isAdmin={isAdmin}
               getRowId={(r) => r.id}
-              defaultSortKey="name"
+              defaultSortKey="is_active"
               primaryColumns={[
                 { header: "Name", sortKey: "name", render: (r) => r.name, className: "px-4 py-3 font-medium text-foreground" },
                 { header: "Dose", sortKey: "dose", render: (r) => r.dose ?? "" },
