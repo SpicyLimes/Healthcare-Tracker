@@ -1,7 +1,6 @@
 # backend/app/schemas/audit_log.py
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -15,6 +14,6 @@ class AuditLogEntry(BaseModel):
     action: AuditAction
     actor_type: ActorType
     actor_label: str          # computed: user email or share link label
-    section: Optional[str]
-    record_id: Optional[str]
-    detail: Optional[str]
+    section: str | None
+    record_id: str | None
+    detail: str | None

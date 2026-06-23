@@ -16,7 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FormField, Input, Select, Textarea } from "@/components/ui/form-field";
-import { localToUtcIso, formatInTimezone } from "@/lib/datetime";
+import { localToUtcIso, formatInTimezone, toLocalInputValue } from "@/lib/datetime";
 import { RecordTable } from "@/components/RecordTable";
 import { RecordFormModal } from "@/components/RecordFormModal";
 
@@ -50,25 +50,6 @@ const EMPTY: AppointmentInput = {
   status: "upcoming",
   notes: null,
 };
-
-function toLocalInputValue(isoUtc: string | null | undefined, timezone: string): string {
-  if (!isoUtc) return "";
-  try {
-    const formatter = new Intl.DateTimeFormat("sv-SE", {
-      timeZone: timezone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    });
-    return formatter.format(new Date(isoUtc)).replace(" ", "T").slice(0, 16);
-  } catch {
-    return isoUtc.slice(0, 16);
-  }
-}
 
 export default function AppointmentsPage() {
   const { user } = useAuth();

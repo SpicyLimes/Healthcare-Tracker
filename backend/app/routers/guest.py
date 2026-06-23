@@ -197,16 +197,12 @@ def list_guest_records(
     model, schema = section_map[section]
     if section == "visit_logs":
         from app.models.extended_records import Appointment, VisitLog as _VisitLog
-        from app.routers.visit_logs import _attach_vitals
-        auto_vl_ids = db.scalars(
-            select(Appointment.visit_log_id).where(Appointment.visit_log_id.is_not(None))
-        ).all()
-        auto_vl_id_set = set(auto_vl_ids)
-        rows = [
-            _attach_vitals(r, db)
-            for r in db.scalars(select(_VisitLog)).all()
-            if r.id not in auto_vl_id_set
-        ]
+        from app.routers.visit_logs import _attach_vitals_batch
+        auto_vl_ids = select(Appointment.visit_log_id).where(Appointment.visit_log_id.is_not(None)).scalar_subquery()
+        vl_rows = list(db.scalars(
+            select(_VisitLog).where(~_VisitLog.id.in_(auto_vl_ids))
+        ).all())
+        rows = _attach_vitals_batch(vl_rows, db)
     else:
         rows = list(db.scalars(select(model)).all())
     log_event(

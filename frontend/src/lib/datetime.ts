@@ -1,4 +1,27 @@
 /**
+ * Convert a UTC ISO string to a datetime-local input value (YYYY-MM-DDTHH:mm),
+ * rendering the time in the given IANA timezone so the input shows local time.
+ */
+export function toLocalInputValue(isoUtc: string | null | undefined, timezone: string): string {
+  if (!isoUtc) return "";
+  try {
+    const formatter = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+    return formatter.format(new Date(isoUtc)).replace(" ", "T").slice(0, 16);
+  } catch {
+    return isoUtc.slice(0, 16);
+  }
+}
+
+/**
  * Convert a datetime-local input value (no timezone) to a UTC ISO string,
  * interpreting the input as being in the given IANA timezone.
  *

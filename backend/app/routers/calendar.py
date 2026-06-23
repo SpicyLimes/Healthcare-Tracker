@@ -1,6 +1,5 @@
 # backend/app/routers/calendar.py
 from datetime import date, datetime
-from typing import List
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
@@ -47,7 +46,7 @@ def _to_iso(d) -> str:
     return str(d)
 
 
-@router.get("/api/calendar/events", response_model=List[CalendarEventResponse])
+@router.get("/api/calendar/events", response_model=list[CalendarEventResponse])
 def get_calendar_events(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

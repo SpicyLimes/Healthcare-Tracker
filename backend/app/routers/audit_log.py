@@ -1,6 +1,5 @@
 # backend/app/routers/audit_log.py
 from datetime import date, datetime, timezone
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select as sa_select
@@ -23,11 +22,11 @@ MAX_PAGE_SIZE = 500
 def list_audit_log(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
-    action: Optional[AuditAction] = None,
-    actor_type: Optional[ActorType] = None,
-    section: Optional[str] = None,
-    date_from: Optional[date] = None,
-    date_to: Optional[date] = None,
+    action: AuditAction | None = None,
+    actor_type: ActorType | None = None,
+    section: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
     db: Session = Depends(get_db),
 ):
     q = db.query(AuditLog)

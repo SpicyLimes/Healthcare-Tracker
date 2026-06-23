@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
 import { RecordTable } from "@/components/RecordTable";
 import { RecordFormModal } from "@/components/RecordFormModal";
-import { localToUtcIso, formatInTimezone } from "@/lib/datetime";
+import { localToUtcIso, formatInTimezone, toLocalInputValue } from "@/lib/datetime";
 import { feetInchesToIn, inToFeetInches, formatHeight } from "@/lib/format";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -22,25 +22,6 @@ function computeBmi(h: number | null, w: number | null): number | null {
   return null;
 }
 
-/** UTC ISO datetime → datetime-local input value (YYYY-MM-DDTHH:MM) in the user's timezone */
-function toLocalInputValue(isoUtc: string | null | undefined, timezone: string): string {
-  if (!isoUtc) return "";
-  try {
-    const formatter = new Intl.DateTimeFormat("sv-SE", {
-      timeZone: timezone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    });
-    return formatter.format(new Date(isoUtc)).replace(" ", "T").slice(0, 16);
-  } catch {
-    return isoUtc.slice(0, 16);
-  }
-}
 
 /** Current time as a datetime-local input value in the user's timezone */
 function nowLocal(timezone: string): string {

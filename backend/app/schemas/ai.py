@@ -6,11 +6,11 @@ from pydantic import BaseModel, Field
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant"]
     # Assistant turns that only carried tool calls have null content.
-    content: str | None = None
+    content: str | None = Field(default=None, max_length=32_000)
 
 
 class ChatRequest(BaseModel):
-    messages: list[ChatMessage] = Field(min_length=1)
+    messages: list[ChatMessage] = Field(min_length=1, max_length=50)
 
 
 class Proposal(BaseModel):

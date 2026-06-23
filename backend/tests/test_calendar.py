@@ -236,3 +236,30 @@ def test_calendar_sorted_by_date(client, db_session):
     assert r.status_code == 200
     events = r.json()
     assert events[0]["date"] < events[1]["date"]
+
+
+def test_calendar_completed_appointment_visit_log_appears_once(client, db_session):
+    """When an appointment is completed its auto-created VisitLog must appear exactly once
+    (as an appointment event, not also as a separate visit_log event)."""
+    u = _make_admin(db_session)
+    _login(client)
+    csrf = client.cookies.get("csrf_token")
+    h = {"X-CSRF-Token": csrf}
+
+    appt = client.post(
+        "/api/appointments",
+        headers=h,
+        json={"appointment_datetime": "2026-08-10T09:00:00", "status": "upcoming", "reason": "Dedup test"},
+    ).json()
+    client.put(f"/api/appointments/{appt['id']}", headers=h, json={"status": "completed"})
+
+    r = client.get("/api/calendar/events")
+    assert r.status_code == 200
+    events = r.json()
+
+    appt_events = [e for e in events if e["type"] == "appointment"]
+    vl_events = [e for e in events if e["type"] == "visit_log"]
+
+    assert len(appt_events) == 1, "appointment must appear once"
+    # The auto-created visit_log must NOT appear as a separate calendar entry
+    assert len(vl_events) == 0, "auto-created visit_log must be excluded from calendar visit_log events"

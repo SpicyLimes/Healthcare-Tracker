@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.ailment import AilmentStatus
 from app.models.medication import MedicationKind
@@ -9,16 +9,16 @@ from app.models.medication import MedicationKind
 
 # ---- Profile (singleton) ----
 class ProfileWrite(BaseModel):
-    full_name: str
+    full_name: str = Field(max_length=512)
     date_of_birth: date | None = None
-    blood_type: str | None = None
-    allergies: str | None = None
-    emergency_contacts: str | None = None
-    primary_language: str | None = None
-    height: str | None = None
-    weight: str | None = None
-    phone: str | None = None
-    notes: str | None = None
+    blood_type: str | None = Field(default=None, max_length=16)
+    allergies: str | None = Field(default=None, max_length=10_000)
+    emergency_contacts: str | None = Field(default=None, max_length=10_000)
+    primary_language: str | None = Field(default=None, max_length=64)
+    height: str | None = Field(default=None, max_length=32)
+    weight: str | None = Field(default=None, max_length=32)
+    phone: str | None = Field(default=None, max_length=32)
+    notes: str | None = Field(default=None, max_length=50_000)
     main_doctor_id: uuid.UUID | None = None
 
 
@@ -43,31 +43,31 @@ class ProfileResponse(BaseModel):
 
 # ---- Medications ----
 class MedicationCreate(BaseModel):
-    name: str
+    name: str = Field(max_length=256)
     kind: MedicationKind = MedicationKind.medication
-    dose: str | None = None
-    frequency: str | None = None
-    route: str | None = None
-    prescribing_doctor: str | None = None
+    dose: str | None = Field(default=None, max_length=128)
+    frequency: str | None = Field(default=None, max_length=128)
+    route: str | None = Field(default=None, max_length=128)
+    prescribing_doctor: str | None = Field(default=None, max_length=256)
     prescribing_doctor_id: uuid.UUID | None = None
     start_date: date | None = None
     end_date: date | None = None
     is_active: bool = True
-    notes: str | None = None
+    notes: str | None = Field(default=None, max_length=50_000)
 
 
 class MedicationUpdate(BaseModel):
-    name: str | None = None
+    name: str | None = Field(default=None, max_length=256)
     kind: MedicationKind | None = None
-    dose: str | None = None
-    frequency: str | None = None
-    route: str | None = None
-    prescribing_doctor: str | None = None
+    dose: str | None = Field(default=None, max_length=128)
+    frequency: str | None = Field(default=None, max_length=128)
+    route: str | None = Field(default=None, max_length=128)
+    prescribing_doctor: str | None = Field(default=None, max_length=256)
     prescribing_doctor_id: uuid.UUID | None = None
     start_date: date | None = None
     end_date: date | None = None
     is_active: bool | None = None
-    notes: str | None = None
+    notes: str | None = Field(default=None, max_length=50_000)
 
 
 class MedicationResponse(BaseModel):
@@ -91,25 +91,25 @@ class MedicationResponse(BaseModel):
 
 # ---- Doctors ----
 class DoctorCreate(BaseModel):
-    name: str
-    specialty: str | None = None
-    practice: str | None = None
-    phone: str | None = None
-    fax: str | None = None
-    address: str | None = None
-    patient_portal_url: str | None = None
-    notes: str | None = None
+    name: str = Field(max_length=256)
+    specialty: str | None = Field(default=None, max_length=256)
+    practice: str | None = Field(default=None, max_length=256)
+    phone: str | None = Field(default=None, max_length=32)
+    fax: str | None = Field(default=None, max_length=32)
+    address: str | None = Field(default=None, max_length=1_000)
+    patient_portal_url: str | None = Field(default=None, max_length=2_048)
+    notes: str | None = Field(default=None, max_length=50_000)
 
 
 class DoctorUpdate(BaseModel):
-    name: str | None = None
-    specialty: str | None = None
-    practice: str | None = None
-    phone: str | None = None
-    fax: str | None = None
-    address: str | None = None
-    patient_portal_url: str | None = None
-    notes: str | None = None
+    name: str | None = Field(default=None, max_length=256)
+    specialty: str | None = Field(default=None, max_length=256)
+    practice: str | None = Field(default=None, max_length=256)
+    phone: str | None = Field(default=None, max_length=32)
+    fax: str | None = Field(default=None, max_length=32)
+    address: str | None = Field(default=None, max_length=1_000)
+    patient_portal_url: str | None = Field(default=None, max_length=2_048)
+    notes: str | None = Field(default=None, max_length=50_000)
 
 
 class DoctorResponse(BaseModel):
@@ -130,21 +130,21 @@ class DoctorResponse(BaseModel):
 
 # ---- Ailments ----
 class AilmentCreate(BaseModel):
-    condition: str
+    condition: str = Field(max_length=512)
     onset_date: date | None = None
     status: AilmentStatus = AilmentStatus.active
-    treating_doctor: str | None = None
+    treating_doctor: str | None = Field(default=None, max_length=256)
     treating_doctor_id: uuid.UUID | None = None
-    notes: str | None = None
+    notes: str | None = Field(default=None, max_length=50_000)
 
 
 class AilmentUpdate(BaseModel):
-    condition: str | None = None
+    condition: str | None = Field(default=None, max_length=512)
     onset_date: date | None = None
     status: AilmentStatus | None = None
-    treating_doctor: str | None = None
+    treating_doctor: str | None = Field(default=None, max_length=256)
     treating_doctor_id: uuid.UUID | None = None
-    notes: str | None = None
+    notes: str | None = Field(default=None, max_length=50_000)
 
 
 class AilmentResponse(BaseModel):

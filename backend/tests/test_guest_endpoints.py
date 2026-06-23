@@ -242,3 +242,40 @@ def test_guest_nutrition_plan_returns_acceptable_and_unacceptable_foods(client, 
     assert any(x["food_name"] == "Broccoli" and x["type"] == "Acceptable" for x in rows)
     assert any(x["food_name"] == "Soda" and x["type"] == "Unacceptable" for x in rows)
     assert all("meal_type" not in x for x in rows)
+
+
+def test_guest_visit_logs_excludes_auto_created_from_completed_appointment(client, db_session):
+    """Auto-created VisitLog (via Appointment.visit_log_id) must NOT appear in the guest visit_logs list."""
+    csrf = _admin(client, db_session)
+    h = {"X-CSRF-Token": csrf}
+    # Create an appointment and mark it completed — this auto-creates a linked VisitLog
+    appt = client.post(
+        "/api/appointments",
+        headers=h,
+        json={"appointment_datetime": "2026-07-01T10:00:00", "status": "upcoming", "reason": "Auto-visit test"},
+    ).json()
+    client.put(f"/api/appointments/{appt['id']}", headers=h, json={"status": "completed"})
+
+    # Create a manual visit log that SHOULD appear
+    manual_vl = client.post(
+        "/api/visit-logs",
+        headers=h,
+        json={"visit_date": "2026-06-01", "reason": "Manual visit"},
+    ).json()
+
+    token = _create_link(client, csrf, sections=["visit_logs"])
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+
+    r = client.get(f"/api/guest/visit_logs?token={token}")
+    assert r.status_code == 200
+    ids = [x["id"] for x in r.json()]
+
+    # Manual visit log must be present
+    assert manual_vl["id"] in ids
+    # Auto-created visit log (linked from appointment) must be absent
+    appt_data = client.get(f"/api/appointments/{appt['id']}?token={token}")
+    # Re-login to check appointment visit_log_id
+    client.post("/api/auth/login", json={"email": "guestadmin@example.com", "password": "a-strong-passphrase-123"})
+    updated_appt = client.get(f"/api/appointments/{appt['id']}").json()
+    if updated_appt.get("visit_log_id"):
+        assert updated_appt["visit_log_id"] not in ids

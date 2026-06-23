@@ -94,10 +94,24 @@ def _attach_vitals(record: VisitLog, db: Session) -> VisitLog:
     return record
 
 
+def _attach_vitals_batch(rows: list[VisitLog], db: Session) -> list[VisitLog]:
+    """Single-query variant: fetches all linked Vitals rows in one IN query."""
+    ids = [r.linked_vitals_id for r in rows if r.linked_vitals_id is not None]
+    if ids:
+        vitals_map = {v.id: v for v in db.scalars(select(Vitals).where(Vitals.id.in_(ids)))}
+    else:
+        vitals_map = {}
+    for r in rows:
+        linked = vitals_map.get(r.linked_vitals_id) if r.linked_vitals_id else None
+        for f in _VITALS_FIELDS:
+            setattr(r, f, getattr(linked, f) if linked else None)
+    return rows
+
+
 @router.get("", response_model=list[VisitLogResponse], dependencies=[Depends(get_current_user)])
 def list_records(db: Session = Depends(get_db)):
     rows = list(db.scalars(select(VisitLog).order_by(VisitLog.created_at)))
-    return [_attach_vitals(r, db) for r in rows]
+    return _attach_vitals_batch(rows, db)
 
 
 @router.get("/{record_id}", response_model=VisitLogResponse, dependencies=[Depends(get_current_user)])

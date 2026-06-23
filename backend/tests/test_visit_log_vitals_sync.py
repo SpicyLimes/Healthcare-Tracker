@@ -152,3 +152,41 @@ def test_update_visit_height_updates_linked_vitals(client, db_session):
     vitals = client.get("/api/vitals").json()
     assert len(vitals) == 1
     assert vitals[0]["height_in"] == 65.0
+
+
+def test_visit_log_list_injects_all_nine_vitals_fields(client, db_session):
+    """GET /api/visit-logs must return all 9 vitals fields on the visit log response."""
+    csrf = _admin(client, db_session)
+    h = {"X-CSRF-Token": csrf}
+    client.post("/api/visit-logs", headers=h, json=_visit(
+        bp_systolic=120, bp_diastolic=80, pulse_bpm=72,
+        height_in=70.0, weight_lb=175.0, temperature_f=98.6,
+        respiratory_rate=16, spo2=98, blood_glucose=90,
+    ))
+    rows = client.get("/api/visit-logs").json()
+    assert len(rows) == 1
+    vl = rows[0]
+    assert vl["bp_systolic"] == 120
+    assert vl["bp_diastolic"] == 80
+    assert vl["pulse_bpm"] == 72
+    assert vl["height_in"] == 70.0
+    assert vl["weight_lb"] == 175.0
+    assert vl["temperature_f"] == 98.6
+    assert vl["respiratory_rate"] == 16
+    assert vl["spo2"] == 98
+    assert vl["blood_glucose"] == 90
+
+
+def test_vitals_circular_fk_both_sides_consistent(client, db_session):
+    """After creating a visit log with vitals, both FK pointers must agree:
+    VisitLog.linked_vitals_id == Vitals.id AND Vitals.visit_log_id == VisitLog.id."""
+    csrf = _admin(client, db_session)
+    h = {"X-CSRF-Token": csrf}
+    vl = client.post("/api/visit-logs", headers=h, json=_visit(bp_systolic=130, bp_diastolic=85)).json()
+    vitals = client.get("/api/vitals").json()
+    assert len(vitals) == 1
+    v = vitals[0]
+    # VisitLog.linked_vitals_id → Vitals.id
+    assert vl["linked_vitals_id"] == v["id"]
+    # Vitals.visit_log_id → VisitLog.id
+    assert v["visit_log_id"] == vl["id"]

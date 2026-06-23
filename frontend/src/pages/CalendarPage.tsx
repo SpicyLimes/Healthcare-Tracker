@@ -1,5 +1,5 @@
 // frontend/src/pages/CalendarPage.tsx
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { calendarApi, type CalendarEvent, type CalendarEventType, EVENT_TYPE_LABELS } from "../api/calendar";
@@ -23,7 +23,7 @@ import { FormField, Input, Select, Textarea } from "@/components/ui/form-field";
 import { cn } from "@/lib/utils";
 import { RecordTable } from "@/components/RecordTable";
 import { RecordFormModal } from "@/components/RecordFormModal";
-import { localToUtcIso, formatInTimezone } from "@/lib/datetime";
+import { localToUtcIso, formatInTimezone, toLocalInputValue } from "@/lib/datetime";
 
 // ─── Event routing ───────────────────────────────────────────────────────────
 
@@ -68,24 +68,7 @@ const EMPTY: AppointmentInput = {
   notes: null,
 };
 
-function toLocalInputValue(isoUtc: string | null | undefined, timezone: string): string {
-  if (!isoUtc) return "";
-  try {
-    const formatter = new Intl.DateTimeFormat("sv-SE", {
-      timeZone: timezone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    });
-    return formatter.format(new Date(isoUtc)).replace(" ", "T").slice(0, 16);
-  } catch {
-    return isoUtc.slice(0, 16);
-  }
-}
+
 
 // ─── Calendar helpers ────────────────────────────────────────────────────────
 
@@ -362,17 +345,6 @@ function AppointmentsSection({ tz, isAdmin, onRegisterOpenById, onRegisterOpenAd
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    onRegisterOpenById?.((id: string) => {
-      const r = rows.find((row) => row.id === id);
-      if (r) openEdit(r);
-    });
-  }, [rows, onRegisterOpenById]);
-
-  useEffect(() => {
-    onRegisterOpenAdd?.(openAdd);
-  }, [onRegisterOpenAdd]);
-
   function appointmentTypeLabel(t: AppointmentType | null): string {
     return APPOINTMENT_TYPES.find((x) => x.value === t)?.label ?? "";
   }
@@ -382,13 +354,23 @@ function AppointmentsSection({ tz, isAdmin, onRegisterOpenById, onRegisterOpenAd
     return other ?? "";
   }
 
-  function openAdd() {
+  const openAdd = useCallback(() => {
     setForm(EMPTY);
     setEditingRow(null);
     setModalError("");
     setModalMode("add");
-  }
+  }, []);
 
+  useEffect(() => {
+    onRegisterOpenById?.((id: string) => {
+      const r = rows.find((row) => row.id === id);
+      if (r) openEdit(r);
+    });
+  }, [rows, onRegisterOpenById]);
+
+  useEffect(() => {
+    onRegisterOpenAdd?.(openAdd);
+  }, [onRegisterOpenAdd, openAdd]);
 
   function closeModal() {
     setModalMode(null);
