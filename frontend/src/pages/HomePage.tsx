@@ -268,20 +268,18 @@ export default function HomePage() {
     <AppShell>
       <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Welcome header */}
-        <div className="mb-8">
-          <h1 className="font-heading text-2xl font-semibold text-foreground text-balance">
-            {getGreeting(tz)}, {user?.full_name || user?.email}
-          </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-            Personal health records are organized and ready to access. Use the sidebar to navigate.
-          </p>
-        </div>
-
-        {/* Print Summary */}
-        <div className="mb-6 flex justify-end">
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="font-heading text-2xl font-semibold text-foreground text-balance">
+              {getGreeting(tz)}, {user?.full_name || user?.email}
+            </h1>
+            <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
+              Personal health records are organized and ready to access. Use the sidebar to navigate.
+            </p>
+          </div>
           <button
             onClick={openPrintSummary}
-            className="rounded-lg bg-orange-500/10 px-3 py-1.5 text-sm font-medium text-orange-600 transition-colors hover:bg-orange-500/15 dark:text-orange-400"
+            className="shrink-0 rounded-lg bg-orange-500/10 px-3 py-1.5 text-sm font-medium text-orange-600 transition-colors hover:bg-orange-500/15 dark:text-orange-400"
           >
             Print Summary
           </button>

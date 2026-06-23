@@ -601,7 +601,7 @@ export default function CalendarPage() {
   return (
     <AppShell>
       <PageLayout
-        title="Calendar"
+        title="Appointments & Calendar"
         description="A unified view of all time-based health records."
         action={
           <div className="hidden md:flex items-center gap-2">
