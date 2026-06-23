@@ -618,16 +618,13 @@ export default function CalendarPage() {
 
   return (
     <AppShell>
-      <PageLayout
-        title="Calendar"
-        description="A unified view of all time-based health records."
-      >
+      <PageLayout>
         {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
-        {/* Appointments — above calendar */}
+        {/* Appointments section */}
         {!loading && (
-          <>
+          <div>
             <div className="mb-3 flex items-start justify-between gap-4">
               <div>
                 <h2 className="font-heading text-base font-semibold text-foreground">Appointments</h2>
@@ -643,12 +640,12 @@ export default function CalendarPage() {
               onRegisterOpenById={(fn) => { openApptById.current = fn; }}
               onRegisterOpenAdd={(fn) => { openApptAdd.current = fn; }}
             />
-          </>
+          </div>
         )}
 
-        <div className="mt-8">
-          {/* Calendar sub-heading with Month/Agenda toggle */}
-          {!loading && !error && (
+        {/* Calendar section */}
+        {!loading && !error && (
+          <div>
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <h2 className="font-heading text-base font-semibold text-foreground">Calendar</h2>
@@ -681,11 +678,9 @@ export default function CalendarPage() {
                 </div>
               </div>
             </div>
-          )}
 
-          {/* Mobile: always show mobile nav + AgendaList */}
-          {!loading && !error && (
-            <div className="md:hidden">
+            {/* Mobile: nav + AgendaList */}
+            <div className="md:hidden flex flex-col gap-4">
               <Card>
                 <CardContent className="p-4 flex flex-col gap-4">
                   <div className="flex items-center justify-between">
@@ -709,54 +704,55 @@ export default function CalendarPage() {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="mt-4">
+              <Card>
                 <CardContent className="p-0 max-h-[420px] overflow-y-auto">
                   <AgendaList events={events} onEventClick={handleEventClick} />
                 </CardContent>
               </Card>
             </div>
-          )}
 
-          {/* Desktop: show month grid or agenda based on view toggle */}
-          {!loading && !error && view === "month" && (
-            <div className="hidden md:block">
-              <Card>
-                <CardContent className="p-4 flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    <button
-                      onClick={prevMonth}
-                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                      aria-label="Previous month"
-                    >
-                      <ChevronLeft className="size-4" />
-                    </button>
-                    <span className="text-sm font-semibold text-foreground">
-                      {MONTH_NAMES[month]} {year}
-                    </span>
-                    <button
-                      onClick={nextMonth}
-                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                      aria-label="Next month"
-                    >
-                      <ChevronRight className="size-4" />
-                    </button>
-                  </div>
-                  <MonthGrid events={monthEvents} year={year} month={month} onEventClick={handleEventClick} />
-                </CardContent>
-              </Card>
-            </div>
-          )}
+            {/* Desktop: month grid */}
+            {view === "month" && (
+              <div className="hidden md:block">
+                <Card>
+                  <CardContent className="p-4 flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <button
+                        onClick={prevMonth}
+                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        aria-label="Previous month"
+                      >
+                        <ChevronLeft className="size-4" />
+                      </button>
+                      <span className="text-sm font-semibold text-foreground">
+                        {MONTH_NAMES[month]} {year}
+                      </span>
+                      <button
+                        onClick={nextMonth}
+                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                        aria-label="Next month"
+                      >
+                        <ChevronRight className="size-4" />
+                      </button>
+                    </div>
+                    <MonthGrid events={monthEvents} year={year} month={month} onEventClick={handleEventClick} />
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
-          {!loading && !error && view === "agenda" && (
-            <div className="hidden md:block">
-              <Card>
-                <CardContent className="p-0">
-                  <AgendaList events={events} onEventClick={handleEventClick} />
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
+            {/* Desktop: agenda */}
+            {view === "agenda" && (
+              <div className="hidden md:block">
+                <Card>
+                  <CardContent className="p-0">
+                    <AgendaList events={events} onEventClick={handleEventClick} />
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+        )}
       </PageLayout>
     </AppShell>
   );
