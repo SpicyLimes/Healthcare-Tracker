@@ -139,7 +139,7 @@ export default function ProfilePage() {
   }
 
   function addContact() {
-    setContacts((prev) => [...prev, { name: "", relationship: "", phone: "", email: "" }]);
+    setContacts((prev) => [...prev, { name: "", relationship: "", phone: "", email: "", is_poa: false, doc_ids: [] }]);
   }
 
   function removeContact(index: number) {

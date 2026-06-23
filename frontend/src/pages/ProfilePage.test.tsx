@@ -177,6 +177,22 @@ describe("Emergency contact cards", () => {
       expect(callArg.emergency_contacts).toBeNull();
     });
   });
+
+  it("parseContacts returns is_poa=false and doc_ids=[] when fields absent", async () => {
+    const { parseContacts } = await import("@/lib/profile-parsers");
+    const raw = JSON.stringify([{ name: "Bob", relationship: "Friend", phone: "555-1234", email: "" }]);
+    const contacts = parseContacts(raw);
+    expect(contacts[0].is_poa).toBe(false);
+    expect(contacts[0].doc_ids).toEqual([]);
+  });
+
+  it("parseContacts preserves is_poa=true and doc_ids from stored JSON", async () => {
+    const { parseContacts } = await import("@/lib/profile-parsers");
+    const raw = JSON.stringify([{ name: "Alice", relationship: "Spouse/Partner", phone: "", email: "", is_poa: true, doc_ids: [42, 99] }]);
+    const contacts = parseContacts(raw);
+    expect(contacts[0].is_poa).toBe(true);
+    expect(contacts[0].doc_ids).toEqual([42, 99]);
+  });
 });
 
 describe("Height/Weight Vitals prefill", () => {
