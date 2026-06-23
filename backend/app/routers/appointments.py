@@ -95,7 +95,6 @@ def update_record(
     # Side effect: auto-create Visit Log when transitioning to completed for the first time
     if data.get("status") == "completed" and prev_status != "completed":
         _auto_create_visit_log(db, record, current.id)
-        db.flush()  # flush visit_log_id write; get_db commits at request end
 
     try:
         log_event(db, action=AuditAction.update, actor_type=ActorType.user,
