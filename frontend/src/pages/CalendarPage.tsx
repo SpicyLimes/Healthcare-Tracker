@@ -618,7 +618,38 @@ export default function CalendarPage() {
 
   return (
     <AppShell>
-      <PageLayout>
+      <PageLayout
+        title="Calendar"
+        description="A unified view of all time-based health records."
+        action={
+          <div className="hidden md:flex">
+            <div className="flex rounded-lg border border-border overflow-hidden">
+              <button
+                onClick={() => setView("month")}
+                className={cn(
+                  "px-3 py-1.5 text-sm font-medium transition-colors",
+                  view === "month"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-muted-foreground hover:bg-muted"
+                )}
+              >
+                Month
+              </button>
+              <button
+                onClick={() => setView("agenda")}
+                className={cn(
+                  "px-3 py-1.5 text-sm font-medium transition-colors",
+                  view === "agenda"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-muted-foreground hover:bg-muted"
+                )}
+              >
+                Agenda
+              </button>
+            </div>
+          </div>
+        }
+      >
         {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
@@ -646,38 +677,6 @@ export default function CalendarPage() {
         {/* Calendar section */}
         {!loading && !error && (
           <div>
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <h2 className="font-heading text-base font-semibold text-foreground">Calendar</h2>
-                <p className="text-sm text-muted-foreground mt-0.5">A unified view of all time-based health records.</p>
-              </div>
-              <div className="hidden md:flex">
-                <div className="flex rounded-lg border border-border overflow-hidden">
-                  <button
-                    onClick={() => setView("month")}
-                    className={cn(
-                      "px-3 py-1.5 text-sm font-medium transition-colors",
-                      view === "month"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background text-muted-foreground hover:bg-muted"
-                    )}
-                  >
-                    Month
-                  </button>
-                  <button
-                    onClick={() => setView("agenda")}
-                    className={cn(
-                      "px-3 py-1.5 text-sm font-medium transition-colors",
-                      view === "agenda"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background text-muted-foreground hover:bg-muted"
-                    )}
-                  >
-                    Agenda
-                  </button>
-                </div>
-              </div>
-            </div>
 
             {/* Mobile: nav + AgendaList */}
             <div className="md:hidden flex flex-col gap-4">
