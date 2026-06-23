@@ -342,9 +342,10 @@ interface AppointmentsSectionProps {
   tz: string;
   isAdmin: boolean;
   onRegisterOpenById?: (fn: (id: string) => void) => void;
+  onRegisterOpenAdd?: (fn: () => void) => void;
 }
 
-function AppointmentsSection({ tz, isAdmin, onRegisterOpenById }: AppointmentsSectionProps) {
+function AppointmentsSection({ tz, isAdmin, onRegisterOpenById, onRegisterOpenAdd }: AppointmentsSectionProps) {
   const [rows, setRows] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -368,6 +369,10 @@ function AppointmentsSection({ tz, isAdmin, onRegisterOpenById }: AppointmentsSe
     });
   }, [rows, onRegisterOpenById]);
 
+  useEffect(() => {
+    onRegisterOpenAdd?.(openAdd);
+  }, [onRegisterOpenAdd]);
+
   function appointmentTypeLabel(t: AppointmentType | null): string {
     return APPOINTMENT_TYPES.find((x) => x.value === t)?.label ?? "";
   }
@@ -383,6 +388,7 @@ function AppointmentsSection({ tz, isAdmin, onRegisterOpenById }: AppointmentsSe
     setModalError("");
     setModalMode("add");
   }
+
 
   function closeModal() {
     setModalMode(null);
@@ -429,11 +435,6 @@ function AppointmentsSection({ tz, isAdmin, onRegisterOpenById }: AppointmentsSe
 
   return (
     <>
-      {isAdmin && (
-        <div className="mb-3 flex justify-end">
-          <Button onClick={openAdd}>+ Add</Button>
-        </div>
-      )}
       <Card>
         <CardContent className="p-0">
           <RecordTable
@@ -574,6 +575,7 @@ export default function CalendarPage() {
   const isAdmin = user?.role === "admin";
   const navigate = useNavigate();
   const openApptById = useRef<((id: string) => void) | null>(null);
+  const openApptAdd = useRef<(() => void) | null>(null);
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [error, setError] = useState("");
@@ -619,34 +621,6 @@ export default function CalendarPage() {
       <PageLayout
         title="Calendar"
         description="A unified view of all time-based health records."
-        action={
-          <div className="hidden md:flex">
-            <div className="flex rounded-lg border border-border overflow-hidden">
-              <button
-                onClick={() => setView("month")}
-                className={cn(
-                  "px-3 py-1.5 text-sm font-medium transition-colors",
-                  view === "month"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-background text-muted-foreground hover:bg-muted"
-                )}
-              >
-                Month
-              </button>
-              <button
-                onClick={() => setView("agenda")}
-                className={cn(
-                  "px-3 py-1.5 text-sm font-medium transition-colors",
-                  view === "agenda"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-background text-muted-foreground hover:bg-muted"
-                )}
-              >
-                Agenda
-              </button>
-            </div>
-          </div>
-        }
       >
         {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
@@ -654,19 +628,61 @@ export default function CalendarPage() {
         {/* Appointments — above calendar */}
         {!loading && (
           <>
-            <div className="mb-3">
-              <h2 className="font-heading text-base font-semibold text-foreground">Appointments</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">Manage upcoming and past healthcare appointments.</p>
+            <div className="mb-3 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="font-heading text-base font-semibold text-foreground">Appointments</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">Manage upcoming and past healthcare appointments.</p>
+              </div>
+              {isAdmin && (
+                <Button onClick={() => openApptAdd.current?.()}>+ Add</Button>
+              )}
             </div>
             <AppointmentsSection
               tz={tz}
               isAdmin={isAdmin}
               onRegisterOpenById={(fn) => { openApptById.current = fn; }}
+              onRegisterOpenAdd={(fn) => { openApptAdd.current = fn; }}
             />
           </>
         )}
 
         <div className="mt-8">
+          {/* Calendar sub-heading with Month/Agenda toggle */}
+          {!loading && !error && (
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h2 className="font-heading text-base font-semibold text-foreground">Calendar</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">A unified view of all time-based health records.</p>
+              </div>
+              <div className="hidden md:flex">
+                <div className="flex rounded-lg border border-border overflow-hidden">
+                  <button
+                    onClick={() => setView("month")}
+                    className={cn(
+                      "px-3 py-1.5 text-sm font-medium transition-colors",
+                      view === "month"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    Month
+                  </button>
+                  <button
+                    onClick={() => setView("agenda")}
+                    className={cn(
+                      "px-3 py-1.5 text-sm font-medium transition-colors",
+                      view === "agenda"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    Agenda
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Mobile: always show mobile nav + AgendaList */}
           {!loading && !error && (
             <div className="md:hidden">

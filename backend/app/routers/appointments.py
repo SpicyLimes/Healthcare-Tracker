@@ -28,9 +28,10 @@ def _auto_create_visit_log(db: Session, appt: Appointment, created_by: uuid.UUID
     """Create a Visit Log from a just-completed appointment (idempotent: skips if already linked)."""
     if appt.visit_log_id is not None:
         return
-    visit_date = appt.appointment_datetime.astimezone(timezone.utc).date()
+    local_dt = appt.appointment_datetime.astimezone(timezone.utc)
     vl = _vl_service.create(db, {
-        "visit_date": visit_date,
+        "visit_date": local_dt.date(),
+        "visit_time": local_dt.time().replace(tzinfo=None),
         "doctor_id": appt.doctor_id,
         "doctor_other": appt.doctor_other,
         "reason": appt.reason,
