@@ -656,12 +656,11 @@ export default function CalendarPage() {
         {/* Appointments section */}
         {!loading && (
           <div>
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-medium text-muted-foreground">Appointments</p>
-              {isAdmin && (
+            {isAdmin && (
+              <div className="mb-3 flex justify-end">
                 <Button onClick={() => openApptAdd.current?.()}>+ Add</Button>
-              )}
-            </div>
+              </div>
+            )}
             <AppointmentsSection
               tz={tz}
               isAdmin={isAdmin}

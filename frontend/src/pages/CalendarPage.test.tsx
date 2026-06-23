@@ -90,9 +90,9 @@ describe("CalendarPage", () => {
     vi.spyOn(apptApiModule.appointmentsApi, "list").mockResolvedValue([]);
     render(<MemoryRouter><CalendarPage /></MemoryRouter>);
     await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
-    // "Appointments" heading should appear before the calendar weekday headers (Sun/Mon/…)
+    // "No appointment records yet." appears in the empty Appointments card before the calendar
     const allText = document.body.textContent ?? "";
-    const apptIdx = allText.indexOf("Appointments");
+    const apptIdx = allText.indexOf("No appointment records yet.");
     // "Sun" appears in the MonthGrid weekday header row — a reliable marker for the calendar body
     const sunIdx = allText.indexOf("Sun");
     expect(apptIdx).toBeGreaterThanOrEqual(0);
