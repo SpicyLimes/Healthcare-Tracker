@@ -501,7 +501,15 @@ export default function HomePage() {
               <div className="flex flex-col gap-2">
                 {contacts.map((c, i) => (
                   <div key={i} className="rounded-md border border-border bg-muted/20 p-2 text-sm">
-                    <div className="font-medium text-foreground">{c.name || "—"}</div>
+                    <div className="flex items-center gap-1.5 font-medium text-foreground">
+                      {c.is_poa && (
+                        <span
+                          className="inline-block h-2 w-2 shrink-0 rounded-full bg-primary"
+                          aria-label="Power of Attorney"
+                        />
+                      )}
+                      {c.name || "—"}
+                    </div>
                     <div className="text-muted-foreground">{c.relationship || "—"}</div>
                     {c.phone && <div className="text-xs text-muted-foreground">{c.phone}</div>}
                     {c.email && <div className="text-xs text-muted-foreground">{c.email}</div>}
