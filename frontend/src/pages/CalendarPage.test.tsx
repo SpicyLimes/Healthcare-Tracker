@@ -7,6 +7,7 @@ import * as calApi from "../api/calendar";
 import * as useAuthModule from "../auth/useAuth";
 import type { CalendarEvent } from "../api/calendar";
 import * as apptApiModule from "../api/appointments";
+import * as doctorsApiModule from "../api/doctors";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -123,5 +124,45 @@ describe("CalendarPage", () => {
     expect(
       rows.some((row) => row.closest("[data-testid='agenda-row']") !== null || row.closest(".cursor-pointer") !== null)
     ).toBe(true);
+  });
+
+  it("hides completed appointments from the Appointments card", async () => {
+    mockAuth();
+    vi.spyOn(calApi.calendarApi, "list").mockResolvedValue([]);
+    vi.spyOn(apptApiModule.appointmentsApi, "list").mockResolvedValue([
+      {
+        id: "a1",
+        appointment_datetime: "2026-07-15T09:00:00Z",
+        appointment_type: null,
+        doctor_id: null,
+        doctor_other: null,
+        location: null,
+        reason: "Annual checkup",
+        status: "upcoming",
+        notes: null,
+        visit_log_id: null,
+      },
+      {
+        id: "a2",
+        appointment_datetime: "2026-06-01T09:00:00Z",
+        appointment_type: null,
+        doctor_id: null,
+        doctor_other: null,
+        location: null,
+        reason: "Old completed visit",
+        status: "completed",
+        notes: null,
+        visit_log_id: "vl-123",
+      },
+    ]);
+    vi.spyOn(doctorsApiModule.doctorsApi, "list").mockResolvedValue([]);
+    render(<MemoryRouter><CalendarPage /></MemoryRouter>);
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
+    // Upcoming appointment should be visible
+    const upcomingBadges = await screen.findAllByText("upcoming");
+    expect(upcomingBadges.length).toBeGreaterThan(0);
+    // Completed appointment should NOT be visible in the Appointments card
+    const completedBadges = screen.queryAllByText("completed");
+    expect(completedBadges.length).toBe(0);
   });
 });

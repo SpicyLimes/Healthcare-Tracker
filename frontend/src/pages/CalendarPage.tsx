@@ -437,7 +437,7 @@ function AppointmentsSection({ tz, isAdmin, onRegisterOpenById }: AppointmentsSe
       <Card>
         <CardContent className="p-0">
           <RecordTable
-            rows={rows}
+            rows={rows.filter((r) => r.status !== "completed")}
             loading={loading}
             isAdmin={isAdmin}
             getRowId={(r) => r.id}
