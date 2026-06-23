@@ -165,16 +165,18 @@ export default function ProfilePage() {
     setUploadingContacts((prev) => new Set(prev).add(index));
     try {
       const doc = await uploadDocument("profile", profileId, file);
-      mergeContact(index, { doc_ids: [...(contacts[index]?.doc_ids ?? []), doc.id] });
-      // Auto-save the profile so the new doc_id is persisted immediately
-      const updated = contacts.map((c, i) =>
-        i === index ? { ...c, doc_ids: [...(c.doc_ids ?? []), doc.id] } : c
-      );
+      let updatedContacts: EmergencyContact[] = [];
+      setContacts((prev) => {
+        updatedContacts = prev.map((c, i) =>
+          i === index ? { ...c, doc_ids: [...(c.doc_ids ?? []), doc.id] } : c
+        );
+        return updatedContacts;
+      });
       const payload = Object.fromEntries(
         Object.entries(form).filter(([, v]) => v !== null && v !== ""),
       ) as unknown as ProfileInput;
       payload.full_name = form.full_name;
-      payload.emergency_contacts = serializeContacts(updated);
+      payload.emergency_contacts = serializeContacts(updatedContacts);
       payload.allergies = serializeAllergies(allergyList);
       payload.main_doctor_id = mainDoctorId;
       await saveProfile(payload);
