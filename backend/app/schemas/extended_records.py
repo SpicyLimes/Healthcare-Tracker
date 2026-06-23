@@ -346,6 +346,7 @@ class AppointmentResponse(BaseModel):
     reason: str | None
     status: AppointmentStatus
     notes: str | None
+    visit_log_id: uuid.UUID | None = None
     created_at: datetime
     updated_at: datetime
 

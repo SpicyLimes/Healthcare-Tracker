@@ -13,6 +13,7 @@ export interface Appointment {
   reason: string | null;
   status: AppointmentStatus;
   notes: string | null;
+  visit_log_id: string | null;
 }
 
 export interface AppointmentInput {
