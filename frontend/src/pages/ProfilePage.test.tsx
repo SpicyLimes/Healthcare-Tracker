@@ -193,6 +193,83 @@ describe("Emergency contact cards", () => {
     expect(contacts[0].is_poa).toBe(true);
     expect(contacts[0].doc_ids).toEqual([42, 99]);
   });
+
+  it("shows POA checkbox for admin when contact exists", async () => {
+    mockAuth("admin");
+    const contacts = JSON.stringify([{ name: "Alice", relationship: "Spouse/Partner", phone: "555-0001", email: "", is_poa: false, doc_ids: [] }]);
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "p1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: contacts, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    render(<ProfilePage />);
+    const checkbox = await screen.findByRole("checkbox", { name: /power of attorney/i });
+    expect(checkbox).toBeInTheDocument();
+    expect(checkbox).not.toBeChecked();
+  });
+
+  it("shows POA checkbox checked when is_poa is true", async () => {
+    mockAuth("admin");
+    const contacts = JSON.stringify([{ name: "Bob", relationship: "Parent", phone: "", email: "", is_poa: true, doc_ids: [] }]);
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "p1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: contacts, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    render(<ProfilePage />);
+    const checkbox = await screen.findByRole("checkbox", { name: /power of attorney/i });
+    expect(checkbox).toBeChecked();
+  });
+
+  it("viewer does not see POA checkbox", async () => {
+    mockAuth("viewer");
+    const contacts = JSON.stringify([{ name: "Alice", relationship: "Friend", phone: "", email: "", is_poa: true, doc_ids: [] }]);
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "p1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: contacts, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    render(<ProfilePage />);
+    await screen.findByText("Alice");
+    expect(screen.queryByRole("checkbox", { name: /power of attorney/i })).not.toBeInTheDocument();
+  });
+
+  it("POA contact name shows dot indicator for admin", async () => {
+    mockAuth("admin");
+    const contacts = JSON.stringify([{ name: "POA Person", relationship: "Parent", phone: "", email: "", is_poa: true, doc_ids: [] }]);
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "p1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: contacts, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    render(<ProfilePage />);
+    await screen.findByText("POA Person");
+    // The dot is a span with aria-label
+    expect(screen.getByLabelText("Power of Attorney")).toBeInTheDocument();
+  });
+
+  it("serializeContacts preserves is_poa and doc_ids on save", async () => {
+    mockAuth("admin");
+    const contacts = JSON.stringify([{ name: "Alice", relationship: "Friend", phone: "555", email: "", is_poa: true, doc_ids: [7] }]);
+    vi.spyOn(profileApi, "getProfile").mockResolvedValue({
+      id: "p1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: contacts, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    const save = vi.spyOn(profileApi, "saveProfile").mockResolvedValue({
+      id: "p1", full_name: "Jane", date_of_birth: null, blood_type: null,
+      allergies: null, emergency_contacts: null, primary_language: null,
+      height: null, weight: null, phone: null, notes: null,
+    });
+    render(<ProfilePage />);
+    await screen.findByRole("checkbox", { name: /power of attorney/i });
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    await waitFor(() => expect(save).toHaveBeenCalled());
+    const arg = save.mock.calls[0][0];
+    const parsed = JSON.parse(arg.emergency_contacts as string);
+    expect(parsed[0].is_poa).toBe(true);
+    expect(parsed[0].doc_ids).toEqual([7]);
+  });
 });
 
 describe("Height/Weight Vitals prefill", () => {

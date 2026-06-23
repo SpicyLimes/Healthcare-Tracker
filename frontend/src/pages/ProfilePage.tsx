@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { getProfile, saveProfile, type ProfileInput } from "../api/profile";
+import { uploadDocument, getDownloadUrl } from "../api/documents";
 import { vitalsApi } from "../api/vitals";
 import { doctorsApi, type Doctor } from "../api/doctors";
 import { formatDate } from "@/lib/format";
@@ -75,6 +76,7 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
   const [vitalsHeightHint, setVitalsHeightHint] = useState<string | null>(null);
   const [vitalsWeightHint, setVitalsWeightHint] = useState<string | null>(null);
+  const [uploadingContacts, setUploadingContacts] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     getProfile()
@@ -150,6 +152,37 @@ export default function ProfilePage() {
     setContacts((prev) =>
       prev.map((c, i) => (i === index ? { ...c, [field]: value } : c))
     );
+  }
+
+  function mergeContact(index: number, patch: Partial<EmergencyContact>) {
+    setContacts((prev) =>
+      prev.map((c, i) => (i === index ? { ...c, ...patch } : c))
+    );
+  }
+
+  async function attachDocToContact(index: number, file: File) {
+    if (!profileId) return;
+    setUploadingContacts((prev) => new Set(prev).add(index));
+    try {
+      const doc = await uploadDocument("profile", profileId, file);
+      mergeContact(index, { doc_ids: [...(contacts[index]?.doc_ids ?? []), doc.id] });
+      // Auto-save the profile so the new doc_id is persisted immediately
+      const updated = contacts.map((c, i) =>
+        i === index ? { ...c, doc_ids: [...(c.doc_ids ?? []), doc.id] } : c
+      );
+      const payload = Object.fromEntries(
+        Object.entries(form).filter(([, v]) => v !== null && v !== ""),
+      ) as unknown as ProfileInput;
+      payload.full_name = form.full_name;
+      payload.emergency_contacts = serializeContacts(updated);
+      payload.allergies = serializeAllergies(allergyList);
+      payload.main_doctor_id = mainDoctorId;
+      await saveProfile(payload);
+    } catch {
+      // silent — user can retry
+    } finally {
+      setUploadingContacts((prev) => { const s = new Set(prev); s.delete(index); return s; });
+    }
   }
 
   function addAllergy() {
@@ -409,6 +442,17 @@ export default function ProfilePage() {
                           >
                             ×
                           </button>
+                          {c.name && (
+                            <p className="mb-3 flex items-center gap-1.5 text-sm font-medium text-foreground">
+                              {c.is_poa && (
+                                <span
+                                  className="inline-block h-2 w-2 rounded-full bg-primary"
+                                  aria-hidden="true"
+                                />
+                              )}
+                              {c.name}
+                            </p>
+                          )}
                           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <FormField label="Name" htmlFor={`ec-name-${i}`}>
                               <Input
@@ -450,16 +494,88 @@ export default function ProfilePage() {
                               />
                             </FormField>
                           </div>
+
+                          {/* POA checkbox */}
+                          <label className="mt-3 flex items-center gap-2 text-sm text-foreground cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-border accent-primary"
+                              checked={c.is_poa}
+                              onChange={(e) => mergeContact(i, { is_poa: e.target.checked })}
+                              aria-label="Power of Attorney"
+                            />
+                            Power of Attorney
+                          </label>
+
+                          {/* Attached documents */}
+                          <div className="mt-3">
+                            <p className="mb-1 text-xs font-medium text-muted-foreground">POA Documents</p>
+                            {c.doc_ids.length > 0 && (
+                              <ul className="mb-2 flex flex-col gap-1">
+                                {c.doc_ids.map((docId) => (
+                                  <li key={docId}>
+                                    <a
+                                      href={getDownloadUrl(docId)}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-xs text-primary underline underline-offset-2"
+                                    >
+                                      Document #{docId}
+                                    </a>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted/40">
+                              <input
+                                type="file"
+                                className="sr-only"
+                                accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.txt"
+                                disabled={uploadingContacts.has(i) || !profileId}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) { e.target.value = ""; attachDocToContact(i, file); }
+                                }}
+                              />
+                              {uploadingContacts.has(i) ? "Uploading…" : "+ Attach Document"}
+                            </label>
+                          </div>
                         </div>
                       ) : (
-                        // Viewer: read-only card
                         <div key={i} className="rounded-lg border border-border bg-muted/20 p-4">
                           <div className="grid grid-cols-1 gap-1 text-sm sm:grid-cols-2">
-                            <div><span className="text-muted-foreground">Name: </span><span className="text-foreground">{c.name || "—"}</span></div>
+                            <div>
+                              <span className="text-muted-foreground">Name: </span>
+                              <span className="inline-flex items-center gap-1.5 text-foreground">
+                                {c.is_poa && (
+                                  <span
+                                    className="inline-block h-2 w-2 rounded-full bg-primary"
+                                    aria-label="Power of Attorney"
+                                  />
+                                )}
+                                {c.name || "—"}
+                              </span>
+                            </div>
                             <div><span className="text-muted-foreground">Relationship: </span><span className="text-foreground">{c.relationship || "—"}</span></div>
                             <div><span className="text-muted-foreground">Phone: </span><span className="text-foreground">{c.phone || "—"}</span></div>
                             <div><span className="text-muted-foreground">Email: </span><span className="text-foreground">{c.email || "—"}</span></div>
                           </div>
+                          {c.doc_ids.length > 0 && (
+                            <ul className="mt-2 flex flex-col gap-1">
+                              {c.doc_ids.map((docId) => (
+                                <li key={docId}>
+                                  <a
+                                    href={getDownloadUrl(docId)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-xs text-primary underline underline-offset-2"
+                                  >
+                                    Document #{docId}
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </div>
                       )
                     )}
