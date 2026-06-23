@@ -159,7 +159,7 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
         })()}
 
         <div className={cn("flex flex-1 flex-col gap-5", collapsed ? "items-center px-0" : "px-3")}>
-          <ul className={cn("flex flex-col gap-0.5", collapsed && "items-center")}>
+          <ul className={cn("list-none flex flex-col gap-0.5", collapsed && "items-center")}>
             <li>{navLink("/", "Dashboard", LayoutDashboard, pathname === "/")}</li>
           </ul>
 
@@ -170,7 +170,7 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
               </p>
             )}
             {collapsed && <Separator className="mb-2 w-6" />}
-            <ul className={cn("flex flex-col gap-0.5", collapsed && "items-center")}>
+            <ul className={cn("list-none flex flex-col gap-0.5", collapsed && "items-center")}>
               {toolsGroup.items.map((item) => (
                 <li key={item.to}>{navLink(item.to, item.label, item.icon, pathname === item.to)}</li>
               ))}
@@ -185,7 +185,7 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
                 </p>
               )}
               {collapsed && <Separator className="mb-2 w-6" />}
-              <ul className={cn("flex flex-col gap-0.5", collapsed && "items-center")}>
+              <ul className={cn("list-none flex flex-col gap-0.5", collapsed && "items-center")}>
                 {group.items.map((item) => (
                   <li key={item.to}>{navLink(item.to, item.label, item.icon, pathname === item.to)}</li>
                 ))}
@@ -201,7 +201,7 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
                   Admin
                 </p>
               )}
-              <ul className={cn("flex flex-col gap-0.5", collapsed && "items-center")}>
+              <ul className={cn("list-none flex flex-col gap-0.5", collapsed && "items-center")}>
                 {adminItems.map((item) => (
                   <li key={item.to}>{navLink(item.to, item.label, item.icon, pathname === item.to)}</li>
                 ))}

@@ -51,7 +51,7 @@ export default function GuestRecordPage() {
       {docs.length > 0 && (
         <>
           <h2>Documents</h2>
-          <ul>
+          <ul className="list-none">
             {docs.map((doc) => (
               <li key={doc.id}>
                 <a href={getGuestDownloadUrl(doc.id, rawToken)} target="_blank" rel="noopener noreferrer">

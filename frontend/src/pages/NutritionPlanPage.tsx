@@ -255,7 +255,7 @@ export default function NutritionPlanPage() {
                     {entries.length === 0 ? (
                       <p className="text-xs text-muted-foreground">No items yet.</p>
                     ) : (
-                      <ul className="flex flex-col gap-1">
+                      <ul className="list-none flex flex-col gap-1">
                         {entries.map((meal) => (
                           <li key={meal.id} className="flex items-center justify-between gap-1 rounded-md border border-border bg-muted/20 px-2 py-1 text-sm">
                             <span className="text-foreground truncate">{meal.food_name}</span>

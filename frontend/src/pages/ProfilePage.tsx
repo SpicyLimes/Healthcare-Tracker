@@ -513,7 +513,7 @@ export default function ProfilePage() {
                           <div className="mt-3">
                             <p className="mb-1 text-xs font-medium text-muted-foreground">POA Documents</p>
                             {c.doc_ids.length > 0 && (
-                              <ul className="mb-2 flex flex-col gap-1">
+                              <ul className="list-none mb-2 flex flex-col gap-1">
                                 {c.doc_ids.map((docId) => (
                                   <li key={docId}>
                                     <a
@@ -563,7 +563,7 @@ export default function ProfilePage() {
                             <div><span className="text-muted-foreground">Email: </span><span className="text-foreground">{c.email || "—"}</span></div>
                           </div>
                           {c.doc_ids.length > 0 && (
-                            <ul className="mt-2 flex flex-col gap-1">
+                            <ul className="list-none mt-2 flex flex-col gap-1">
                               {c.doc_ids.map((docId) => (
                                 <li key={docId}>
                                   <a

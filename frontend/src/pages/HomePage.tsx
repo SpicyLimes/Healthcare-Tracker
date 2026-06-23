@@ -379,7 +379,7 @@ export default function HomePage() {
                 <div className="mt-3 border-t border-border pt-3">
                   <p className="mb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">Active Medications</p>
                   {activeMeds.length > 0 ? (
-                    <ul className="flex flex-col gap-0.5">
+                    <ul className="list-none flex flex-col gap-0.5">
                       {activeMeds.map((m) => (
                         <li key={m.id} className="flex items-start gap-1 text-sm text-foreground">
                           <span aria-hidden="true">•</span>
