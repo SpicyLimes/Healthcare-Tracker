@@ -2,7 +2,6 @@ import hmac
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Optional
 
 from fastapi import Cookie, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
@@ -101,7 +100,7 @@ def get_guest_access(
 
     # Verify the raw token matches the stored hash — prevents JWT forgery using a known link_id
     token_hash = hashlib.sha256(token.encode()).hexdigest()
-    if link.token_hash != token_hash:
+    if not hmac.compare_digest(link.token_hash, token_hash):
         raise invalid
 
     if link.revoked:

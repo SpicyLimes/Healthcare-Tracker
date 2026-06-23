@@ -18,6 +18,19 @@ export function RecordFormModal({
   submitLabel = "Save",
   children,
 }: RecordFormModalProps) {
+  const [submitting, setSubmitting] = React.useState(false)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (submitting) return
+    setSubmitting(true)
+    try {
+      await onSubmit(e)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div
       role="dialog"
@@ -46,13 +59,15 @@ export function RecordFormModal({
 
         {error && <p role="alert" className="mb-4 text-sm text-destructive">{error}</p>}
 
-        <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {children}
           <div className="mt-2 flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
               Cancel
             </Button>
-            <Button type="submit">{submitLabel}</Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Saving…" : submitLabel}
+            </Button>
           </div>
         </form>
       </div>

@@ -364,7 +364,6 @@ class VitalsCreate(BaseModel):
     spo2: int | None = None
     blood_glucose: int | None = None
     notes: str | None = None
-    visit_log_id: uuid.UUID | None = None
 
 
 class VitalsUpdate(BaseModel):
@@ -379,7 +378,6 @@ class VitalsUpdate(BaseModel):
     spo2: int | None = None
     blood_glucose: int | None = None
     notes: str | None = None
-    visit_log_id: uuid.UUID | None = None
 
 
 class VitalsResponse(BaseModel):
