@@ -5,6 +5,8 @@ import MedicationsPage from "./MedicationsPage";
 import * as medsApi from "../api/medications";
 import * as useAuthModule from "../auth/useAuth";
 
+vi.mock("../components/toast", () => ({ useToast: () => ({ showToast: vi.fn() }) }));
+
 vi.mock("../api/documents", () => ({
   listDocumentsForRecord: vi.fn().mockResolvedValue([]),
   uploadDocument: vi.fn(),

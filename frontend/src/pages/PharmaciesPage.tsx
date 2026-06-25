@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { pharmaciesApi, type Pharmacy, type PharmacyInput } from "../api/pharmacies";
 import { useAuth } from "../auth/useAuth";
+import { useToast } from "../components/toast";
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,6 +22,7 @@ export default function PharmaciesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const isContributor = user?.role === "contributor";
+  const { showToast } = useToast();
   const canWrite = isAdmin || isContributor;
   const submitLabel = isContributor ? "Submit for Approval" : "Save";
   const contributorNotice = isContributor
@@ -79,6 +81,7 @@ export default function PharmaciesPage() {
       }
       closeModal();
       await reload();
+      showToast(isContributor ? "Submitted for approval — an Admin will review it." : "Saved.");
     } catch {
       setModalError(modalMode === "edit" ? "Could not update record" : "Could not add pharmacy");
     }
@@ -93,6 +96,7 @@ export default function PharmaciesPage() {
     try {
       await pharmaciesApi.remove(id);
       await reload();
+      showToast(isContributor ? "Deletion submitted for approval." : "Deleted.");
     } catch {
       setError("Could not delete pharmacy");
     }

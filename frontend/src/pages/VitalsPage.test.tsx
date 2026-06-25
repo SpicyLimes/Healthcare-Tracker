@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../auth/useAuth", () => ({ useAuth: () => ({ user: { role: "admin" } }) }));
+vi.mock("../components/toast", () => ({ useToast: () => ({ showToast: vi.fn() }) }));
 
 const list = vi.fn();
 const create = vi.fn();

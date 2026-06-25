@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { vaccinationsApi, type Vaccination, type VaccinationInput } from "../api/vaccinations";
 import { useAuth } from "../auth/useAuth";
+import { useToast } from "../components/toast";
 import DocumentsPanel from "../components/DocumentsPanel";
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
@@ -25,6 +26,7 @@ export default function VaccinationsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const isContributor = user?.role === "contributor";
+  const { showToast } = useToast();
   const canWrite = isAdmin || isContributor;
   const submitLabel = isContributor ? "Submit for Approval" : "Save";
   const contributorNotice = isContributor
@@ -86,6 +88,7 @@ export default function VaccinationsPage() {
       }
       closeModal();
       await reload();
+      showToast(isContributor ? "Submitted for approval — an Admin will review it." : "Saved.");
     } catch {
       setModalError(modalMode === "edit" ? "Could not update record" : "Could not add record");
     }
@@ -96,7 +99,7 @@ export default function VaccinationsPage() {
       ? "Submit a deletion request for this vaccination record? An Admin must approve before it is removed."
       : "Delete this vaccination record?";
     if (!window.confirm(msg)) return;
-    try { await vaccinationsApi.remove(id); await reload(); }
+    try { await vaccinationsApi.remove(id); await reload(); showToast(isContributor ? "Deletion submitted for approval." : "Deleted."); }
     catch { setError("Could not delete record"); }
   }
 

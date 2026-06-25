@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import { GuestProvider } from "./auth/GuestContext";
+import { ToastProvider } from "./components/toast";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RequireAdmin from "./components/RequireAdmin";
 import LoginPage from "./pages/LoginPage";
@@ -38,6 +39,7 @@ export default function App() {
   return (
     <GuestProvider>
       <AuthProvider>
+        <ToastProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -73,6 +75,7 @@ export default function App() {
             <Route path="/guest/sections/:section/:recordId" element={<GuestRecordPage />} />
           </Routes>
         </BrowserRouter>
+        </ToastProvider>
       </AuthProvider>
     </GuestProvider>
   );
