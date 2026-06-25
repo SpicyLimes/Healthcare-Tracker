@@ -15,14 +15,14 @@ from app.services.submission_service import (
 
 
 def _make_contributor(db):
-    user_service.create_user(db, f"contrib+{uuid.uuid4().hex[:6]}@example.com", "Test1234!", Role.contributor)
+    user_service.create_user(db, f"contrib+{uuid.uuid4().hex[:6]}@example.com", "TestPassword1234!", Role.contributor)
     from sqlalchemy import select
     from app.models.user import User
     return db.scalars(select(User).where(User.role == Role.contributor)).first()
 
 
 def _make_admin(db):
-    user_service.create_user(db, f"admin+{uuid.uuid4().hex[:6]}@example.com", "Test1234!", Role.admin)
+    user_service.create_user(db, f"admin+{uuid.uuid4().hex[:6]}@example.com", "TestPassword1234!", Role.admin)
     from sqlalchemy import select
     from app.models.user import User
     return db.scalars(select(User).where(User.role == Role.admin)).first()
@@ -117,15 +117,15 @@ def test_approve_unknown_id_raises(db_session):
 
 def _contrib_login(client, db_session):
     email = f"contrib+{uuid.uuid4().hex[:6]}@test.com"
-    user_service.create_user(db_session, email, "Test1234!", Role.contributor)
-    client.post("/api/auth/login", json={"email": email, "password": "Test1234!"})
+    user_service.create_user(db_session, email, "TestPassword1234!", Role.contributor)
+    client.post("/api/auth/login", json={"email": email, "password": "TestPassword1234!"})
     return client.cookies.get("csrf_token")
 
 
 def _admin_login_ep(client, db_session):
     email = f"admin+{uuid.uuid4().hex[:6]}@test.com"
-    user_service.create_user(db_session, email, "Test1234!", Role.admin)
-    client.post("/api/auth/login", json={"email": email, "password": "Test1234!"})
+    user_service.create_user(db_session, email, "TestPassword1234!", Role.admin)
+    client.post("/api/auth/login", json={"email": email, "password": "TestPassword1234!"})
     return client.cookies.get("csrf_token")
 
 
@@ -189,8 +189,8 @@ def test_admin_reject_submission(client, db_session):
 
 def test_viewer_cannot_create_record(client, db_session):
     email = f"viewer+{uuid.uuid4().hex[:6]}@test.com"
-    user_service.create_user(db_session, email, "Test1234!", Role.viewer)
-    client.post("/api/auth/login", json={"email": email, "password": "Test1234!"})
+    user_service.create_user(db_session, email, "TestPassword1234!", Role.viewer)
+    client.post("/api/auth/login", json={"email": email, "password": "TestPassword1234!"})
     csrf = client.cookies.get("csrf_token")
     res = client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Should Fail"})
     assert res.status_code == 403

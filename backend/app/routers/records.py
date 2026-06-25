@@ -61,8 +61,6 @@ def build_list_router(
         section = prefix.removeprefix("/api/").replace("-", "_")
         if current.role == Role.contributor:
             from app.services.submission_service import create_submission, UnknownSectionError
-            from app.models.audit_log import AuditAction, ActorType
-            from app.services.audit_service import log_event
             try:
                 sub = create_submission(
                     db,
@@ -117,8 +115,6 @@ def build_list_router(
         section = prefix.removeprefix("/api/").replace("-", "_")
         if current.role == Role.contributor:
             from app.services.submission_service import create_submission, UnknownSectionError
-            from app.models.audit_log import AuditAction, ActorType
-            from app.services.audit_service import log_event
             try:
                 create_submission(
                     db,
@@ -178,8 +174,6 @@ def build_list_router(
         section = prefix.removeprefix("/api/").replace("-", "_")
         if current.role == Role.contributor:
             from app.services.submission_service import create_submission, UnknownSectionError
-            from app.models.audit_log import AuditAction, ActorType
-            from app.services.audit_service import log_event
             try:
                 create_submission(
                     db,
