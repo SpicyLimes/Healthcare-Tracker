@@ -129,7 +129,7 @@ export default function AilmentsPage() {
                 { label: "Treating Doctor", value: resolveDoctorName(r.treating_doctor_id, r.treating_doctor) || null },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="ailments" recordId={r.id} isAdmin={canWrite} />}
+              renderDetailExtra={(r) => <DocumentsPanel section="ailments" recordId={r.id} isAdmin={isAdmin} />}
               getHeadline={(r) => r.condition}
               getSubtitle={(r) => r.onset_date ?? null}
               getBadge={(r) => ({ label: r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : "", variant: r.status === "active" ? "default" : "secondary" })}

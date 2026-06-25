@@ -122,7 +122,7 @@ export default function DentalHistoryPage() {
                 { label: "Procedure", value: r.procedure },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="dental_history" recordId={r.id} isAdmin={canWrite} />}
+              renderDetailExtra={(r) => <DocumentsPanel section="dental_history" recordId={r.id} isAdmin={isAdmin} />}
               getHeadline={(r) => r.procedure ?? r.visit_date ?? "Dental Visit"}
               getSubtitle={(r) => r.visit_date ?? null}
               onEdit={(r) => openEdit(r)}

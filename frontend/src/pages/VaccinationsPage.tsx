@@ -130,7 +130,7 @@ export default function VaccinationsPage() {
                 { label: "Lot Number", value: r.lot_number },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="vaccinations" recordId={r.id} isAdmin={canWrite} />}
+              renderDetailExtra={(r) => <DocumentsPanel section="vaccinations" recordId={r.id} isAdmin={isAdmin} />}
               getHeadline={(r) => r.vaccine}
               getSubtitle={(r) => r.administered_date ? formatDate(r.administered_date) : null}
               onEdit={(r) => openEdit(r)}

@@ -138,7 +138,7 @@ export default function SurgeriesPage() {
                 { label: "Outcome", value: r.outcome },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="surgeries" recordId={r.id} isAdmin={canWrite} />}
+              renderDetailExtra={(r) => <DocumentsPanel section="surgeries" recordId={r.id} isAdmin={isAdmin} />}
               getHeadline={(r) => r.procedure}
               getSubtitle={(r) => r.surgery_date ?? null}
               onEdit={(r) => openEdit(r)}

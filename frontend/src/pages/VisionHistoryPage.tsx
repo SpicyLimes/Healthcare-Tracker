@@ -124,7 +124,7 @@ export default function VisionHistoryPage() {
                 { label: "Rx OS", value: r.rx_os },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="vision_history" recordId={r.id} isAdmin={canWrite} />}
+              renderDetailExtra={(r) => <DocumentsPanel section="vision_history" recordId={r.id} isAdmin={isAdmin} />}
               getHeadline={(r) => r.visit_date ?? "Vision Visit"}
               getSubtitle={(r) => resolveDoctorName(r.provider_id, r.provider_other) || null}
               onEdit={(r) => openEdit(r)}

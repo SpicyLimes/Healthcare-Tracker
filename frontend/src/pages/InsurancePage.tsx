@@ -127,7 +127,7 @@ export default function InsurancePage() {
                 { label: "Address", value: r.contact_address },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="insurances" recordId={r.id} isAdmin={canWrite} />}
+              renderDetailExtra={(r) => <DocumentsPanel section="insurances" recordId={r.id} isAdmin={isAdmin} />}
               getHeadline={(r) => r.insurer_name}
               getSubtitle={(r) => r.policy_number ?? null}
               onEdit={(r) => openEdit(r)}

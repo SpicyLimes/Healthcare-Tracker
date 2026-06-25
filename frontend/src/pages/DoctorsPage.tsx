@@ -123,7 +123,7 @@ export default function DoctorsPage() {
                 { label: "Portal URL", value: r.patient_portal_url },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="doctors" recordId={r.id} isAdmin={canWrite} />}
+              renderDetailExtra={(r) => <DocumentsPanel section="doctors" recordId={r.id} isAdmin={isAdmin} />}
               getHeadline={(r) => r.name}
               getSubtitle={(r) => r.specialty ?? null}
               onEdit={(r) => openEdit(r)}

@@ -157,7 +157,7 @@ export default function MedicationsPage() {
                 { label: "End Date", value: r.end_date },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="medications" recordId={r.id} isAdmin={canWrite} />}
+              renderDetailExtra={(r) => <DocumentsPanel section="medications" recordId={r.id} isAdmin={isAdmin} />}
               getHeadline={(r) => r.name}
               getSubtitle={(r) => [r.dose, r.route, r.frequency].filter(Boolean).join(" · ") || null}
               getBadge={(r) => ({ label: r.is_active ? "Active" : "Inactive", variant: r.is_active ? "default" : "secondary" })}
