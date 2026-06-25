@@ -203,3 +203,35 @@ def test_pending_count(client, db_session):
     res = client.get("/api/submissions/pending-count")
     assert res.status_code == 200
     assert res.json()["count"] >= 1
+
+
+def test_contributor_can_create_and_edit_own_note(client, db_session):
+    csrf_c = _contrib_login(client, db_session)
+    res = client.post(
+        "/api/notes",
+        headers={"X-CSRF-Token": csrf_c},
+        json={"title": "Contrib Note", "body": "body", "pinned": False, "done": False},
+    )
+    assert res.status_code == 201
+    note_id = res.json()["id"]
+    # Edit own note
+    res2 = client.patch(
+        f"/api/notes/{note_id}",
+        headers={"X-CSRF-Token": csrf_c},
+        json={"title": "Edited"},
+    )
+    assert res2.status_code == 200
+
+
+def test_contributor_cannot_delete_note(client, db_session):
+    csrf_a = _admin_login_ep(client, db_session)
+    # Create via admin
+    res = client.post(
+        "/api/notes",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"title": "Admin Note", "body": "", "pinned": False, "done": False},
+    )
+    note_id = res.json()["id"]
+    csrf_c = _contrib_login(client, db_session)
+    res2 = client.delete(f"/api/notes/{note_id}", headers={"X-CSRF-Token": csrf_c})
+    assert res2.status_code == 403
