@@ -18,6 +18,7 @@ from app.models.extended_records import (
     VisitLog,
     Appointment,
 )
+from app.models.submission import Submission, SubmissionAction, SubmissionStatus
 
 __all__ = [
     "AiSettings",
@@ -41,4 +42,7 @@ __all__ = [
     "Vaccination",
     "VisitLog",
     "Appointment",
+    "Submission",
+    "SubmissionAction",
+    "SubmissionStatus",
 ]

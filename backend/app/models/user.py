@@ -11,6 +11,7 @@ from app.database import Base
 
 class Role(str, enum.Enum):
     admin = "admin"
+    contributor = "contributor"
     viewer = "viewer"
 
 
