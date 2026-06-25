@@ -15,21 +15,19 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Add contributor to the user_role enum.
-    # ALTER TYPE … ADD VALUE cannot run inside a transaction in Postgres ≤ 11.
+    # All three ALTER TYPE / CREATE TYPE calls need to run outside a transaction
+    # on Postgres ≤ 11.  We use COMMIT/BEGIN to bracket the whole block.
     op.execute("COMMIT")
     op.execute("ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'contributor' AFTER 'admin'")
-    op.execute("BEGIN")
 
-    # New enums for submissions
-    submissionaction = sa.Enum(
-        "create", "update", "delete", name="submissionaction"
-    )
-    submissionstatus = sa.Enum(
-        "pending", "approved", "rejected", name="submissionstatus"
-    )
-    submissionaction.create(op.get_bind(), checkfirst=True)
-    submissionstatus.create(op.get_bind(), checkfirst=True)
+    # Check if enum types exist before creating them (psycopg3 doesn't handle DO $$ blocks properly)
+    conn = op.get_bind()
+    if not conn.execute(sa.text("SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname = 'submissionaction')")).scalar():
+        conn.execute(sa.text("CREATE TYPE submissionaction AS ENUM ('create', 'update', 'delete')"))
+    if not conn.execute(sa.text("SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname = 'submissionstatus')")).scalar():
+        conn.execute(sa.text("CREATE TYPE submissionstatus AS ENUM ('pending', 'approved', 'rejected')"))
+
+    op.execute("BEGIN")
 
     op.create_table(
         "submissions",
@@ -41,12 +39,12 @@ def upgrade() -> None:
             nullable=True,
         ),
         sa.Column("section", sa.String(), nullable=False),
-        sa.Column("action", sa.Enum("create", "update", "delete", name="submissionaction"), nullable=False),
+        sa.Column("action", sa.Enum("create", "update", "delete", name="submissionaction", create_type=False), nullable=False),
         sa.Column("record_id", sa.String(), nullable=True),
         sa.Column("payload", sa.JSON(), nullable=False),
         sa.Column(
             "status",
-            sa.Enum("pending", "approved", "rejected", name="submissionstatus"),
+            sa.Enum("pending", "approved", "rejected", name="submissionstatus", create_type=False),
             nullable=False,
             server_default="pending",
         ),
