@@ -4,7 +4,7 @@ import { apiFetch } from "./client";
 export interface CurrentUser {
   id: string;
   email: string;
-  role: "admin" | "viewer";
+  role: "admin" | "contributor" | "viewer";
   full_name: string | null;
   timezone: string;
 }

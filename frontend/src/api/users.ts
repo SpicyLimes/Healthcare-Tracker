@@ -4,7 +4,7 @@ import { apiFetch } from "./client";
 export interface ManagedUser {
   id: string;
   email: string;
-  role: "admin" | "viewer";
+  role: "admin" | "contributor" | "viewer";
   full_name: string | null;
   is_active: boolean;
   created_at: string;
@@ -19,7 +19,7 @@ export async function listUsers(): Promise<ManagedUser[]> {
 export async function createUser(
   email: string,
   password: string,
-  role: "admin" | "viewer",
+  role: "admin" | "contributor" | "viewer",
   full_name?: string | null,
 ): Promise<ManagedUser> {
   const res = await apiFetch("/api/users", {
@@ -33,7 +33,7 @@ export async function createUser(
 
 export async function updateUser(
   id: string,
-  payload: { role?: "admin" | "viewer"; is_active?: boolean; full_name?: string | null },
+  payload: { role?: "admin" | "contributor" | "viewer"; is_active?: boolean; full_name?: string | null },
 ): Promise<ManagedUser> {
   const res = await apiFetch(`/api/users/${id}`, {
     method: "PUT",

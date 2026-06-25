@@ -21,12 +21,12 @@ export default function UsersPage() {
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newName, setNewName] = useState("");
-  const [newRole, setNewRole] = useState<"admin" | "viewer">("viewer");
+  const [newRole, setNewRole] = useState<"admin" | "contributor" | "viewer">("viewer");
 
   // Edit modal state
   const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
   const [editName, setEditName] = useState("");
-  const [editRole, setEditRole] = useState<"admin" | "viewer">("viewer");
+  const [editRole, setEditRole] = useState<"admin" | "contributor" | "viewer">("viewer");
   const [editActive, setEditActive] = useState(true);
 
   async function reload() {
@@ -213,7 +213,7 @@ export default function UsersPage() {
                 <Select
                   id="new_user_role"
                   value={newRole}
-                  onChange={(e) => setNewRole(e.target.value as "admin" | "viewer")}
+                  onChange={(e) => setNewRole(e.target.value as "admin" | "contributor" | "viewer")}
                 >
                   <option value="viewer">Viewer</option>
                   <option value="admin">Admin</option>
@@ -247,7 +247,7 @@ export default function UsersPage() {
                 <Select
                   id="edit_role"
                   value={editRole}
-                  onChange={(e) => setEditRole(e.target.value as "admin" | "viewer")}
+                  onChange={(e) => setEditRole(e.target.value as "admin" | "contributor" | "viewer")}
                 >
                   <option value="viewer">Viewer</option>
                   <option value="admin">Admin</option>
