@@ -11,7 +11,7 @@ from app.database import SessionLocal
 from app.routers import (
     ai, ailments, appointments, audit_log, auth, calendar, dental_history, documents,
     doctors, family_history, guest, health, hospitalizations, insurances, medications,
-    notes, nutrition, pharmacies, profile, share_links, summary, surgeries,
+    notes, nutrition, pharmacies, profile, share_links, submissions, summary, surgeries,
     users, vaccinations, vision_history, visit_logs, vitals,
 )
 from app.routers import settings as settings_router
@@ -76,3 +76,4 @@ app.include_router(guest.router)
 app.include_router(notes.router)
 app.include_router(nutrition.router)
 app.include_router(settings_router.router)
+app.include_router(submissions.router)

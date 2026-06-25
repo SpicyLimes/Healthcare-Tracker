@@ -111,3 +111,95 @@ def test_approve_unknown_id_raises(db_session):
     admin = _make_admin(db_session)
     with pytest.raises(SubmissionNotFoundError):
         approve_submission(db_session, uuid.uuid4(), admin.id)
+
+
+# ---- Endpoint tests ----
+
+def _contrib_login(client, db_session):
+    email = f"contrib+{uuid.uuid4().hex[:6]}@test.com"
+    user_service.create_user(db_session, email, "Test1234!", Role.contributor)
+    client.post("/api/auth/login", json={"email": email, "password": "Test1234!"})
+    return client.cookies.get("csrf_token")
+
+
+def _admin_login_ep(client, db_session):
+    email = f"admin+{uuid.uuid4().hex[:6]}@test.com"
+    user_service.create_user(db_session, email, "Test1234!", Role.admin)
+    client.post("/api/auth/login", json={"email": email, "password": "Test1234!"})
+    return client.cookies.get("csrf_token")
+
+
+def test_contributor_create_queues_submission(client, db_session):
+    csrf = _contrib_login(client, db_session)
+    res = client.post(
+        "/api/doctors",
+        headers={"X-CSRF-Token": csrf},
+        json={"name": "Dr. Queue"},
+    )
+    assert res.status_code == 201
+    # The record should NOT be in the doctors table yet
+    doctors = client.get("/api/doctors").json()
+    assert not any(d["name"] == "Dr. Queue" for d in doctors)
+
+
+def test_contributor_cannot_view_submissions_list(client, db_session):
+    _contrib_login(client, db_session)
+    res = client.get("/api/submissions")
+    assert res.status_code == 403
+
+
+def test_admin_can_list_submissions(client, db_session):
+    csrf_c = _contrib_login(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf_c}, json={"name": "Dr. List"})
+    # Now login as admin
+    csrf_a = _admin_login_ep(client, db_session)
+    res = client.get("/api/submissions")
+    assert res.status_code == 200
+    assert any(s["payload"].get("name") == "Dr. List" for s in res.json())
+
+
+def test_admin_approve_creates_record(client, db_session):
+    csrf_c = _contrib_login(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf_c}, json={"name": "Dr. Approve"})
+    csrf_a = _admin_login_ep(client, db_session)
+    subs = client.get("/api/submissions").json()
+    sub_id = next(s["id"] for s in subs if s["payload"].get("name") == "Dr. Approve")
+    res = client.post(f"/api/submissions/{sub_id}/approve", headers={"X-CSRF-Token": csrf_a})
+    assert res.status_code == 200
+    assert res.json()["status"] == "approved"
+    doctors = client.get("/api/doctors").json()
+    assert any(d["name"] == "Dr. Approve" for d in doctors)
+
+
+def test_admin_reject_submission(client, db_session):
+    csrf_c = _contrib_login(client, db_session)
+    client.post("/api/ailments", headers={"X-CSRF-Token": csrf_c}, json={"condition": "Rej Test"})
+    csrf_a = _admin_login_ep(client, db_session)
+    subs = client.get("/api/submissions").json()
+    sub_id = next(s["id"] for s in subs if s["payload"].get("condition") == "Rej Test")
+    res = client.post(
+        f"/api/submissions/{sub_id}/reject",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"reject_reason": "Needs more detail"},
+    )
+    assert res.status_code == 200
+    assert res.json()["status"] == "rejected"
+    assert res.json()["reject_reason"] == "Needs more detail"
+
+
+def test_viewer_cannot_create_record(client, db_session):
+    email = f"viewer+{uuid.uuid4().hex[:6]}@test.com"
+    user_service.create_user(db_session, email, "Test1234!", Role.viewer)
+    client.post("/api/auth/login", json={"email": email, "password": "Test1234!"})
+    csrf = client.cookies.get("csrf_token")
+    res = client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Should Fail"})
+    assert res.status_code == 403
+
+
+def test_pending_count(client, db_session):
+    csrf_c = _contrib_login(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf_c}, json={"name": "Count Test"})
+    csrf_a = _admin_login_ep(client, db_session)
+    res = client.get("/api/submissions/pending-count")
+    assert res.status_code == 200
+    assert res.json()["count"] >= 1

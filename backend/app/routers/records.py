@@ -9,8 +9,9 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.audit_log import AuditAction, ActorType
-from app.models.user import User
-from app.security.dependencies import get_current_user, require_admin, verify_csrf
+from app.models.submission import SubmissionAction
+from app.models.user import Role, User
+from app.security.dependencies import get_current_user, require_admin, require_contributor_or_admin, verify_csrf
 from app.services.audit_service import log_event
 from app.services.crud_service import CRUDService
 from app.services.errors import NotFoundError
@@ -55,8 +56,38 @@ def build_list_router(
     def create_record(
         payload: create_schema,
         db: Session = Depends(get_db),
-        current: User = Depends(require_admin),
+        current: User = Depends(require_contributor_or_admin),
     ):
+        section = prefix.removeprefix("/api/").replace("-", "_")
+        if current.role == Role.contributor:
+            from app.services.submission_service import create_submission, UnknownSectionError
+            from app.models.audit_log import AuditAction, ActorType
+            from app.services.audit_service import log_event
+            try:
+                sub = create_submission(
+                    db,
+                    submitted_by_id=current.id,
+                    section=section,
+                    action=SubmissionAction.create,
+                    payload=payload.model_dump(mode="json"),
+                )
+                log_event(
+                    db,
+                    action=AuditAction.submission_created,
+                    actor_type=ActorType.user,
+                    actor_user_id=current.id,
+                    section=section,
+                    detail=f"Contributor submitted create for {tag}",
+                )
+            except UnknownSectionError:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Section '{section}' does not support contributor submissions",
+                )
+            return response_schema.model_validate(
+                {**payload.model_dump(), "id": sub.id, "created_at": sub.created_at, "updated_at": sub.created_at}
+            )
+        # Admin path — write directly
         record = service.create(db, payload.model_dump(), created_by=current.id)
         try:
             log_event(
@@ -64,7 +95,7 @@ def build_list_router(
                 action=AuditAction.create,
                 actor_type=ActorType.user,
                 actor_user_id=current.id,
-                section=prefix.removeprefix("/api/").replace("-", "_"),
+                section=section,
                 record_id=str(record.id),
                 detail=f"Created record in {tag}",
             )
@@ -81,8 +112,41 @@ def build_list_router(
         record_id: uuid.UUID,
         payload: update_schema,
         db: Session = Depends(get_db),
-        current: User = Depends(require_admin),
+        current: User = Depends(require_contributor_or_admin),
     ):
+        section = prefix.removeprefix("/api/").replace("-", "_")
+        if current.role == Role.contributor:
+            from app.services.submission_service import create_submission, UnknownSectionError
+            from app.models.audit_log import AuditAction, ActorType
+            from app.services.audit_service import log_event
+            try:
+                create_submission(
+                    db,
+                    submitted_by_id=current.id,
+                    section=section,
+                    action=SubmissionAction.update,
+                    payload=payload.model_dump(exclude_unset=True, mode="json"),
+                    record_id=str(record_id),
+                )
+                log_event(
+                    db,
+                    action=AuditAction.submission_created,
+                    actor_type=ActorType.user,
+                    actor_user_id=current.id,
+                    section=section,
+                    record_id=str(record_id),
+                    detail=f"Contributor submitted update for {tag} record {record_id}",
+                )
+            except UnknownSectionError:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Section '{section}' does not support contributor submissions",
+                )
+            try:
+                return service.get(db, record_id)
+            except Exception:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+        # Admin path
         try:
             record = service.update(db, record_id, payload.model_dump(exclude_unset=True))
         except NotFoundError:
@@ -93,7 +157,7 @@ def build_list_router(
                 action=AuditAction.update,
                 actor_type=ActorType.user,
                 actor_user_id=current.id,
-                section=prefix.removeprefix("/api/").replace("-", "_"),
+                section=section,
                 record_id=str(record_id),
                 detail=f"Updated record in {tag}",
             )
@@ -109,8 +173,38 @@ def build_list_router(
     def delete_record(
         record_id: uuid.UUID,
         db: Session = Depends(get_db),
-        current: User = Depends(require_admin),
+        current: User = Depends(require_contributor_or_admin),
     ):
+        section = prefix.removeprefix("/api/").replace("-", "_")
+        if current.role == Role.contributor:
+            from app.services.submission_service import create_submission, UnknownSectionError
+            from app.models.audit_log import AuditAction, ActorType
+            from app.services.audit_service import log_event
+            try:
+                create_submission(
+                    db,
+                    submitted_by_id=current.id,
+                    section=section,
+                    action=SubmissionAction.delete,
+                    payload={},
+                    record_id=str(record_id),
+                )
+                log_event(
+                    db,
+                    action=AuditAction.submission_created,
+                    actor_type=ActorType.user,
+                    actor_user_id=current.id,
+                    section=section,
+                    record_id=str(record_id),
+                    detail=f"Contributor submitted delete for {tag} record {record_id}",
+                )
+            except UnknownSectionError:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Section '{section}' does not support contributor submissions",
+                )
+            return  # 204 No Content — submission queued
+        # Admin path
         if document_section is not None:
             from app.services.documents import delete_documents_for_record
             delete_documents_for_record(db, document_section, str(record_id))
@@ -124,7 +218,7 @@ def build_list_router(
                 action=AuditAction.delete,
                 actor_type=ActorType.user,
                 actor_user_id=current.id,
-                section=prefix.removeprefix("/api/").replace("-", "_"),
+                section=section,
                 record_id=str(record_id),
                 detail=f"Deleted record in {tag}",
             )
