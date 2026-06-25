@@ -142,8 +142,8 @@ export default function UsersPage() {
                   header: "Role",
                   sortKey: "role",
                   render: (r) => (
-                    <Badge variant={r.role === "admin" ? "default" : "secondary"}>
-                      {r.role === "admin" ? "Admin" : "Viewer"}
+                    <Badge variant={r.role === "admin" ? "default" : r.role === "contributor" ? "outline" : "secondary"}>
+                      {r.role === "admin" ? "Admin" : r.role === "contributor" ? "Contributor" : "Viewer"}
                     </Badge>
                   ),
                 },
@@ -152,15 +152,15 @@ export default function UsersPage() {
               detailFields={(r) => [
                 { label: "Name", value: r.full_name ?? null },
                 { label: "Email", value: r.email },
-                { label: "Role", value: r.role === "admin" ? "Admin" : "Viewer" },
+                { label: "Role", value: r.role === "admin" ? "Admin" : r.role === "contributor" ? "Contributor" : "Viewer" },
                 { label: "Active", value: r.is_active ? "Yes" : "No" },
                 { label: "Created", value: formatDate(r.created_at) },
               ]}
               getHeadline={(r) => r.email}
               getSubtitle={(r) => r.full_name ?? null}
               getBadge={(r) => ({
-                label: r.role === "admin" ? "Admin" : "Viewer",
-                variant: r.role === "admin" ? "default" : "secondary",
+                label: r.role === "admin" ? "Admin" : r.role === "contributor" ? "Contributor" : "Viewer",
+                variant: r.role === "admin" ? "default" : r.role === "contributor" ? "outline" : "secondary",
               })}
               onEdit={(r) => openEdit(r)}
               onDelete={(r) => onDelete(r)}
@@ -215,8 +215,9 @@ export default function UsersPage() {
                   value={newRole}
                   onChange={(e) => setNewRole(e.target.value as "admin" | "contributor" | "viewer")}
                 >
-                  <option value="viewer">Viewer</option>
                   <option value="admin">Admin</option>
+                  <option value="contributor">Contributor</option>
+                  <option value="viewer">Viewer</option>
                 </Select>
               </FormField>
             </div>
@@ -249,8 +250,9 @@ export default function UsersPage() {
                   value={editRole}
                   onChange={(e) => setEditRole(e.target.value as "admin" | "contributor" | "viewer")}
                 >
-                  <option value="viewer">Viewer</option>
                   <option value="admin">Admin</option>
+                  <option value="contributor">Contributor</option>
+                  <option value="viewer">Viewer</option>
                 </Select>
               </FormField>
               <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
