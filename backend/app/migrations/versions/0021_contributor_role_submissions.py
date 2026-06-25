@@ -6,6 +6,7 @@ Create Date: 2026-06-23
 """
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import UUID
 
 revision = "0021"
@@ -15,19 +16,30 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # All three ALTER TYPE / CREATE TYPE calls need to run outside a transaction
-    # on Postgres ≤ 11.  We use COMMIT/BEGIN to bracket the whole block.
-    op.execute("COMMIT")
+    # Postgres 12+ (this project runs PG 17) allows ALTER TYPE ... ADD VALUE
+    # inside a transaction, so we stay inside Alembic's transaction — no manual
+    # COMMIT/BEGIN.  (The previous COMMIT/BEGIN approach desynced SQLAlchemy's
+    # transaction state, which silently defeated create_type=False and caused a
+    # duplicate CREATE TYPE for the submission enums.)
+    #
+    # We only ADD the enum value; we never USE it (no INSERT/UPDATE referencing
+    # 'contributor') in this same transaction — the one thing Postgres forbids.
     op.execute("ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'contributor' AFTER 'admin'")
 
-    # Check if enum types exist before creating them (psycopg3 doesn't handle DO $$ blocks properly)
-    conn = op.get_bind()
-    if not conn.execute(sa.text("SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname = 'submissionaction')")).scalar():
-        conn.execute(sa.text("CREATE TYPE submissionaction AS ENUM ('create', 'update', 'delete')"))
-    if not conn.execute(sa.text("SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname = 'submissionstatus')")).scalar():
-        conn.execute(sa.text("CREATE TYPE submissionstatus AS ENUM ('pending', 'approved', 'rejected')"))
+    bind = op.get_bind()
 
-    op.execute("BEGIN")
+    # Create the submission enum types explicitly with checkfirst=True so this
+    # migration is safe to re-run even if a prior failed attempt left the types
+    # behind.  We reuse the SAME ENUM instances as the column types with
+    # create_type=False so create_table does not try to create them again.
+    submission_action = postgresql.ENUM(
+        "create", "update", "delete", name="submissionaction", create_type=False
+    )
+    submission_status = postgresql.ENUM(
+        "pending", "approved", "rejected", name="submissionstatus", create_type=False
+    )
+    submission_action.create(bind, checkfirst=True)
+    submission_status.create(bind, checkfirst=True)
 
     op.create_table(
         "submissions",
@@ -39,12 +51,12 @@ def upgrade() -> None:
             nullable=True,
         ),
         sa.Column("section", sa.String(), nullable=False),
-        sa.Column("action", sa.Enum("create", "update", "delete", name="submissionaction", create_type=False), nullable=False),
+        sa.Column("action", submission_action, nullable=False),
         sa.Column("record_id", sa.String(), nullable=True),
         sa.Column("payload", sa.JSON(), nullable=False),
         sa.Column(
             "status",
-            sa.Enum("pending", "approved", "rejected", name="submissionstatus", create_type=False),
+            submission_status,
             nullable=False,
             server_default="pending",
         ),
@@ -66,7 +78,7 @@ def upgrade() -> None:
     op.create_index("ix_submissions_status", "submissions", ["status"])
     op.create_index("ix_submissions_section", "submissions", ["section"])
 
-    # Add new audit actions
+    # Add new audit actions (ADD VALUE is transaction-safe on PG 12+).
     op.execute("ALTER TYPE auditaction ADD VALUE IF NOT EXISTS 'submission_created'")
     op.execute("ALTER TYPE auditaction ADD VALUE IF NOT EXISTS 'submission_approved'")
     op.execute("ALTER TYPE auditaction ADD VALUE IF NOT EXISTS 'submission_rejected'")
