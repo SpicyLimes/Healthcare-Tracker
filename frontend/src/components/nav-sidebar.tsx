@@ -4,8 +4,9 @@ import {
   Activity, User, Pill, Stethoscope, HeartPulse, Shield, Building2, Users,
   Scissors, Hospital, Eye, Smile, Syringe, ClipboardList,
   FolderOpen, KeyRound, Share2, ScrollText, UserCog, LogOut,
-  LayoutDashboard, Calendar, CheckCircle2, Database, StickyNote, Salad, Bot,
+  LayoutDashboard, Calendar, CheckCircle2, Database, StickyNote, Salad, Bot, Inbox,
 } from "lucide-react";
+import { pendingSubmissionCount } from "@/api/submissions";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -66,6 +67,7 @@ const navGroups = [
 ];
 
 const adminItems = [
+  { to: "/submissions", label: "Submissions", icon: Inbox },
   { to: "/share-links", label: "Share Links", icon: Share2 },
   { to: "/audit-log", label: "Audit Log", icon: ScrollText },
   { to: "/users", label: "Manage Users", icon: UserCog },
@@ -82,10 +84,20 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
   const { user, logout } = useAuth();
   const isAdmin = user?.role === "admin";
   const [health, setHealth] = useState<HealthStatus | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     fetchHealth().then(setHealth).catch(() => setHealth(null));
   }, []);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    pendingSubmissionCount().then(setPendingCount).catch(() => setPendingCount(0));
+    const interval = setInterval(() => {
+      pendingSubmissionCount().then(setPendingCount).catch(() => setPendingCount(0));
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [isAdmin]);
 
   const navLink = (
     to: string,
@@ -203,7 +215,25 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
               )}
               <ul className={cn("list-none flex flex-col gap-0.5", collapsed && "items-center")}>
                 {adminItems.map((item) => (
-                  <li key={item.to}>{navLink(item.to, item.label, item.icon, pathname === item.to)}</li>
+                  <li key={item.to}>
+                    {item.to === "/submissions" && pendingCount > 0 ? (
+                      <div className="relative">
+                        {navLink(item.to, item.label, item.icon, pathname === item.to)}
+                        {!collapsed && (
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-primary px-1.5 py-0.5 text-[0.6rem] font-bold text-primary-foreground">
+                            {pendingCount}
+                          </span>
+                        )}
+                        {collapsed && (
+                          <span className="absolute -right-1 -top-1 rounded-full bg-primary px-1 text-[0.6rem] font-bold text-primary-foreground">
+                            {pendingCount}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      navLink(item.to, item.label, item.icon, pathname === item.to)
+                    )}
+                  </li>
                 ))}
               </ul>
             </div>
