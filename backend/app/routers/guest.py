@@ -149,11 +149,13 @@ def download_guest_document(
     except Exception:
         logger.exception("Guest handler commit failed")
         db.rollback()
+    # Let FileResponse build the Content-Disposition header (it RFC 5987-encodes
+    # the filename safely); just tell it inline vs attachment.
     return FileResponse(
         path=file_path,
         media_type=doc.mime_type,
         filename=doc.filename,
-        headers={"Content-Disposition": f'{disposition}; filename="{doc.filename}"'},
+        content_disposition_type=disposition,
     )
 
 

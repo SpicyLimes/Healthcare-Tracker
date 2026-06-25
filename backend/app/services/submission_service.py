@@ -21,6 +21,7 @@ from app.schemas.extended_records import (
 )
 from app.schemas.records import AilmentCreate, DoctorCreate, MedicationCreate
 from app.services.crud_service import CRUDService
+from app.services.errors import NotFoundError
 
 # Maps the section key (derived from the URL prefix) to the Create schema.
 # On approve, the incoming payload is validated against this schema before
@@ -97,6 +98,12 @@ class UnknownSectionError(Exception):
     pass
 
 
+class TargetRecordMissingError(Exception):
+    """Raised when approving an update/delete submission whose target record
+    no longer exists. The submission is auto-rejected before this is raised."""
+    pass
+
+
 def create_submission(
     db: Session,
     submitted_by_id: uuid.UUID,
@@ -128,6 +135,23 @@ def _get_or_404(db: Session, submission_id: uuid.UUID) -> Submission:
     return sub
 
 
+_MISSING_TARGET_REASON = (
+    "Target record no longer exists; submission auto-rejected on approval."
+)
+
+
+def _auto_reject_missing_target(
+    db: Session, sub: Submission, reviewer_id: uuid.UUID
+) -> None:
+    """Mark a submission rejected because its target record is gone, so it
+    leaves the pending queue instead of being stuck as an un-approvable item."""
+    sub.status = SubmissionStatus.rejected
+    sub.reviewed_by = reviewer_id
+    sub.reviewed_at = datetime.now(timezone.utc)
+    sub.reject_reason = _MISSING_TARGET_REASON
+    db.flush()
+
+
 def approve_submission(
     db: Session,
     submission_id: uuid.UUID,
@@ -149,12 +173,24 @@ def approve_submission(
         if sub.record_id is None:
             raise SubmissionNotFoundError("update submission missing record_id")
         record_id = uuid.UUID(sub.record_id)
-        service.update(db, record_id, sub.payload)
+        try:
+            service.update(db, record_id, sub.payload)
+        except NotFoundError:
+            _auto_reject_missing_target(db, sub, reviewer_id)
+            raise TargetRecordMissingError(str(submission_id))
 
     elif sub.action == SubmissionAction.delete:
         if sub.record_id is None:
             raise SubmissionNotFoundError("delete submission missing record_id")
         record_id = uuid.UUID(sub.record_id)
+        # Confirm the record still exists BEFORE cascading documents, so a stale
+        # submission doesn't trigger delete_documents_for_record's internal
+        # commit on a doomed approval.
+        try:
+            service.get(db, record_id)
+        except NotFoundError:
+            _auto_reject_missing_target(db, sub, reviewer_id)
+            raise TargetRecordMissingError(str(submission_id))
         if sub.section in DOCUMENT_SECTION_REGISTRY:
             from app.services.documents import delete_documents_for_record
             from app.models.document import DocumentSection as _DocumentSection

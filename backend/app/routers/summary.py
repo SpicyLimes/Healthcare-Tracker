@@ -32,6 +32,9 @@ def _get_patient(db: Session) -> dict | None:
     return ProfileResponse.model_validate(row).model_dump(mode="json") if row else None
 
 
+# require_viewer_or_admin is listed here (in addition to the `current` param
+# below) so authentication is evaluated BEFORE verify_csrf — an anonymous caller
+# gets 401, not a 403 that leaks the CSRF gate.
 @router.post("", dependencies=[Depends(require_viewer_or_admin), Depends(verify_csrf)])
 @limiter.limit("20/minute")
 def generate_summary(

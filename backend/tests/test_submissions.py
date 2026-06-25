@@ -10,6 +10,7 @@ from app.services.submission_service import (
     list_submissions,
     AlreadyReviewedError,
     SubmissionNotFoundError,
+    TargetRecordMissingError,
     UnknownSectionError,
 )
 
@@ -111,6 +112,47 @@ def test_approve_unknown_id_raises(db_session):
     admin = _make_admin(db_session)
     with pytest.raises(SubmissionNotFoundError):
         approve_submission(db_session, uuid.uuid4(), admin.id)
+
+
+def test_approve_delete_with_missing_record_auto_rejects(db_session):
+    # A contributor proposes deleting a record, then the record is gone by the
+    # time the admin approves. The submission must auto-reject (not 500/stick).
+    contrib = _make_contributor(db_session)
+    admin = _make_admin(db_session)
+    sub = create_submission(
+        db_session,
+        submitted_by_id=contrib.id,
+        section="doctors",
+        action=SubmissionAction.delete,
+        payload={},
+        record_id=str(uuid.uuid4()),  # a record id that does not exist
+    )
+    with pytest.raises(TargetRecordMissingError):
+        approve_submission(db_session, sub.id, admin.id)
+    # The submission left the pending queue with a clear reason.
+    from app.models.submission import Submission
+    refreshed = db_session.get(Submission, sub.id)
+    assert refreshed.status == SubmissionStatus.rejected
+    assert refreshed.reviewed_by == admin.id
+    assert "no longer exists" in refreshed.reject_reason
+
+
+def test_approve_update_with_missing_record_auto_rejects(db_session):
+    contrib = _make_contributor(db_session)
+    admin = _make_admin(db_session)
+    sub = create_submission(
+        db_session,
+        submitted_by_id=contrib.id,
+        section="doctors",
+        action=SubmissionAction.update,
+        payload={"name": "Renamed"},
+        record_id=str(uuid.uuid4()),
+    )
+    with pytest.raises(TargetRecordMissingError):
+        approve_submission(db_session, sub.id, admin.id)
+    from app.models.submission import Submission
+    refreshed = db_session.get(Submission, sub.id)
+    assert refreshed.status == SubmissionStatus.rejected
 
 
 # ---- Endpoint tests ----
@@ -235,3 +277,37 @@ def test_contributor_cannot_delete_note(client, db_session):
     csrf_c = _contrib_login(client, db_session)
     res2 = client.delete(f"/api/notes/{note_id}", headers={"X-CSRF-Token": csrf_c})
     assert res2.status_code == 403
+
+
+# ---- C1 regression: contributor create must return 201 for EVERY section ----
+# The synthetic response object is built from the create payload + system fields
+# and validated against the response schema. A response-schema field that is
+# required but absent from the create payload (e.g. VitalsResponse.visit_log_id)
+# previously raised a 500. This exercises all 12 registered sections, not just
+# doctors, so that class of bug can't recur silently.
+
+# (section URL prefix, minimal valid create payload)
+_SECTION_CREATE_CASES = [
+    ("/api/medications", {"name": "Test Med"}),
+    ("/api/doctors", {"name": "Dr. Test"}),
+    ("/api/ailments", {"condition": "Test Condition"}),
+    ("/api/insurances", {"insurer_name": "Test Insurer"}),
+    ("/api/pharmacies", {"name": "Test Pharmacy"}),
+    ("/api/family-history", {"relative": "Mother", "condition": "Test"}),
+    ("/api/surgeries", {"procedure": "Test Procedure"}),
+    ("/api/hospitalizations", {"facility": "Test Facility"}),
+    ("/api/vision-history", {"visit_date": "2026-01-01"}),
+    ("/api/dental-history", {"visit_date": "2026-01-01"}),
+    ("/api/vaccinations", {"vaccine": "Test Vaccine"}),
+    ("/api/vitals", {"measured_at": "2026-01-01T10:00:00Z", "bp_systolic": 120, "bp_diastolic": 80}),
+]
+
+
+@pytest.mark.parametrize("prefix,payload", _SECTION_CREATE_CASES)
+def test_contributor_create_returns_201_for_all_sections(client, db_session, prefix, payload):
+    csrf = _contrib_login(client, db_session)
+    res = client.post(prefix, headers={"X-CSRF-Token": csrf}, json=payload)
+    assert res.status_code == 201, f"{prefix} -> {res.status_code}: {res.text}"
+    # And it must be queued, not written directly.
+    body = res.json()
+    assert "id" in body

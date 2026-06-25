@@ -109,6 +109,10 @@ def test_download_as_admin(client, db_session, tmp_uploads_dir):
     doc_id = upload.json()["id"]
     r = client.get(f"/api/documents/{doc_id}/download")
     assert r.status_code == 200
+    # PDFs are viewable inline; the filename must survive in the header.
+    cd = r.headers["content-disposition"]
+    assert cd.startswith("inline")
+    assert "test.pdf" in cd
 
 
 def test_download_as_viewer(client, db_session, tmp_uploads_dir):

@@ -32,11 +32,13 @@ def download_document(doc_id: int, db: Session = Depends(get_db)):
     if not os.path.exists(file_path):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk")
     disposition = "inline" if doc.mime_type in INLINE_MIME_TYPES else "attachment"
+    # Let FileResponse build the Content-Disposition header (it RFC 5987-encodes
+    # the filename safely); just tell it inline vs attachment.
     return FileResponse(
         path=file_path,
         media_type=doc.mime_type,
         filename=doc.filename,
-        headers={"Content-Disposition": f'{disposition}; filename="{doc.filename}"'},
+        content_disposition_type=disposition,
     )
 
 

@@ -13,6 +13,7 @@ from app.services.audit_service import log_event
 from app.services.submission_service import (
     AlreadyReviewedError,
     SubmissionNotFoundError,
+    TargetRecordMissingError,
     approve_submission,
     list_submissions,
     reject_submission,
@@ -57,6 +58,14 @@ def approve(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
     except AlreadyReviewedError:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Already reviewed")
+    except TargetRecordMissingError:
+        # The record this submission targeted was deleted before approval. The
+        # submission has been auto-rejected; persist that and tell the admin.
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The record this submission targets no longer exists; it has been auto-rejected.",
+        )
     try:
         log_event(
             db,

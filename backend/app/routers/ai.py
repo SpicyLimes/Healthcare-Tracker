@@ -34,6 +34,9 @@ def status_(db: Session = Depends(get_db)):
 
 
 @router.post("/chat", response_model=ChatResponse,
+             # require_viewer_or_admin is listed here (in addition to the `current`
+             # param below) so authentication is evaluated BEFORE verify_csrf — an
+             # anonymous caller gets 401, not a 403 that leaks the CSRF gate.
              dependencies=[Depends(require_viewer_or_admin), Depends(verify_csrf)])
 @limiter.limit("20/minute")
 def chat(

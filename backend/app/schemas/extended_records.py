@@ -394,7 +394,9 @@ class VitalsResponse(BaseModel):
     spo2: int | None
     blood_glucose: int | None
     notes: str | None
-    visit_log_id: uuid.UUID | None
+    # Defaulted so the contributor-create synthetic response (built from the
+    # VitalsCreate payload, before any Visit Log link exists) validates.
+    visit_log_id: uuid.UUID | None = None
     created_at: datetime
     updated_at: datetime
 
