@@ -1,11 +1,12 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func, select as sa_select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.audit_log import AuditAction, ActorType
-from app.models.submission import SubmissionStatus
+from app.models.submission import Submission, SubmissionStatus
 from app.schemas.submission import ReviewRequest, SubmissionRead
 from app.security.dependencies import require_admin, verify_csrf
 from app.services.audit_service import log_event
@@ -32,8 +33,12 @@ def list_all(
 
 @router.get("/pending-count", dependencies=[Depends(require_admin)])
 def pending_count(db: Session = Depends(get_db)):
-    subs = list_submissions(db, status=SubmissionStatus.pending)
-    return {"count": len(subs)}
+    count = db.scalar(
+        sa_select(func.count()).select_from(Submission).where(
+            Submission.status == SubmissionStatus.pending
+        )
+    ) or 0
+    return {"count": count}
 
 
 @router.post(

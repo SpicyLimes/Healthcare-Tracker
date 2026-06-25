@@ -144,7 +144,7 @@ def build_list_router(
                 )
             try:
                 return service.get(db, record_id)
-            except Exception:
+            except NotFoundError:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
         # Admin path
         try:

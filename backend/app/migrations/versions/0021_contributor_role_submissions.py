@@ -16,7 +16,7 @@ depends_on = None
 
 def upgrade() -> None:
     # Add contributor to the user_role enum.
-    # ALTER TYPE … ADD VALUE cannot run inside a transaction in Postgres ≤ 15.
+    # ALTER TYPE … ADD VALUE cannot run inside a transaction in Postgres ≤ 11.
     op.execute("COMMIT")
     op.execute("ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'contributor' AFTER 'admin'")
     op.execute("BEGIN")

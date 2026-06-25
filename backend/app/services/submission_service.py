@@ -40,6 +40,21 @@ SECTION_REGISTRY: dict[str, type[BaseModel]] = {
     "vitals": VitalsCreate,
 }
 
+# Maps section keys that have associated documents to their DocumentSection enum
+# value string.  Used by approve_submission to cascade-delete documents before
+# deleting the record (mirrors what build_list_router's admin delete path does).
+DOCUMENT_SECTION_REGISTRY: dict[str, str] = {
+    "medications": "medications",
+    "doctors": "doctors",
+    "ailments": "ailments",
+    "surgeries": "surgeries",
+    "hospitalizations": "hospitalizations",
+    "dental_history": "dental_history",
+    "insurances": "insurances",
+    "vision_history": "vision_history",
+    "vaccinations": "vaccinations",
+}
+
 # Maps the section key to the SQLAlchemy model (for update/delete approvals).
 # Import lazily to avoid circular imports at module load time.
 def _get_model(section: str):
@@ -131,11 +146,20 @@ def approve_submission(
         service.create(db, validated.model_dump(), created_by=reviewer_id)
 
     elif sub.action == SubmissionAction.update:
+        if sub.record_id is None:
+            raise SubmissionNotFoundError("update submission missing record_id")
         record_id = uuid.UUID(sub.record_id)
         service.update(db, record_id, sub.payload)
 
     elif sub.action == SubmissionAction.delete:
+        if sub.record_id is None:
+            raise SubmissionNotFoundError("delete submission missing record_id")
         record_id = uuid.UUID(sub.record_id)
+        if sub.section in DOCUMENT_SECTION_REGISTRY:
+            from app.services.documents import delete_documents_for_record
+            from app.models.document import DocumentSection as _DocumentSection
+            doc_section = _DocumentSection(DOCUMENT_SECTION_REGISTRY[sub.section])
+            delete_documents_for_record(db, doc_section, str(record_id))
         service.delete(db, record_id)
 
     sub.status = SubmissionStatus.approved
