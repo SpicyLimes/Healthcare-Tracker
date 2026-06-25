@@ -51,7 +51,7 @@ def _get_model(section: str):
         Insurance, Pharmacy, Surgery, Vaccination, VisionHistory, Vitals,
     )
 
-    return {
+    registry = {
         "medications": Medication,
         "doctors": Doctor,
         "ailments": Ailment,
@@ -64,7 +64,10 @@ def _get_model(section: str):
         "dental_history": DentalHistory,
         "vaccinations": Vaccination,
         "vitals": Vitals,
-    }[section]
+    }
+    if section not in registry:
+        raise UnknownSectionError(section)
+    return registry[section]
 
 
 class SubmissionNotFoundError(Exception):
