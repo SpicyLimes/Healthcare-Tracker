@@ -24,6 +24,12 @@ const EMPTY: VisionHistoryInput = {
 export default function VisionHistoryPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isContributor = user?.role === "contributor";
+  const canWrite = isAdmin || isContributor;
+  const submitLabel = isContributor ? "Submit for Approval" : "Save";
+  const contributorNotice = isContributor
+    ? "As a Contributor, your changes will be submitted for Admin review before taking effect."
+    : null;
   const [rows, setRows] = useState<VisionHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -81,6 +87,10 @@ export default function VisionHistoryPage() {
   }
 
   async function onDelete(id: string) {
+    const msg = isContributor
+      ? "Submit a deletion request for this vision history record? An Admin must approve before it is removed."
+      : "Delete this vision history record?";
+    if (!window.confirm(msg)) return;
     try { await visionHistoryApi.remove(id); await reload(); }
     catch { setError("Could not delete record"); }
   }
@@ -90,14 +100,14 @@ export default function VisionHistoryPage() {
       <PageLayout
         title="Vision History"
         description="Eye exams, prescriptions, and vision care."
-        action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
+        action={canWrite ? <Button onClick={openAdd}>+ Add</Button> : undefined}
       >
         <Card>
           <CardContent className="p-0">
             <RecordTable
               rows={rows}
               loading={loading}
-              isAdmin={isAdmin}
+              isAdmin={canWrite}
               getRowId={(r) => r.id}
               defaultSortKey="visit_date"
               defaultSortDir="desc"
@@ -114,7 +124,7 @@ export default function VisionHistoryPage() {
                 { label: "Rx OS", value: r.rx_os },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="vision_history" recordId={r.id} isAdmin={isAdmin} />}
+              renderDetailExtra={(r) => <DocumentsPanel section="vision_history" recordId={r.id} isAdmin={canWrite} />}
               getHeadline={(r) => r.visit_date ?? "Vision Visit"}
               getSubtitle={(r) => resolveDoctorName(r.provider_id, r.provider_other) || null}
               onEdit={(r) => openEdit(r)}
@@ -128,11 +138,14 @@ export default function VisionHistoryPage() {
       {modalMode && (
         <RecordFormModal
           title={modalMode === "edit" ? "Edit Vision Record" : "Add Vision Record"}
-          submitLabel={modalMode === "edit" ? "Save" : "Add Record"}
+          submitLabel={submitLabel}
           error={modalError || null}
           onClose={closeModal}
           onSubmit={onSubmit}
         >
+          {contributorNotice && (
+            <p className="text-sm text-muted-foreground">{contributorNotice}</p>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField label="Visit Date" htmlFor="vis-date">
               <Input

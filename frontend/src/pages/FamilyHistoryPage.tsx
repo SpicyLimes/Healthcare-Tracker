@@ -19,6 +19,12 @@ const EMPTY: FamilyHistoryInput = {
 export default function FamilyHistoryPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isContributor = user?.role === "contributor";
+  const canWrite = isAdmin || isContributor;
+  const submitLabel = isContributor ? "Submit for Approval" : "Save";
+  const contributorNotice = isContributor
+    ? "As a Contributor, your changes will be submitted for Admin review before taking effect."
+    : null;
   const [rows, setRows] = useState<FamilyHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -77,6 +83,10 @@ export default function FamilyHistoryPage() {
   }
 
   async function onDelete(id: string) {
+    const msg = isContributor
+      ? "Submit a deletion request for this family history record? An Admin must approve before it is removed."
+      : "Delete this family history record?";
+    if (!window.confirm(msg)) return;
     setError("");
     try {
       await familyHistoryApi.remove(id);
@@ -91,14 +101,14 @@ export default function FamilyHistoryPage() {
       <PageLayout
         title="Family Health History"
         description="Hereditary conditions and family medical history."
-        action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
+        action={canWrite ? <Button onClick={openAdd}>+ Add</Button> : undefined}
       >
         <Card>
           <CardContent className="p-0">
             <RecordTable
               rows={rows}
               loading={loading}
-              isAdmin={isAdmin}
+              isAdmin={canWrite}
               getRowId={(r) => r.id}
               defaultSortKey="relative"
               primaryColumns={[
@@ -127,11 +137,14 @@ export default function FamilyHistoryPage() {
       {modalMode && (
         <RecordFormModal
           title={modalMode === "edit" ? "Edit Family History" : "Add Family History"}
-          submitLabel={modalMode === "edit" ? "Save" : "Add record"}
+          submitLabel={submitLabel}
           error={modalError || null}
           onClose={closeModal}
           onSubmit={onSubmit}
         >
+          {contributorNotice && (
+            <p className="text-sm text-muted-foreground">{contributorNotice}</p>
+          )}
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <FormField label="Relative" htmlFor="relative">
               <Input

@@ -21,6 +21,12 @@ const EMPTY: InsuranceInput = {
 export default function InsurancePage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isContributor = user?.role === "contributor";
+  const canWrite = isAdmin || isContributor;
+  const submitLabel = isContributor ? "Submit for Approval" : "Save";
+  const contributorNotice = isContributor
+    ? "As a Contributor, your changes will be submitted for Admin review before taking effect."
+    : null;
   const [rows, setRows] = useState<Insurance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -80,6 +86,10 @@ export default function InsurancePage() {
   }
 
   async function onDelete(id: string) {
+    const msg = isContributor
+      ? "Submit a deletion request for this insurance record? An Admin must approve before it is removed."
+      : "Delete this insurance record?";
+    if (!window.confirm(msg)) return;
     setError("");
     try {
       await insurancesApi.remove(id);
@@ -94,14 +104,14 @@ export default function InsurancePage() {
       <PageLayout
         title="Insurance"
         description="Health insurance policies and contact information."
-        action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
+        action={canWrite ? <Button onClick={openAdd}>+ Add</Button> : undefined}
       >
         <Card>
           <CardContent className="p-0">
             <RecordTable
               rows={rows}
               loading={loading}
-              isAdmin={isAdmin}
+              isAdmin={canWrite}
               getRowId={(r) => r.id}
               defaultSortKey="insurer_name"
               primaryColumns={[
@@ -117,7 +127,7 @@ export default function InsurancePage() {
                 { label: "Address", value: r.contact_address },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="insurances" recordId={r.id} isAdmin={isAdmin} />}
+              renderDetailExtra={(r) => <DocumentsPanel section="insurances" recordId={r.id} isAdmin={canWrite} />}
               getHeadline={(r) => r.insurer_name}
               getSubtitle={(r) => r.policy_number ?? null}
               onEdit={(r) => openEdit(r)}
@@ -132,11 +142,14 @@ export default function InsurancePage() {
       {modalMode && (
         <RecordFormModal
           title={modalMode === "edit" ? "Edit Insurance" : "Add Insurance"}
-          submitLabel={modalMode === "edit" ? "Save" : "Add Insurance"}
+          submitLabel={submitLabel}
           error={modalError || null}
           onClose={closeModal}
           onSubmit={onSubmit}
         >
+          {contributorNotice && (
+            <p className="text-sm text-muted-foreground">{contributorNotice}</p>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <FormField label="Insurer name" htmlFor="ins-insurer-name">

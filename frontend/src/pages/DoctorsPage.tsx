@@ -23,6 +23,12 @@ const EMPTY: DoctorInput = {
 export default function DoctorsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isContributor = user?.role === "contributor";
+  const canWrite = isAdmin || isContributor;
+  const submitLabel = isContributor ? "Submit for Approval" : "Save";
+  const contributorNotice = isContributor
+    ? "As a Contributor, your changes will be submitted for Admin review before taking effect."
+    : null;
   const [rows, setRows] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -75,6 +81,10 @@ export default function DoctorsPage() {
   }
 
   async function onDelete(id: string) {
+    const msg = isContributor
+      ? "Submit a deletion request for this doctor? An Admin must approve before it is removed."
+      : "Delete this doctor?";
+    if (!window.confirm(msg)) return;
     try {
       await doctorsApi.remove(id);
       await reload();
@@ -88,14 +98,14 @@ export default function DoctorsPage() {
       <PageLayout
         title="Doctors & Specialists"
         description="Manage your physicians, specialists, and care providers."
-        action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
+        action={canWrite ? <Button onClick={openAdd}>+ Add</Button> : undefined}
       >
         <Card>
           <CardContent className="p-0">
             <RecordTable
               rows={rows}
               loading={loading}
-              isAdmin={isAdmin}
+              isAdmin={canWrite}
               getRowId={(r) => r.id}
               defaultSortKey="name"
               primaryColumns={[
@@ -113,7 +123,7 @@ export default function DoctorsPage() {
                 { label: "Portal URL", value: r.patient_portal_url },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="doctors" recordId={r.id} isAdmin={isAdmin} />}
+              renderDetailExtra={(r) => <DocumentsPanel section="doctors" recordId={r.id} isAdmin={canWrite} />}
               getHeadline={(r) => r.name}
               getSubtitle={(r) => r.specialty ?? null}
               onEdit={(r) => openEdit(r)}
@@ -127,11 +137,14 @@ export default function DoctorsPage() {
       {modalMode && (
         <RecordFormModal
           title={modalMode === "edit" ? "Edit Doctor" : "Add Doctor"}
-          submitLabel={modalMode === "edit" ? "Save" : "Add Doctor"}
+          submitLabel={submitLabel}
           error={modalError || null}
           onClose={closeModal}
           onSubmit={onSubmit}
         >
+          {contributorNotice && (
+            <p className="text-sm text-muted-foreground">{contributorNotice}</p>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField label="Name" htmlFor="doc-name">
               <Input

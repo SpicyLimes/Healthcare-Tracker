@@ -27,6 +27,12 @@ const EMPTY: HospitalizationInput = {
 export default function HospitalizationsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isContributor = user?.role === "contributor";
+  const canWrite = isAdmin || isContributor;
+  const submitLabel = isContributor ? "Submit for Approval" : "Save";
+  const contributorNotice = isContributor
+    ? "As a Contributor, your changes will be submitted for Admin review before taking effect."
+    : null;
   const [rows, setRows] = useState<Hospitalization[]>([]);
   const [loading, setLoading] = useState(true);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -45,7 +51,7 @@ export default function HospitalizationsPage() {
   }, []);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!canWrite) return;
     const openId = searchParams.get("open");
     if (!openId || rows.length === 0) return;
     const record = rows.find((r) => r.id === openId);
@@ -91,6 +97,10 @@ export default function HospitalizationsPage() {
   }
 
   async function onDelete(id: string) {
+    const msg = isContributor
+      ? "Submit a deletion request for this hospitalization record? An Admin must approve before it is removed."
+      : "Delete this hospitalization record?";
+    if (!window.confirm(msg)) return;
     try { await hospitalizationsApi.remove(id); await reload(); }
     catch { setError("Could not delete record"); }
   }
@@ -105,14 +115,14 @@ export default function HospitalizationsPage() {
       <PageLayout
         title="Hospitalizations"
         description="Hospital stays and inpatient events."
-        action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
+        action={canWrite ? <Button onClick={openAdd}>+ Add</Button> : undefined}
       >
         <Card>
           <CardContent className="p-0">
             <RecordTable
               rows={rows}
               loading={loading}
-              isAdmin={isAdmin}
+              isAdmin={canWrite}
               getRowId={(r) => r.id}
               defaultSortKey="admission_date"
               defaultSortDir="desc"
@@ -130,7 +140,7 @@ export default function HospitalizationsPage() {
                 { label: "Outcome", value: r.outcome },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="hospitalizations" recordId={r.id} isAdmin={isAdmin} />}
+              renderDetailExtra={(r) => <DocumentsPanel section="hospitalizations" recordId={r.id} isAdmin={canWrite} />}
               getHeadline={(r) => r.facility}
               getSubtitle={(r) => r.admission_date ?? null}
               onEdit={(r) => openEdit(r)}
@@ -148,11 +158,14 @@ export default function HospitalizationsPage() {
       {modalMode && (
         <RecordFormModal
           title={modalMode === "edit" ? "Edit Hospitalization" : "Add Hospitalization"}
-          submitLabel={modalMode === "edit" ? "Save" : "Add Hospitalization"}
+          submitLabel={submitLabel}
           error={modalError || null}
           onClose={closeModal}
           onSubmit={onSubmit}
         >
+          {contributorNotice && (
+            <p className="text-sm text-muted-foreground">{contributorNotice}</p>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <FormField label="Facility" htmlFor="hosp-facility">

@@ -24,6 +24,12 @@ const EMPTY: VaccinationInput = {
 export default function VaccinationsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isContributor = user?.role === "contributor";
+  const canWrite = isAdmin || isContributor;
+  const submitLabel = isContributor ? "Submit for Approval" : "Save";
+  const contributorNotice = isContributor
+    ? "As a Contributor, your changes will be submitted for Admin review before taking effect."
+    : null;
   const [rows, setRows] = useState<Vaccination[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -40,7 +46,7 @@ export default function VaccinationsPage() {
   }, []);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!canWrite) return;
     const openId = searchParams.get("open");
     if (!openId || rows.length === 0) return;
     const record = rows.find((r) => r.id === openId);
@@ -86,6 +92,10 @@ export default function VaccinationsPage() {
   }
 
   async function onDelete(id: string) {
+    const msg = isContributor
+      ? "Submit a deletion request for this vaccination record? An Admin must approve before it is removed."
+      : "Delete this vaccination record?";
+    if (!window.confirm(msg)) return;
     try { await vaccinationsApi.remove(id); await reload(); }
     catch { setError("Could not delete record"); }
   }
@@ -95,14 +105,14 @@ export default function VaccinationsPage() {
       <PageLayout
         title="Vaccinations"
         description="Track immunization history, lot numbers, and upcoming booster dates."
-        action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
+        action={canWrite ? <Button onClick={openAdd}>+ Add</Button> : undefined}
       >
         <Card>
           <CardContent className="p-0">
             <RecordTable
               rows={rows}
               loading={loading}
-              isAdmin={isAdmin}
+              isAdmin={canWrite}
               getRowId={(r) => r.id}
               defaultSortKey="administered_date"
               defaultSortDir="desc"
@@ -120,7 +130,7 @@ export default function VaccinationsPage() {
                 { label: "Lot Number", value: r.lot_number },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="vaccinations" recordId={r.id} isAdmin={isAdmin} />}
+              renderDetailExtra={(r) => <DocumentsPanel section="vaccinations" recordId={r.id} isAdmin={canWrite} />}
               getHeadline={(r) => r.vaccine}
               getSubtitle={(r) => r.administered_date ? formatDate(r.administered_date) : null}
               onEdit={(r) => openEdit(r)}
@@ -138,11 +148,14 @@ export default function VaccinationsPage() {
       {modalMode && (
         <RecordFormModal
           title={modalMode === "edit" ? "Edit Vaccination" : "Add Vaccination"}
-          submitLabel={modalMode === "edit" ? "Save" : "Add Vaccination"}
+          submitLabel={submitLabel}
           error={modalError || null}
           onClose={closeModal}
           onSubmit={onSubmit}
         >
+          {contributorNotice && (
+            <p className="text-sm text-muted-foreground">{contributorNotice}</p>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <FormField label="Vaccine" htmlFor="vac-vaccine">

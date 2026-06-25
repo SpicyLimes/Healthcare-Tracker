@@ -30,6 +30,12 @@ const EMPTY: MedicationInput = {
 export default function MedicationsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isContributor = user?.role === "contributor";
+  const canWrite = isAdmin || isContributor;
+  const submitLabel = isContributor ? "Submit for Approval" : "Save";
+  const contributorNotice = isContributor
+    ? "As a Contributor, your changes will be submitted for Admin review before taking effect."
+    : null;
   const [rows, setRows] = useState<Medication[]>([]);
   const [loading, setLoading] = useState(true);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -50,7 +56,7 @@ export default function MedicationsPage() {
   }, []);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!canWrite) return;
     const openId = searchParams.get("open");
     if (!openId || rows.length === 0) return;
     const record = rows.find((r) => r.id === openId);
@@ -102,6 +108,10 @@ export default function MedicationsPage() {
   }
 
   async function onDelete(id: string) {
+    const msg = isContributor
+      ? "Submit a deletion request for this medication? An Admin must approve before it is removed."
+      : "Delete this medication?";
+    if (!window.confirm(msg)) return;
     try {
       await medicationsApi.remove(id);
       await reload();
@@ -120,14 +130,14 @@ export default function MedicationsPage() {
       <PageLayout
         title="Medications"
         description="Track current and past medications, dosages, and prescribing doctors."
-        action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
+        action={canWrite ? <Button onClick={openAdd}>+ Add</Button> : undefined}
       >
         <Card>
           <CardContent className="p-0">
             <RecordTable
               rows={rows}
               loading={loading}
-              isAdmin={isAdmin}
+              isAdmin={canWrite}
               getRowId={(r) => r.id}
               defaultSortKey="is_active"
               defaultSortDir="desc"
@@ -147,7 +157,7 @@ export default function MedicationsPage() {
                 { label: "End Date", value: r.end_date },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="medications" recordId={r.id} isAdmin={isAdmin} />}
+              renderDetailExtra={(r) => <DocumentsPanel section="medications" recordId={r.id} isAdmin={canWrite} />}
               getHeadline={(r) => r.name}
               getSubtitle={(r) => [r.dose, r.route, r.frequency].filter(Boolean).join(" · ") || null}
               getBadge={(r) => ({ label: r.is_active ? "Active" : "Inactive", variant: r.is_active ? "default" : "secondary" })}
@@ -162,11 +172,14 @@ export default function MedicationsPage() {
       {modalMode && (
         <RecordFormModal
           title={modalMode === "edit" ? "Edit Medication" : "Add Medication"}
-          submitLabel={modalMode === "edit" ? "Save" : "Add Medication"}
+          submitLabel={submitLabel}
           error={modalError || null}
           onClose={closeModal}
           onSubmit={onSubmit}
         >
+          {contributorNotice && (
+            <p className="text-sm text-muted-foreground">{contributorNotice}</p>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField label="Medication Name" htmlFor="med-name">
               <Input id="med-name" required placeholder="e.g. Lisinopril"

@@ -65,6 +65,12 @@ const EMPTY: VitalsFormState = {
 export default function VitalsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isContributor = user?.role === "contributor";
+  const canWrite = isAdmin || isContributor;
+  const submitLabel = isContributor ? "Submit for Approval" : "Save";
+  const contributorNotice = isContributor
+    ? "As a Contributor, your changes will be submitted for Admin review before taking effect."
+    : null;
   const tz = user?.timezone ?? "America/Chicago";
 
   const [rows, setRows] = useState<Vitals[]>([]);
@@ -150,6 +156,10 @@ export default function VitalsPage() {
   }
 
   async function onDelete(id: string) {
+    const msg = isContributor
+      ? "Submit a deletion request for this vitals record? An Admin must approve before it is removed."
+      : "Delete this vitals record?";
+    if (!window.confirm(msg)) return;
     try { await vitalsApi.remove(id); await reload(); }
     catch { setError("Could not delete record"); }
   }
@@ -162,14 +172,14 @@ export default function VitalsPage() {
       <PageLayout
         title="Vitals"
         description="Track blood pressure, weight, height, and other health measurements."
-        action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
+        action={canWrite ? <Button onClick={openAdd}>+ Add</Button> : undefined}
       >
         <Card>
           <CardContent className="p-0">
             <RecordTable
               rows={rows}
               loading={loading}
-              isAdmin={isAdmin}
+              isAdmin={canWrite}
               getRowId={(r) => r.id}
               defaultSortKey="measured_at"
               defaultSortDir="desc"
@@ -240,11 +250,14 @@ export default function VitalsPage() {
       {modalMode && (
         <RecordFormModal
           title={modalMode === "edit" ? "Edit Vitals" : "Add Vitals"}
-          submitLabel={modalMode === "edit" ? "Save" : "Add Vitals"}
+          submitLabel={submitLabel}
           error={modalError || null}
           onClose={closeModal}
           onSubmit={onSubmit}
         >
+          {contributorNotice && (
+            <p className="text-sm text-muted-foreground">{contributorNotice}</p>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Date & Time — full width */}
             <div className="sm:col-span-2">

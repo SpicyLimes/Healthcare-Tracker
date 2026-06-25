@@ -25,6 +25,12 @@ const EMPTY: AilmentInput = {
 export default function AilmentsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isContributor = user?.role === "contributor";
+  const canWrite = isAdmin || isContributor;
+  const submitLabel = isContributor ? "Submit for Approval" : "Save";
+  const contributorNotice = isContributor
+    ? "As a Contributor, your changes will be submitted for Admin review before taking effect."
+    : null;
   const [rows, setRows] = useState<Ailment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -79,6 +85,10 @@ export default function AilmentsPage() {
   }
 
   async function onDelete(id: string) {
+    const msg = isContributor
+      ? "Submit a deletion request for this ailment? An Admin must approve before it is removed."
+      : "Delete this ailment?";
+    if (!window.confirm(msg)) return;
     try {
       await ailmentsApi.remove(id);
       await reload();
@@ -97,14 +107,14 @@ export default function AilmentsPage() {
       <PageLayout
         title="Ailment History"
         description="Track diagnoses, conditions, and their current status."
-        action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
+        action={canWrite ? <Button onClick={openAdd}>+ Add</Button> : undefined}
       >
         <Card>
           <CardContent className="p-0">
             <RecordTable
               rows={rows}
               loading={loading}
-              isAdmin={isAdmin}
+              isAdmin={canWrite}
               getRowId={(r) => r.id}
               defaultSortKey="condition"
               primaryColumns={[
@@ -119,7 +129,7 @@ export default function AilmentsPage() {
                 { label: "Treating Doctor", value: resolveDoctorName(r.treating_doctor_id, r.treating_doctor) || null },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="ailments" recordId={r.id} isAdmin={isAdmin} />}
+              renderDetailExtra={(r) => <DocumentsPanel section="ailments" recordId={r.id} isAdmin={canWrite} />}
               getHeadline={(r) => r.condition}
               getSubtitle={(r) => r.onset_date ?? null}
               getBadge={(r) => ({ label: r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : "", variant: r.status === "active" ? "default" : "secondary" })}
@@ -134,11 +144,14 @@ export default function AilmentsPage() {
       {modalMode && (
         <RecordFormModal
           title={modalMode === "edit" ? "Edit Ailment" : "Add Ailment"}
-          submitLabel={modalMode === "edit" ? "Save" : "Add Ailment"}
+          submitLabel={submitLabel}
           error={modalError || null}
           onClose={closeModal}
           onSubmit={onSubmit}
         >
+          {contributorNotice && (
+            <p className="text-sm text-muted-foreground">{contributorNotice}</p>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField label="Condition" htmlFor="ail-condition">
               <Input

@@ -23,6 +23,12 @@ const EMPTY: DentalHistoryInput = {
 export default function DentalHistoryPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isContributor = user?.role === "contributor";
+  const canWrite = isAdmin || isContributor;
+  const submitLabel = isContributor ? "Submit for Approval" : "Save";
+  const contributorNotice = isContributor
+    ? "As a Contributor, your changes will be submitted for Admin review before taking effect."
+    : null;
   const [rows, setRows] = useState<DentalHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -80,6 +86,10 @@ export default function DentalHistoryPage() {
   }
 
   async function onDelete(id: string) {
+    const msg = isContributor
+      ? "Submit a deletion request for this dental history record? An Admin must approve before it is removed."
+      : "Delete this dental history record?";
+    if (!window.confirm(msg)) return;
     try { await dentalHistoryApi.remove(id); await reload(); }
     catch { setError("Could not delete record"); }
   }
@@ -89,14 +99,14 @@ export default function DentalHistoryPage() {
       <PageLayout
         title="Dental History"
         description="Dental visits, procedures, and oral health records."
-        action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
+        action={canWrite ? <Button onClick={openAdd}>+ Add</Button> : undefined}
       >
         <Card>
           <CardContent className="p-0">
             <RecordTable
               rows={rows}
               loading={loading}
-              isAdmin={isAdmin}
+              isAdmin={canWrite}
               getRowId={(r) => r.id}
               defaultSortKey="visit_date"
               defaultSortDir="desc"
@@ -112,7 +122,7 @@ export default function DentalHistoryPage() {
                 { label: "Procedure", value: r.procedure },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="dental_history" recordId={r.id} isAdmin={isAdmin} />}
+              renderDetailExtra={(r) => <DocumentsPanel section="dental_history" recordId={r.id} isAdmin={canWrite} />}
               getHeadline={(r) => r.procedure ?? r.visit_date ?? "Dental Visit"}
               getSubtitle={(r) => r.visit_date ?? null}
               onEdit={(r) => openEdit(r)}
@@ -126,11 +136,14 @@ export default function DentalHistoryPage() {
       {modalMode && (
         <RecordFormModal
           title={modalMode === "edit" ? "Edit Dental Record" : "Add Dental Record"}
-          submitLabel={modalMode === "edit" ? "Save" : "Add Record"}
+          submitLabel={submitLabel}
           error={modalError || null}
           onClose={closeModal}
           onSubmit={onSubmit}
         >
+          {contributorNotice && (
+            <p className="text-sm text-muted-foreground">{contributorNotice}</p>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField label="Visit Date" htmlFor="dent-date">
               <Input

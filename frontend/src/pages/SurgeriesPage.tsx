@@ -26,6 +26,12 @@ const EMPTY: SurgeryInput = {
 export default function SurgeriesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isContributor = user?.role === "contributor";
+  const canWrite = isAdmin || isContributor;
+  const submitLabel = isContributor ? "Submit for Approval" : "Save";
+  const contributorNotice = isContributor
+    ? "As a Contributor, your changes will be submitted for Admin review before taking effect."
+    : null;
   const [rows, setRows] = useState<Surgery[]>([]);
   const [loading, setLoading] = useState(true);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -44,7 +50,7 @@ export default function SurgeriesPage() {
   }, []);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!canWrite) return;
     const openId = searchParams.get("open");
     if (!openId || rows.length === 0) return;
     const record = rows.find((r) => r.id === openId);
@@ -90,6 +96,10 @@ export default function SurgeriesPage() {
   }
 
   async function onDelete(id: string) {
+    const msg = isContributor
+      ? "Submit a deletion request for this surgery record? An Admin must approve before it is removed."
+      : "Delete this surgery record?";
+    if (!window.confirm(msg)) return;
     try { await surgeriesApi.remove(id); await reload(); }
     catch { setError("Could not delete record"); }
   }
@@ -104,14 +114,14 @@ export default function SurgeriesPage() {
       <PageLayout
         title="Surgery Records"
         description="Surgical procedures and outcomes."
-        action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
+        action={canWrite ? <Button onClick={openAdd}>+ Add</Button> : undefined}
       >
         <Card>
           <CardContent className="p-0">
             <RecordTable
               rows={rows}
               loading={loading}
-              isAdmin={isAdmin}
+              isAdmin={canWrite}
               getRowId={(r) => r.id}
               defaultSortKey="surgery_date"
               defaultSortDir="desc"
@@ -128,7 +138,7 @@ export default function SurgeriesPage() {
                 { label: "Outcome", value: r.outcome },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="surgeries" recordId={r.id} isAdmin={isAdmin} />}
+              renderDetailExtra={(r) => <DocumentsPanel section="surgeries" recordId={r.id} isAdmin={canWrite} />}
               getHeadline={(r) => r.procedure}
               getSubtitle={(r) => r.surgery_date ?? null}
               onEdit={(r) => openEdit(r)}
@@ -146,11 +156,14 @@ export default function SurgeriesPage() {
       {modalMode && (
         <RecordFormModal
           title={modalMode === "edit" ? "Edit Surgery" : "Add Surgery"}
-          submitLabel={modalMode === "edit" ? "Save" : "Add Surgery"}
+          submitLabel={submitLabel}
           error={modalError || null}
           onClose={closeModal}
           onSubmit={onSubmit}
         >
+          {contributorNotice && (
+            <p className="text-sm text-muted-foreground">{contributorNotice}</p>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <FormField label="Procedure" htmlFor="surg-procedure">

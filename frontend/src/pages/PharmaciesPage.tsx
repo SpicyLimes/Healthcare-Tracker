@@ -20,6 +20,12 @@ const EMPTY: PharmacyInput = {
 export default function PharmaciesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isContributor = user?.role === "contributor";
+  const canWrite = isAdmin || isContributor;
+  const submitLabel = isContributor ? "Submit for Approval" : "Save";
+  const contributorNotice = isContributor
+    ? "As a Contributor, your changes will be submitted for Admin review before taking effect."
+    : null;
   const [rows, setRows] = useState<Pharmacy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -79,6 +85,10 @@ export default function PharmaciesPage() {
   }
 
   async function onDelete(id: string) {
+    const msg = isContributor
+      ? "Submit a deletion request for this pharmacy? An Admin must approve before it is removed."
+      : "Delete this pharmacy?";
+    if (!window.confirm(msg)) return;
     setError("");
     try {
       await pharmaciesApi.remove(id);
@@ -93,14 +103,14 @@ export default function PharmaciesPage() {
       <PageLayout
         title="Pharmacies"
         description="Preferred pharmacies and contact information."
-        action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
+        action={canWrite ? <Button onClick={openAdd}>+ Add</Button> : undefined}
       >
         <Card>
           <CardContent className="p-0">
             <RecordTable
               rows={rows}
               loading={loading}
-              isAdmin={isAdmin}
+              isAdmin={canWrite}
               getRowId={(r) => r.id}
               defaultSortKey="name"
               primaryColumns={[
@@ -129,11 +139,14 @@ export default function PharmaciesPage() {
       {modalMode && (
         <RecordFormModal
           title={modalMode === "edit" ? "Edit Pharmacy" : "Add Pharmacy"}
-          submitLabel={modalMode === "edit" ? "Save" : "Add pharmacy"}
+          submitLabel={submitLabel}
           error={modalError || null}
           onClose={closeModal}
           onSubmit={onSubmit}
         >
+          {contributorNotice && (
+            <p className="text-sm text-muted-foreground">{contributorNotice}</p>
+          )}
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <FormField label="Name" htmlFor="name">
