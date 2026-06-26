@@ -39,6 +39,11 @@ yarn-error.log*
 *.log
 backups/
 
+# Local-dev uploaded files (prod uses the uploads_data Docker volume).
+# Keep the dir on a fresh clone but never commit its contents (may be PHI).
+backend/uploads/*
+!backend/uploads/.gitkeep
+
 # OS
 .DS_Store
 Thumbs.db
