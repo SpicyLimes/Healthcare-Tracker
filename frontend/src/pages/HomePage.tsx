@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { StickyNote, User, Activity, AlertTriangle, Phone, Shield, Pill } from "lucide-react";
+import { User, Activity, AlertTriangle, Phone, Shield, Pill, Eye, FilePlus } from "lucide-react";
 import { calendarApi, type CalendarEvent, EVENT_TYPE_LABELS } from "../api/calendar";
 import { getProfile, type Profile } from "../api/profile";
 import { vitalsApi, type Vitals } from "../api/vitals";
@@ -285,20 +285,48 @@ export default function HomePage() {
           </button>
         </div>
 
-        {/* Viewer notice */}
-        {user?.role !== "admin" && (
+        {/* Contributor role notice */}
+        {user?.role === "contributor" && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-400 bg-amber-50 px-4 py-3 dark:bg-amber-950/30">
-            <StickyNote className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <FilePlus className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
             <div>
               <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-                Have a note, correction, or comment?
+                You're signed in as a Contributor
               </p>
               <p className="mt-0.5 text-sm text-amber-800 dark:text-amber-200">
-                Use the{" "}
+                You can propose changes to any health record — add a new entry, edit an
+                existing one, or request a deletion. Your proposals are sent to an Admin for
+                approval before they take effect. Track, edit, or withdraw anything still
+                awaiting review on the{" "}
+                <Link to="/my-submissions" className="font-medium underline underline-offset-2 hover:opacity-80">
+                  My Submissions
+                </Link>{" "}
+                page. You can also add notes and to-do items on the{" "}
                 <Link to="/notes" className="font-medium underline underline-offset-2 hover:opacity-80">
                   Notes / To-Do's
                 </Link>{" "}
-                page to add personal notes, flag corrections, or track follow-up items. To search, please use the 'AI Assistant' located in the bottom right corner of your screen.
+                page, and ask the 'AI Assistant' (bottom-right) to look things up for you.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Viewer role notice */}
+        {user?.role === "viewer" && (
+          <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-400 bg-amber-50 px-4 py-3 dark:bg-amber-950/30">
+            <Eye className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div>
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                You're signed in as a Viewer
+              </p>
+              <p className="mt-0.5 text-sm text-amber-800 dark:text-amber-200">
+                You have read-only access to every health record — browse them anytime using
+                the sidebar, and use the 'AI Assistant' (bottom-right) to search or ask
+                questions. If you spot something that needs changing, jot it down on the{" "}
+                <Link to="/notes" className="font-medium underline underline-offset-2 hover:opacity-80">
+                  Notes / To-Do's
+                </Link>{" "}
+                page so an Admin can follow up.
               </p>
             </div>
           </div>
