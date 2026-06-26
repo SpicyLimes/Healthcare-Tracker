@@ -19,8 +19,9 @@
 - **Document uploads:** PDFs, images, and Office files attached to any section or record; preview in-browser
 - **Calendar:** Unified timeline view of appointments, visits, vaccinations, surgeries, hospitalizations, and medications
 - **One-page summary:** Generate a printable health summary across selected sections and date ranges (browser print → save as PDF)
-- **AI assistant (optional, admin-only):** A built-in chat that answers questions about the patient's records by querying the database through read-only tools — answers are grounded in real data, never invented. It can also **help manage records and notes conversationally**: describe an event in plain language ("follow-up with the cardiologist last Tuesday, prescribed a new medication") and the assistant drafts the corresponding records across the relevant sections for you to confirm, and it can likewise add, edit, or delete notes and to-dos on request. **Creating, editing, and deleting are deliberately gated** — the assistant reads its proposed change back to you and only writes after you confirm; edits and deletes require a one-time, server-side confirmation that the model cannot bypass, and every write goes through the same validation and audit log as a manual change. On phones the assistant opens as a dedicated full-screen page; on desktop it slides in as a resizable panel (Standard / Medium / Large, remembered across sessions) with an active model indicator and privacy note. Bring your own self-hosted, OpenAI-compatible endpoint (e.g. LM Studio or Ollama); the model URL and name are set in-app and the assistant is disabled by default. Record creation and document reading require a model that supports tool use (and vision, for documents). No record data is sent anywhere unless you configure and enable it.
-- **Role-based access:** Admin (full access), Viewer (read-only), Guest (time-limited share links)
+- **AI assistant (optional):** A built-in chat that answers questions about the patient's records by querying the database through read-only tools — answers are grounded in real data, never invented. Available to any signed-in user (Admin, Contributor, or Viewer); write actions are role-gated, so Viewers get a read-only assistant. For Admins it can also **help manage records and notes conversationally**: describe an event in plain language ("follow-up with the cardiologist last Tuesday, prescribed a new medication") and the assistant drafts the corresponding records across the relevant sections for you to confirm, and it can likewise add, edit, or delete notes and to-dos on request. **Creating, editing, and deleting are deliberately gated** — the assistant reads its proposed change back to you and only writes after you confirm; edits and deletes require a one-time, server-side confirmation that the model cannot bypass, and every write goes through the same validation and audit log as a manual change. On phones the assistant opens as a dedicated full-screen page; on desktop it slides in as a resizable panel (Standard / Medium / Large, remembered across sessions) with an active model indicator and privacy note. Bring your own self-hosted, OpenAI-compatible endpoint (e.g. LM Studio or Ollama); the model URL and name are set in-app and the assistant is disabled by default. Record creation and document reading require a model that supports tool use (and vision, for documents). No record data is sent anywhere unless you configure and enable it.
+- **Role-based access:** Admin (full access), Contributor (propose changes for admin approval), Viewer (read-only), Guest (time-limited share links)
+- **Contributor submissions:** Contributors propose record changes that queue for admin review; admins approve or reject from a Submissions page, and contributors track their own pending items under "My Submissions"
 - **Share links:** Admin generates signed, expiring URLs scoped to specific sections for doctors; one-time token display, revocable
 - **Audit log:** Every write and share link access logged with actor, timestamp, and detail; filterable in-app
 - **Nightly backups:** Automated PostgreSQL dump + uploads archive with 7-day retention; single-command restore
@@ -53,7 +54,11 @@ docker compose down
 ### Running the tests
 
 ```bash
-# Backend (Python)
+# Backend (Python) — recommended: isolated Docker environment, auto-cleaned
+./scripts/test-backend.sh                 # all tests
+./scripts/test-backend.sh -k "auth"       # pass any pytest args
+
+# Backend (Python) — alternative: native venv
 cd backend && python3.12 -m venv .venv && . .venv/bin/activate && pip install -e ".[dev]" && pytest -v
 
 # Frontend (Node)
@@ -95,7 +100,7 @@ The app is available on **port 1337**. How you expose it — reverse proxy, VPN,
 
 ### Authentication
 
-Two roles: **Admin** (full access and user management) and **Viewer** (read-only). No public sign-up — the admin creates all accounts.
+Three account roles: **Admin** (full access and user management), **Contributor** (proposes record changes that an admin approves), and **Viewer** (read-only). **Guests** are not accounts — they access scoped, time-limited share links. No public sign-up; the admin creates all accounts.
 
 - `INITIAL_ADMIN_PASSWORD` must be at least 12 characters or startup fails
 - Set `JWT_SECRET` to a long random string: `openssl rand -hex 32`
