@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { vitalsApi, type Vitals, type VitalsInput } from "../api/vitals";
+import { amendMySubmission, getMySubmission } from "../api/submissions";
 import { useAuth } from "../auth/useAuth";
 import { useToast } from "../components/toast";
 import { AppShell } from "@/components/app-shell";
@@ -84,6 +86,9 @@ export default function VitalsPage() {
   const [modalError, setModalError] = useState("");
   const [heightFt, setHeightFt] = useState<number | null>(null);
   const [heightIn, setHeightIn] = useState<number | null>(null);
+  const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   async function reload() {
     setRows(await vitalsApi.list());
@@ -95,6 +100,30 @@ export default function VitalsPage() {
       .catch(() => { setError("Failed to load vitals"); setRows([]); })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!isContributor) return;
+    const sid = searchParams.get("editSubmission");
+    if (!sid) return;
+    getMySubmission(sid).then((sub) => {
+      const p = sub.payload as Partial<VitalsFormState>;
+      const heightInches = (p.height_in ?? null) as number | null;
+      const { ft, inches } = inToFeetInches(heightInches);
+      setHeightFt(ft);
+      setHeightIn(inches);
+      setForm({
+        ...EMPTY,
+        ...p,
+        // payload measured_at is a UTC ISO string; show it as a local input value.
+        measured_at: p.measured_at ? toLocalInputValue(p.measured_at as string, tz) : "",
+      });
+      setEditingRow(null);
+      setEditingSubmissionId(sid);
+      setModalError("");
+      setModalMode(sub.action === "create" ? "add" : "edit");
+      setSearchParams({}, { replace: true });
+    }).catch(() => {});
+  }, [isContributor, searchParams]);
 
   useEffect(() => {
     setForm((s) => ({ ...s, height_in: feetInchesToIn(heightFt, heightIn) }));
@@ -135,6 +164,7 @@ export default function VitalsPage() {
   function closeModal() {
     setModalMode(null);
     setEditingRow(null);
+    setEditingSubmissionId(null);
   }
 
   async function onSubmit(e: FormEvent) {
@@ -145,6 +175,13 @@ export default function VitalsPage() {
       measured_at: form.measured_at ? localToUtcIso(form.measured_at, tz) : undefined,
     };
     try {
+      if (editingSubmissionId) {
+        await amendMySubmission(editingSubmissionId, payload as unknown as Record<string, unknown>);
+        closeModal();
+        showAck("Your submission has been updated and is awaiting approval.");
+        navigate("/my-submissions");
+        return;
+      }
       if (modalMode === "edit" && editingRow) {
         await vitalsApi.update(editingRow.id, payload);
       } else {

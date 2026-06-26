@@ -69,6 +69,12 @@ export async function myPendingCount(): Promise<number> {
   return data.count as number;
 }
 
+export async function getMySubmission(id: string): Promise<Submission> {
+  const res = await apiFetch(`/api/submissions/${id}`);
+  if (!res.ok) throw new Error("Failed to load your submission");
+  return res.json();
+}
+
 export async function amendMySubmission(
   id: string,
   payload: Record<string, unknown>,

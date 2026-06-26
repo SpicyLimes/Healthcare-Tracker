@@ -56,6 +56,24 @@ def mine_pending_count(db: Session = Depends(get_db), current=Depends(require_co
     return {"count": count_own_pending(db, current.id)}
 
 
+@router.get(
+    "/{submission_id}",
+    response_model=SubmissionRead,
+    dependencies=[Depends(require_contributor)],
+)
+def get_mine_one(
+    submission_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current=Depends(require_contributor),
+):
+    # Own-scoped fetch: 404 if not the contributor's own submission.
+    subs = {s.id: s for s in list_own_submissions(db, current.id)}
+    sub = subs.get(submission_id)
+    if sub is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+    return to_read(db, sub)
+
+
 @router.post(
     "/{submission_id}/approve",
     response_model=SubmissionRead,

@@ -458,3 +458,20 @@ def test_amend_others_submission_404(client, db_session):
     csrf2 = _contrib_login(client, db_session)  # logs in as a different contributor
     res = client.patch(f"/api/submissions/{sid}", headers={"X-CSRF-Token": csrf2}, json={"payload": {"name": "Hacked"}})
     assert res.status_code == 404
+
+
+def test_get_one_mine_returns_own(client, db_session):
+    csrf = _contrib_login(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Fetch Me"})
+    sid = client.get("/api/submissions/mine").json()[0]["id"]
+    res = client.get(f"/api/submissions/{sid}")
+    assert res.status_code == 200
+    assert res.json()["payload"]["name"] == "Fetch Me"
+
+
+def test_get_one_mine_404_for_others(client, db_session):
+    csrf1 = _contrib_login(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf1}, json={"name": "C1"})
+    sid = client.get("/api/submissions/mine").json()[0]["id"]
+    _contrib_login(client, db_session)  # switch to a different contributor
+    assert client.get(f"/api/submissions/{sid}").status_code == 404
