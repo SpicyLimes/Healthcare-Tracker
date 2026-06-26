@@ -6,7 +6,7 @@ import {
   FolderOpen, KeyRound, Share2, ScrollText, UserCog, LogOut,
   LayoutDashboard, Calendar, CheckCircle2, Database, StickyNote, Salad, Bot, Inbox,
 } from "lucide-react";
-import { pendingSubmissionCount } from "@/api/submissions";
+import { myPendingCount, pendingSubmissionCount } from "@/api/submissions";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -83,8 +83,10 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
   const { pathname } = useLocation();
   const { user, logout } = useAuth();
   const isAdmin = user?.role === "admin";
+  const isContributor = user?.role === "contributor";
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
+  const [myPending, setMyPending] = useState(0);
 
   useEffect(() => {
     fetchHealth().then(setHealth).catch(() => setHealth(null));
@@ -98,6 +100,15 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
     }, 30_000);
     return () => clearInterval(interval);
   }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isContributor) return;
+    myPendingCount().then(setMyPending).catch(() => setMyPending(0));
+    const interval = setInterval(() => {
+      myPendingCount().then(setMyPending).catch(() => setMyPending(0));
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [isContributor]);
 
   const navLink = (
     to: string,
@@ -235,6 +246,33 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
                     )}
                   </li>
                 ))}
+              </ul>
+            </div>
+          )}
+
+          {isContributor && (
+            <div className={cn(collapsed && "flex flex-col items-center")}>
+              <Separator className="mb-4" />
+              <ul className={cn("list-none flex flex-col gap-0.5", collapsed && "items-center")}>
+                <li>
+                  {myPending > 0 ? (
+                    <div className="relative">
+                      {navLink("/my-submissions", "My Submissions", Inbox, pathname === "/my-submissions")}
+                      {!collapsed && (
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-primary px-1.5 py-0.5 text-[0.6rem] font-bold text-primary-foreground">
+                          {myPending}
+                        </span>
+                      )}
+                      {collapsed && (
+                        <span className="absolute -right-1 -top-1 rounded-full bg-primary px-1 text-[0.6rem] font-bold text-primary-foreground">
+                          {myPending}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    navLink("/my-submissions", "My Submissions", Inbox, pathname === "/my-submissions")
+                  )}
+                </li>
               </ul>
             </div>
           )}
