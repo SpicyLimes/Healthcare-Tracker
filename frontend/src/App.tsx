@@ -4,6 +4,7 @@ import { GuestProvider } from "./auth/GuestContext";
 import { ToastProvider } from "./components/toast";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RequireAdmin from "./components/RequireAdmin";
+import RequireContributor from "./components/RequireContributor";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
@@ -27,6 +28,7 @@ import DocumentsPage from "./pages/DocumentsPage";
 import ShareLinksPage from "./pages/ShareLinksPage";
 import AuditLogPage from "./pages/AuditLogPage";
 import SubmissionsPage from "./pages/SubmissionsPage";
+import MySubmissionsPage from "./pages/MySubmissionsPage";
 import NotesPage from "./pages/NotesPage";
 import NutritionPlanPage from "./pages/NutritionPlanPage";
 import GuestEntryPage from "./pages/GuestEntryPage";
@@ -68,6 +70,7 @@ export default function App() {
             <Route path="/share-links" element={<RequireAdmin><ShareLinksPage /></RequireAdmin>} />
             <Route path="/audit-log" element={<RequireAdmin><AuditLogPage /></RequireAdmin>} />
             <Route path="/submissions" element={<RequireAdmin><SubmissionsPage /></RequireAdmin>} />
+            <Route path="/my-submissions" element={<ProtectedRoute><RequireContributor><MySubmissionsPage /></RequireContributor></ProtectedRoute>} />
             <Route path="/settings" element={<RequireAdmin><SettingsPage /></RequireAdmin>} />
             <Route path="/assistant" element={<ProtectedRoute><AiAssistantPage /></ProtectedRoute>} />
             <Route path="/guest" element={<GuestEntryPage />} />
