@@ -311,3 +311,91 @@ def test_contributor_create_returns_201_for_all_sections(client, db_session, pre
     # And it must be queued, not written directly.
     body = res.json()
     assert "id" in body
+
+
+# ---- Own-submission service tests (Task 3) ----
+
+def _distinct_contributor(db):
+    """Create a fresh contributor and return it (distinct from any other)."""
+    from sqlalchemy import select
+    from app.models.user import User
+    email = f"own+{uuid.uuid4().hex[:8]}@example.com"
+    user_service.create_user(db, email, "TestPassword1234!", Role.contributor)
+    return db.scalars(select(User).where(User.email == email)).first()
+
+
+def test_list_own_submissions_scoped_to_user(db_session):
+    from app.services.submission_service import list_own_submissions
+    c1 = _distinct_contributor(db_session)
+    c2 = _distinct_contributor(db_session)
+    create_submission(db_session, c1.id, "doctors", SubmissionAction.create, {"name": "Mine"})
+    create_submission(db_session, c2.id, "doctors", SubmissionAction.create, {"name": "Theirs"})
+    mine = list_own_submissions(db_session, c1.id)
+    assert len(mine) == 1
+    assert mine[0].payload["name"] == "Mine"
+
+
+def test_count_own_pending(db_session):
+    from app.services.submission_service import count_own_pending
+    c = _distinct_contributor(db_session)
+    a = _make_admin(db_session)
+    s1 = create_submission(db_session, c.id, "doctors", SubmissionAction.create, {"name": "A"})
+    create_submission(db_session, c.id, "doctors", SubmissionAction.create, {"name": "B"})
+    assert count_own_pending(db_session, c.id) == 2
+    approve_submission(db_session, s1.id, a.id)
+    assert count_own_pending(db_session, c.id) == 1
+
+
+def test_amend_own_submission_updates_payload(db_session):
+    from app.services.submission_service import amend_own_submission
+    c = _distinct_contributor(db_session)
+    s = create_submission(db_session, c.id, "doctors", SubmissionAction.create, {"name": "Old"})
+    amend_own_submission(db_session, s.id, c.id, {"name": "New"})
+    assert s.payload["name"] == "New"
+
+
+def test_amend_rejects_invalid_payload(db_session):
+    from pydantic import ValidationError
+    from app.services.submission_service import amend_own_submission
+    c = _distinct_contributor(db_session)
+    s = create_submission(db_session, c.id, "doctors", SubmissionAction.create, {"name": "Old"})
+    with pytest.raises(ValidationError):
+        amend_own_submission(db_session, s.id, c.id, {})  # name required for create
+
+
+def test_amend_not_owner_raises_notfound(db_session):
+    from app.services.submission_service import amend_own_submission
+    c1 = _distinct_contributor(db_session)
+    c2 = _distinct_contributor(db_session)
+    s = create_submission(db_session, c1.id, "doctors", SubmissionAction.create, {"name": "X"})
+    with pytest.raises(SubmissionNotFoundError):
+        amend_own_submission(db_session, s.id, c2.id, {"name": "Y"})
+
+
+def test_amend_non_pending_raises_already_reviewed(db_session):
+    from app.services.submission_service import amend_own_submission
+    c = _distinct_contributor(db_session)
+    a = _make_admin(db_session)
+    s = create_submission(db_session, c.id, "doctors", SubmissionAction.create, {"name": "X"})
+    approve_submission(db_session, s.id, a.id)
+    with pytest.raises(AlreadyReviewedError):
+        amend_own_submission(db_session, s.id, c.id, {"name": "Y"})
+
+
+def test_withdraw_own_submission_deletes(db_session):
+    from app.models.submission import Submission
+    from app.services.submission_service import withdraw_own_submission
+    c = _distinct_contributor(db_session)
+    s = create_submission(db_session, c.id, "doctors", SubmissionAction.create, {"name": "Bye"})
+    sid = s.id
+    withdraw_own_submission(db_session, sid, c.id)
+    assert db_session.get(Submission, sid) is None
+
+
+def test_withdraw_not_owner_raises_notfound(db_session):
+    from app.services.submission_service import withdraw_own_submission
+    c1 = _distinct_contributor(db_session)
+    c2 = _distinct_contributor(db_session)
+    s = create_submission(db_session, c1.id, "doctors", SubmissionAction.create, {"name": "X"})
+    with pytest.raises(SubmissionNotFoundError):
+        withdraw_own_submission(db_session, s.id, c2.id)
