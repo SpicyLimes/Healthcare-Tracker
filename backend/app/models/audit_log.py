@@ -19,6 +19,7 @@ class AuditAction(str, enum.Enum):
     submission_created = "submission_created"
     submission_approved = "submission_approved"
     submission_rejected = "submission_rejected"
+    submission_withdrawn = "submission_withdrawn"
 
 
 class ActorType(str, enum.Enum):

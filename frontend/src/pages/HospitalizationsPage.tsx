@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { hospitalizationsApi, type Hospitalization, type HospitalizationInput } from "../api/hospitalizations";
+import { amendMySubmission, getMySubmission } from "../api/submissions";
 import { doctorsApi, type Doctor } from "../api/doctors";
 import DoctorPicker from "../components/DoctorPicker";
 import { useAuth } from "../auth/useAuth";
@@ -43,7 +44,9 @@ export default function HospitalizationsPage() {
   const [editingRow, setEditingRow] = useState<Hospitalization | null>(null);
   const [form, setForm] = useState<HospitalizationInput>(EMPTY);
   const [modalError, setModalError] = useState("");
+  const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   async function reload() { setRows(await hospitalizationsApi.list()); }
   useEffect(() => {
@@ -63,6 +66,20 @@ export default function HospitalizationsPage() {
     }
   }, [rows, searchParams]);
 
+  useEffect(() => {
+    if (!isContributor) return;
+    const sid = searchParams.get("editSubmission");
+    if (!sid) return;
+    getMySubmission(sid).then((sub) => {
+      setForm({ ...EMPTY, ...(sub.payload as Partial<HospitalizationInput>) });
+      setEditingRow(null);
+      setEditingSubmissionId(sid);
+      setModalError("");
+      setModalMode(sub.action === "create" ? "add" : "edit");
+      setSearchParams({}, { replace: true });
+    }).catch(() => {});
+  }, [isContributor, searchParams]);
+
   function openAdd() {
     setForm(EMPTY);
     setEditingRow(null);
@@ -80,12 +97,20 @@ export default function HospitalizationsPage() {
   function closeModal() {
     setModalMode(null);
     setEditingRow(null);
+    setEditingSubmissionId(null);
   }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setModalError("");
     try {
+      if (editingSubmissionId) {
+        await amendMySubmission(editingSubmissionId, form as unknown as Record<string, unknown>);
+        closeModal();
+        showAck("Your submission has been updated and is awaiting approval.");
+        navigate("/my-submissions");
+        return;
+      }
       if (modalMode === "edit" && editingRow) {
         await hospitalizationsApi.update(editingRow.id, form);
       } else {

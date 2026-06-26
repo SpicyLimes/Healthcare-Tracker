@@ -19,7 +19,25 @@ from app.schemas.extended_records import (
     VisionHistoryCreate,
     VitalsCreate,
 )
-from app.schemas.records import AilmentCreate, DoctorCreate, MedicationCreate
+from app.schemas.extended_records import (
+    DentalHistoryUpdate,
+    FamilyHistoryUpdate,
+    HospitalizationUpdate,
+    InsuranceUpdate,
+    PharmacyUpdate,
+    SurgeryUpdate,
+    VaccinationUpdate,
+    VisionHistoryUpdate,
+    VitalsUpdate,
+)
+from app.schemas.records import (
+    AilmentCreate,
+    AilmentUpdate,
+    DoctorCreate,
+    DoctorUpdate,
+    MedicationCreate,
+    MedicationUpdate,
+)
 from app.services.crud_service import CRUDService
 from app.services.errors import NotFoundError
 
@@ -39,6 +57,23 @@ SECTION_REGISTRY: dict[str, type[BaseModel]] = {
     "dental_history": DentalHistoryCreate,
     "vaccinations": VaccinationCreate,
     "vitals": VitalsCreate,
+}
+
+# Maps the section key to the Update schema, used to re-validate an amended
+# payload for a pending UPDATE submission (partial — exclude_unset on dump).
+SECTION_UPDATE_REGISTRY: dict[str, type[BaseModel]] = {
+    "medications": MedicationUpdate,
+    "doctors": DoctorUpdate,
+    "ailments": AilmentUpdate,
+    "insurances": InsuranceUpdate,
+    "pharmacies": PharmacyUpdate,
+    "family_history": FamilyHistoryUpdate,
+    "surgeries": SurgeryUpdate,
+    "hospitalizations": HospitalizationUpdate,
+    "vision_history": VisionHistoryUpdate,
+    "dental_history": DentalHistoryUpdate,
+    "vaccinations": VaccinationUpdate,
+    "vitals": VitalsUpdate,
 }
 
 # Maps section keys that have associated documents to their DocumentSection enum
@@ -231,6 +266,67 @@ def list_submissions(
         q = q.where(Submission.status == status)
     q = q.order_by(Submission.created_at.desc())
     return list(db.scalars(q).all())
+
+
+def list_own_submissions(db: Session, user_id: uuid.UUID) -> list[Submission]:
+    q = (
+        select(Submission)
+        .where(Submission.submitted_by == user_id)
+        .order_by(Submission.created_at.desc())
+    )
+    return list(db.scalars(q).all())
+
+
+def count_own_pending(db: Session, user_id: uuid.UUID) -> int:
+    from sqlalchemy import func
+    return db.scalar(
+        select(func.count())
+        .select_from(Submission)
+        .where(
+            Submission.submitted_by == user_id,
+            Submission.status == SubmissionStatus.pending,
+        )
+    ) or 0
+
+
+def _get_own_pending_or_raise(
+    db: Session, submission_id: uuid.UUID, user_id: uuid.UUID
+) -> Submission:
+    sub = db.get(Submission, submission_id)
+    # Not-yours and not-found both surface as 404 (do not reveal existence).
+    if sub is None or sub.submitted_by != user_id:
+        raise SubmissionNotFoundError(str(submission_id))
+    if sub.status != SubmissionStatus.pending:
+        raise AlreadyReviewedError(str(submission_id))
+    return sub
+
+
+def amend_own_submission(
+    db: Session, submission_id: uuid.UUID, user_id: uuid.UUID, payload: dict
+) -> Submission:
+    sub = _get_own_pending_or_raise(db, submission_id, user_id)
+    # Re-validate the amended payload against the section schema by action.
+    if sub.action == SubmissionAction.create:
+        schema_cls = SECTION_REGISTRY[sub.section]
+        validated = schema_cls.model_validate(payload)
+        sub.payload = validated.model_dump(mode="json")
+    elif sub.action == SubmissionAction.update:
+        schema_cls = SECTION_UPDATE_REGISTRY[sub.section]
+        validated = schema_cls.model_validate(payload)
+        sub.payload = validated.model_dump(mode="json", exclude_unset=True)
+    else:  # delete submissions carry no editable payload
+        raise AlreadyReviewedError(str(submission_id))
+    db.flush()
+    return sub
+
+
+def withdraw_own_submission(
+    db: Session, submission_id: uuid.UUID, user_id: uuid.UUID
+) -> Submission:
+    sub = _get_own_pending_or_raise(db, submission_id, user_id)
+    db.delete(sub)
+    db.flush()
+    return sub
 
 
 def _user_label(db: Session, user_id: uuid.UUID | None) -> str:

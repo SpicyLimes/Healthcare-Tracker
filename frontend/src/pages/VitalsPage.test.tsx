@@ -1,9 +1,21 @@
 import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../auth/useAuth", () => ({ useAuth: () => ({ user: { role: "admin" } }) }));
 vi.mock("../components/toast", () => ({ useToast: () => ({ showToast: vi.fn(), showAck: vi.fn() }) }));
+vi.mock("../api/submissions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/submissions")>()),
+  amendMySubmission: vi.fn(),
+  getMySubmission: vi.fn(),
+  myPendingCount: vi.fn().mockResolvedValue(0),
+  pendingSubmissionCount: vi.fn().mockResolvedValue(0),
+}));
+
+function renderPage() {
+  return render(<MemoryRouter><VitalsPage /></MemoryRouter>);
+}
 
 const list = vi.fn();
 const create = vi.fn();
@@ -33,7 +45,7 @@ beforeEach(() => { list.mockReset(); create.mockReset(); update.mockReset(); rem
 describe("VitalsPage", () => {
   it("admin opens an empty Add modal via the + Add button", async () => {
     list.mockResolvedValue([]);
-    render(<VitalsPage />);
+    renderPage();
     await waitFor(() => expect(list).toHaveBeenCalled());
     await userEvent.click(screen.getByText(/\+ add/i));
     const dialog = await screen.findByRole("dialog");
@@ -42,7 +54,7 @@ describe("VitalsPage", () => {
 
   it("admin opens a pre-filled Edit modal from a row", async () => {
     list.mockResolvedValue([SAMPLE]);
-    render(<VitalsPage />);
+    renderPage();
     await waitFor(() => expect(list).toHaveBeenCalled());
     await userEvent.click(screen.getAllByLabelText(/^edit /i)[0]);
     const dialog = await screen.findByRole("dialog");
@@ -52,7 +64,7 @@ describe("VitalsPage", () => {
 
   it("auto-calculates BMI in the modal as height and weight are entered", async () => {
     list.mockResolvedValue([]);
-    render(<VitalsPage />);
+    renderPage();
     await waitFor(() => expect(list).toHaveBeenCalled());
     await userEvent.click(screen.getByText(/\+ add/i));
     const dialog = await screen.findByRole("dialog");
@@ -66,7 +78,7 @@ describe("VitalsPage", () => {
   it("height fields combine to total inches on submit", async () => {
     list.mockResolvedValue([]);
     create.mockResolvedValue({ id: "v2" });
-    render(<VitalsPage />);
+    renderPage();
     await waitFor(() => expect(list).toHaveBeenCalled());
     await userEvent.click(screen.getByText(/\+ add/i));
     const dialog = await screen.findByRole("dialog");
@@ -84,7 +96,7 @@ describe("VitalsPage", () => {
 
   it("displays height as feet and inches in detail view", async () => {
     list.mockResolvedValue([SAMPLE]); // SAMPLE has height_in: 65
-    render(<VitalsPage />);
+    renderPage();
     await waitFor(() => expect(list).toHaveBeenCalled());
     // SAMPLE height_in is 65 → 5'5"
     // RecordTable More button has aria-label "More details for <detailTitle>"

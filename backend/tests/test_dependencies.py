@@ -34,3 +34,22 @@ def test_get_current_user_rejects_non_uuid_sub():
     client = TestClient(probe)
     resp = client.get("/whoami", cookies={"access_token": token})
     assert resp.status_code == 401
+
+
+def test_require_contributor_rejects_admin_and_viewer():
+    import pytest
+    from fastapi import HTTPException
+    from app.security.dependencies import require_contributor
+    from app.models.user import Role
+
+    class U:
+        def __init__(self, role): self.role = role
+
+    # contributor passes
+    u = U(Role.contributor)
+    assert require_contributor(u) is u
+    # admin and viewer are rejected
+    for role in (Role.admin, Role.viewer):
+        with pytest.raises(HTTPException) as ei:
+            require_contributor(U(role))
+        assert ei.value.status_code == 403

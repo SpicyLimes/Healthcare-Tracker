@@ -7,17 +7,21 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.audit_log import AuditAction, ActorType
 from app.models.submission import Submission, SubmissionStatus
-from app.schemas.submission import ReviewRequest, SubmissionRead
-from app.security.dependencies import require_admin, verify_csrf
+from app.schemas.submission import AmendRequest, ReviewRequest, SubmissionRead
+from app.security.dependencies import require_admin, require_contributor, verify_csrf
 from app.services.audit_service import log_event
 from app.services.submission_service import (
     AlreadyReviewedError,
     SubmissionNotFoundError,
     TargetRecordMissingError,
+    amend_own_submission,
     approve_submission,
+    count_own_pending,
+    list_own_submissions,
     list_submissions,
     reject_submission,
     to_read,
+    withdraw_own_submission,
 )
 
 router = APIRouter(prefix="/api/submissions", tags=["submissions"])
@@ -40,6 +44,34 @@ def pending_count(db: Session = Depends(get_db)):
         )
     ) or 0
     return {"count": count}
+
+
+@router.get("/mine", response_model=list[SubmissionRead], dependencies=[Depends(require_contributor)])
+def list_mine(db: Session = Depends(get_db), current=Depends(require_contributor)):
+    return [to_read(db, s) for s in list_own_submissions(db, current.id)]
+
+
+@router.get("/mine/pending-count", dependencies=[Depends(require_contributor)])
+def mine_pending_count(db: Session = Depends(get_db), current=Depends(require_contributor)):
+    return {"count": count_own_pending(db, current.id)}
+
+
+@router.get(
+    "/{submission_id}",
+    response_model=SubmissionRead,
+    dependencies=[Depends(require_contributor)],
+)
+def get_mine_one(
+    submission_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current=Depends(require_contributor),
+):
+    # Own-scoped fetch: 404 if not the contributor's own submission.
+    subs = {s.id: s for s in list_own_submissions(db, current.id)}
+    sub = subs.get(submission_id)
+    if sub is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+    return to_read(db, sub)
 
 
 @router.post(
@@ -81,6 +113,67 @@ def approve(
         db.rollback()
         raise
     return to_read(db, sub)
+
+
+@router.patch(
+    "/{submission_id}",
+    response_model=SubmissionRead,
+    dependencies=[Depends(require_contributor), Depends(verify_csrf)],
+)
+def amend(
+    submission_id: uuid.UUID,
+    payload: AmendRequest,
+    db: Session = Depends(get_db),
+    current=Depends(require_contributor),
+):
+    try:
+        sub = amend_own_submission(db, submission_id, current.id, payload.payload)
+    except SubmissionNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+    except AlreadyReviewedError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot edit a reviewed or non-editable submission",
+        )
+    db.commit()
+    return to_read(db, sub)
+
+
+@router.delete(
+    "/{submission_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_contributor), Depends(verify_csrf)],
+)
+def withdraw(
+    submission_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current=Depends(require_contributor),
+):
+    try:
+        sub = withdraw_own_submission(db, submission_id, current.id)
+    except SubmissionNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+    except AlreadyReviewedError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Already reviewed")
+    # Capture audit fields before commit (the row is deleted; read now while valid).
+    sub_section = sub.section
+    sub_record_id = sub.record_id
+    sub_action_value = sub.action.value
+    try:
+        log_event(
+            db,
+            action=AuditAction.submission_withdrawn,
+            actor_type=ActorType.user,
+            actor_user_id=current.id,
+            section=sub_section,
+            record_id=sub_record_id,
+            detail=f"Withdrew own submission {submission_id} ({sub_action_value} on {sub_section})",
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return None
 
 
 @router.post(

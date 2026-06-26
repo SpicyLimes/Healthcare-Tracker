@@ -55,6 +55,13 @@ def require_contributor_or_admin(current: User = Depends(get_current_user)) -> U
     return current
 
 
+def require_contributor(current: User = Depends(get_current_user)) -> User:
+    """Allow only contributors; 403 for admins, viewers, guests."""
+    if current.role != Role.contributor:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Contributor required")
+    return current
+
+
 def require_viewer_or_admin(current: User = Depends(get_current_user)) -> User:
     """Allow any authenticated user (admin or viewer); 403 for unauthenticated."""
     return current

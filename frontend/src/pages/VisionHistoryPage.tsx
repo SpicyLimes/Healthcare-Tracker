@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { visionHistoryApi, type VisionHistory, type VisionHistoryInput } from "../api/visionHistory";
+import { amendMySubmission, getMySubmission } from "../api/submissions";
 import { doctorsApi, type Doctor } from "../api/doctors";
 import DoctorPicker from "../components/DoctorPicker";
 import { useAuth } from "../auth/useAuth";
@@ -40,6 +42,9 @@ export default function VisionHistoryPage() {
   const [editingRow, setEditingRow] = useState<VisionHistory | null>(null);
   const [form, setForm] = useState<VisionHistoryInput>(EMPTY);
   const [modalError, setModalError] = useState("");
+  const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   async function reload() { setRows(await visionHistoryApi.list()); }
   useEffect(() => {
@@ -47,6 +52,20 @@ export default function VisionHistoryPage() {
     reload().catch(() => { setError("Failed to load vision history"); setRows([]); }).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!isContributor) return;
+    const sid = searchParams.get("editSubmission");
+    if (!sid) return;
+    getMySubmission(sid).then((sub) => {
+      setForm({ ...EMPTY, ...(sub.payload as Partial<VisionHistoryInput>) });
+      setEditingRow(null);
+      setEditingSubmissionId(sid);
+      setModalError("");
+      setModalMode(sub.action === "create" ? "add" : "edit");
+      setSearchParams({}, { replace: true });
+    }).catch(() => {});
+  }, [isContributor, searchParams]);
 
   function resolveDoctorName(id: string | null, other: string | null): string {
     if (id) return doctors.find((d) => d.id === id)?.name ?? other ?? "";
@@ -70,12 +89,20 @@ export default function VisionHistoryPage() {
   function closeModal() {
     setModalMode(null);
     setEditingRow(null);
+    setEditingSubmissionId(null);
   }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setModalError("");
     try {
+      if (editingSubmissionId) {
+        await amendMySubmission(editingSubmissionId, form as unknown as Record<string, unknown>);
+        closeModal();
+        showAck("Your submission has been updated and is awaiting approval.");
+        navigate("/my-submissions");
+        return;
+      }
       if (modalMode === "edit" && editingRow) {
         await visionHistoryApi.update(editingRow.id, form);
       } else {

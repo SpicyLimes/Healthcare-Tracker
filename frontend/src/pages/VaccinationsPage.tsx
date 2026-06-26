@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { vaccinationsApi, type Vaccination, type VaccinationInput } from "../api/vaccinations";
+import { amendMySubmission, getMySubmission } from "../api/submissions";
 import { useAuth } from "../auth/useAuth";
 import { useToast } from "../components/toast";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -39,7 +40,9 @@ export default function VaccinationsPage() {
   const [editingRow, setEditingRow] = useState<Vaccination | null>(null);
   const [form, setForm] = useState<VaccinationInput>(EMPTY);
   const [modalError, setModalError] = useState("");
+  const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   async function reload() { setRows(await vaccinationsApi.list()); }
   useEffect(() => {
@@ -58,6 +61,20 @@ export default function VaccinationsPage() {
     }
   }, [rows, searchParams]);
 
+  useEffect(() => {
+    if (!isContributor) return;
+    const sid = searchParams.get("editSubmission");
+    if (!sid) return;
+    getMySubmission(sid).then((sub) => {
+      setForm({ ...EMPTY, ...(sub.payload as Partial<VaccinationInput>) });
+      setEditingRow(null);
+      setEditingSubmissionId(sid);
+      setModalError("");
+      setModalMode(sub.action === "create" ? "add" : "edit");
+      setSearchParams({}, { replace: true });
+    }).catch(() => {});
+  }, [isContributor, searchParams]);
+
   function openAdd() {
     setForm(EMPTY);
     setEditingRow(null);
@@ -75,12 +92,20 @@ export default function VaccinationsPage() {
   function closeModal() {
     setModalMode(null);
     setEditingRow(null);
+    setEditingSubmissionId(null);
   }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setModalError("");
     try {
+      if (editingSubmissionId) {
+        await amendMySubmission(editingSubmissionId, form as unknown as Record<string, unknown>);
+        closeModal();
+        showAck("Your submission has been updated and is awaiting approval.");
+        navigate("/my-submissions");
+        return;
+      }
       if (modalMode === "edit" && editingRow) {
         await vaccinationsApi.update(editingRow.id, form);
       } else {

@@ -311,3 +311,167 @@ def test_contributor_create_returns_201_for_all_sections(client, db_session, pre
     # And it must be queued, not written directly.
     body = res.json()
     assert "id" in body
+
+
+# ---- Own-submission service tests (Task 3) ----
+
+def _distinct_contributor(db):
+    """Create a fresh contributor and return it (distinct from any other)."""
+    from sqlalchemy import select
+    from app.models.user import User
+    email = f"own+{uuid.uuid4().hex[:8]}@example.com"
+    user_service.create_user(db, email, "TestPassword1234!", Role.contributor)
+    return db.scalars(select(User).where(User.email == email)).first()
+
+
+def test_list_own_submissions_scoped_to_user(db_session):
+    from app.services.submission_service import list_own_submissions
+    c1 = _distinct_contributor(db_session)
+    c2 = _distinct_contributor(db_session)
+    create_submission(db_session, c1.id, "doctors", SubmissionAction.create, {"name": "Mine"})
+    create_submission(db_session, c2.id, "doctors", SubmissionAction.create, {"name": "Theirs"})
+    mine = list_own_submissions(db_session, c1.id)
+    assert len(mine) == 1
+    assert mine[0].payload["name"] == "Mine"
+
+
+def test_count_own_pending(db_session):
+    from app.services.submission_service import count_own_pending
+    c = _distinct_contributor(db_session)
+    a = _make_admin(db_session)
+    s1 = create_submission(db_session, c.id, "doctors", SubmissionAction.create, {"name": "A"})
+    create_submission(db_session, c.id, "doctors", SubmissionAction.create, {"name": "B"})
+    assert count_own_pending(db_session, c.id) == 2
+    approve_submission(db_session, s1.id, a.id)
+    assert count_own_pending(db_session, c.id) == 1
+
+
+def test_amend_own_submission_updates_payload(db_session):
+    from app.services.submission_service import amend_own_submission
+    c = _distinct_contributor(db_session)
+    s = create_submission(db_session, c.id, "doctors", SubmissionAction.create, {"name": "Old"})
+    amend_own_submission(db_session, s.id, c.id, {"name": "New"})
+    assert s.payload["name"] == "New"
+
+
+def test_amend_rejects_invalid_payload(db_session):
+    from pydantic import ValidationError
+    from app.services.submission_service import amend_own_submission
+    c = _distinct_contributor(db_session)
+    s = create_submission(db_session, c.id, "doctors", SubmissionAction.create, {"name": "Old"})
+    with pytest.raises(ValidationError):
+        amend_own_submission(db_session, s.id, c.id, {})  # name required for create
+
+
+def test_amend_not_owner_raises_notfound(db_session):
+    from app.services.submission_service import amend_own_submission
+    c1 = _distinct_contributor(db_session)
+    c2 = _distinct_contributor(db_session)
+    s = create_submission(db_session, c1.id, "doctors", SubmissionAction.create, {"name": "X"})
+    with pytest.raises(SubmissionNotFoundError):
+        amend_own_submission(db_session, s.id, c2.id, {"name": "Y"})
+
+
+def test_amend_non_pending_raises_already_reviewed(db_session):
+    from app.services.submission_service import amend_own_submission
+    c = _distinct_contributor(db_session)
+    a = _make_admin(db_session)
+    s = create_submission(db_session, c.id, "doctors", SubmissionAction.create, {"name": "X"})
+    approve_submission(db_session, s.id, a.id)
+    with pytest.raises(AlreadyReviewedError):
+        amend_own_submission(db_session, s.id, c.id, {"name": "Y"})
+
+
+def test_withdraw_own_submission_deletes(db_session):
+    from app.models.submission import Submission
+    from app.services.submission_service import withdraw_own_submission
+    c = _distinct_contributor(db_session)
+    s = create_submission(db_session, c.id, "doctors", SubmissionAction.create, {"name": "Bye"})
+    sid = s.id
+    withdraw_own_submission(db_session, sid, c.id)
+    assert db_session.get(Submission, sid) is None
+
+
+def test_withdraw_not_owner_raises_notfound(db_session):
+    from app.services.submission_service import withdraw_own_submission
+    c1 = _distinct_contributor(db_session)
+    c2 = _distinct_contributor(db_session)
+    s = create_submission(db_session, c1.id, "doctors", SubmissionAction.create, {"name": "X"})
+    with pytest.raises(SubmissionNotFoundError):
+        withdraw_own_submission(db_session, s.id, c2.id)
+
+
+# ---- Contributor endpoint tests (Task 4) ----
+
+def test_get_mine_returns_only_own(client, db_session):
+    csrf = _contrib_login(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Mine D"})
+    res = client.get("/api/submissions/mine")
+    assert res.status_code == 200
+    assert all(s["section"] == "doctors" for s in res.json())
+    assert any(s["payload"]["name"] == "Mine D" for s in res.json())
+
+
+def test_get_mine_pending_count(client, db_session):
+    csrf = _contrib_login(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "C1"})
+    res = client.get("/api/submissions/mine/pending-count")
+    assert res.status_code == 200
+    assert res.json()["count"] >= 1
+
+
+def test_viewer_cannot_get_mine(client, db_session):
+    from app.models.user import Role
+    import uuid as _uuid
+    email = f"v+{_uuid.uuid4().hex[:6]}@test.com"
+    user_service.create_user(db_session, email, "TestPassword1234!", Role.viewer)
+    client.post("/api/auth/login", json={"email": email, "password": "TestPassword1234!"})
+    assert client.get("/api/submissions/mine").status_code == 403
+
+
+def test_amend_own_pending_via_endpoint(client, db_session):
+    csrf = _contrib_login(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Before"})
+    sid = client.get("/api/submissions/mine").json()[0]["id"]
+    res = client.patch(
+        f"/api/submissions/{sid}",
+        headers={"X-CSRF-Token": csrf},
+        json={"payload": {"name": "After"}},
+    )
+    assert res.status_code == 200
+    assert res.json()["payload"]["name"] == "After"
+
+
+def test_withdraw_own_pending_via_endpoint(client, db_session):
+    csrf = _contrib_login(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Gone"})
+    sid = client.get("/api/submissions/mine").json()[0]["id"]
+    res = client.delete(f"/api/submissions/{sid}", headers={"X-CSRF-Token": csrf})
+    assert res.status_code == 204
+    assert all(s["id"] != sid for s in client.get("/api/submissions/mine").json())
+
+
+def test_amend_others_submission_404(client, db_session):
+    csrf1 = _contrib_login(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf1}, json={"name": "C1 D"})
+    sid = client.get("/api/submissions/mine").json()[0]["id"]
+    csrf2 = _contrib_login(client, db_session)  # logs in as a different contributor
+    res = client.patch(f"/api/submissions/{sid}", headers={"X-CSRF-Token": csrf2}, json={"payload": {"name": "Hacked"}})
+    assert res.status_code == 404
+
+
+def test_get_one_mine_returns_own(client, db_session):
+    csrf = _contrib_login(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Fetch Me"})
+    sid = client.get("/api/submissions/mine").json()[0]["id"]
+    res = client.get(f"/api/submissions/{sid}")
+    assert res.status_code == 200
+    assert res.json()["payload"]["name"] == "Fetch Me"
+
+
+def test_get_one_mine_404_for_others(client, db_session):
+    csrf1 = _contrib_login(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf1}, json={"name": "C1"})
+    sid = client.get("/api/submissions/mine").json()[0]["id"]
+    _contrib_login(client, db_session)  # switch to a different contributor
+    assert client.get(f"/api/submissions/{sid}").status_code == 404

@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ailmentsApi, type Ailment, type AilmentInput, type AilmentStatus } from "../api/ailments";
+import { amendMySubmission, getMySubmission } from "../api/submissions";
 import { useAuth } from "../auth/useAuth";
 import { useToast } from "../components/toast";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -41,6 +43,9 @@ export default function AilmentsPage() {
   const [editingRow, setEditingRow] = useState<Ailment | null>(null);
   const [form, setForm] = useState<AilmentInput>(EMPTY);
   const [modalError, setModalError] = useState("");
+  const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   async function reload() {
     setRows(await ailmentsApi.list());
@@ -50,6 +55,20 @@ export default function AilmentsPage() {
     reload().catch(() => { setError("Failed to load ailments"); setRows([]); }).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!isContributor) return;
+    const sid = searchParams.get("editSubmission");
+    if (!sid) return;
+    getMySubmission(sid).then((sub) => {
+      setForm({ ...EMPTY, ...(sub.payload as Partial<AilmentInput>) });
+      setEditingRow(null);
+      setEditingSubmissionId(sid);
+      setModalError("");
+      setModalMode(sub.action === "create" ? "add" : "edit");
+      setSearchParams({}, { replace: true });
+    }).catch(() => {});
+  }, [isContributor, searchParams]);
 
   function openAdd() {
     setForm(EMPTY);
@@ -68,12 +87,20 @@ export default function AilmentsPage() {
   function closeModal() {
     setModalMode(null);
     setEditingRow(null);
+    setEditingSubmissionId(null);
   }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setModalError("");
     try {
+      if (editingSubmissionId) {
+        await amendMySubmission(editingSubmissionId, form as unknown as Record<string, unknown>);
+        closeModal();
+        showAck("Your submission has been updated and is awaiting approval.");
+        navigate("/my-submissions");
+        return;
+      }
       if (modalMode === "edit" && editingRow) {
         await ailmentsApi.update(editingRow.id, form);
       } else {
