@@ -20,6 +20,10 @@ function sectionLabel(s: string) {
   return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function capitalize(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 function statusVariant(s: SubmissionStatus): "default" | "secondary" | "destructive" | "outline" {
   if (s === "pending") return "outline";
   if (s === "approved") return "default";
@@ -126,7 +130,7 @@ export default function SubmissionsPage() {
                   sortKey: "action",
                   render: (r) => (
                     <Badge variant={r.action === "create" ? "default" : r.action === "update" ? "secondary" : "destructive"}>
-                      {r.action}
+                      {capitalize(r.action)}
                     </Badge>
                   ),
                 },
@@ -135,7 +139,7 @@ export default function SubmissionsPage() {
                   sortKey: "status",
                   render: (r) => (
                     <Badge variant={statusVariant(r.status)}>
-                      {r.status}
+                      {capitalize(r.status)}
                     </Badge>
                   ),
                 },
@@ -169,9 +173,9 @@ export default function SubmissionsPage() {
                 { label: "Submitted At", value: formatDatetime(r.created_at) },
                 { label: "Submitted By", value: r.submitted_by_label },
                 { label: "Section", value: sectionLabel(r.section) },
-                { label: "Action", value: r.action },
+                { label: "Action", value: capitalize(r.action) },
                 { label: "Record ID", value: r.record_id ?? null },
-                { label: "Status", value: r.status },
+                { label: "Status", value: capitalize(r.status) },
                 { label: "Reviewed By", value: r.reviewed_by_label ?? null },
                 { label: "Reviewed At", value: r.reviewed_at ? formatDatetime(r.reviewed_at) : null },
                 { label: "Reject Reason", value: r.reject_reason ?? null },
