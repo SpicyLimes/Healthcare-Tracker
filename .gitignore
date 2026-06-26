@@ -1,6 +1,5 @@
 # Project-specific
-docs/superpowers/
-docs/project/
+docs/
 .superpowers/
 
 # Env / secrets
