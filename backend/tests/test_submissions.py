@@ -399,3 +399,62 @@ def test_withdraw_not_owner_raises_notfound(db_session):
     s = create_submission(db_session, c1.id, "doctors", SubmissionAction.create, {"name": "X"})
     with pytest.raises(SubmissionNotFoundError):
         withdraw_own_submission(db_session, s.id, c2.id)
+
+
+# ---- Contributor endpoint tests (Task 4) ----
+
+def test_get_mine_returns_only_own(client, db_session):
+    csrf = _contrib_login(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Mine D"})
+    res = client.get("/api/submissions/mine")
+    assert res.status_code == 200
+    assert all(s["section"] == "doctors" for s in res.json())
+    assert any(s["payload"]["name"] == "Mine D" for s in res.json())
+
+
+def test_get_mine_pending_count(client, db_session):
+    csrf = _contrib_login(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "C1"})
+    res = client.get("/api/submissions/mine/pending-count")
+    assert res.status_code == 200
+    assert res.json()["count"] >= 1
+
+
+def test_viewer_cannot_get_mine(client, db_session):
+    from app.models.user import Role
+    import uuid as _uuid
+    email = f"v+{_uuid.uuid4().hex[:6]}@test.com"
+    user_service.create_user(db_session, email, "TestPassword1234!", Role.viewer)
+    client.post("/api/auth/login", json={"email": email, "password": "TestPassword1234!"})
+    assert client.get("/api/submissions/mine").status_code == 403
+
+
+def test_amend_own_pending_via_endpoint(client, db_session):
+    csrf = _contrib_login(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Before"})
+    sid = client.get("/api/submissions/mine").json()[0]["id"]
+    res = client.patch(
+        f"/api/submissions/{sid}",
+        headers={"X-CSRF-Token": csrf},
+        json={"payload": {"name": "After"}},
+    )
+    assert res.status_code == 200
+    assert res.json()["payload"]["name"] == "After"
+
+
+def test_withdraw_own_pending_via_endpoint(client, db_session):
+    csrf = _contrib_login(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf}, json={"name": "Gone"})
+    sid = client.get("/api/submissions/mine").json()[0]["id"]
+    res = client.delete(f"/api/submissions/{sid}", headers={"X-CSRF-Token": csrf})
+    assert res.status_code == 204
+    assert all(s["id"] != sid for s in client.get("/api/submissions/mine").json())
+
+
+def test_amend_others_submission_404(client, db_session):
+    csrf1 = _contrib_login(client, db_session)
+    client.post("/api/doctors", headers={"X-CSRF-Token": csrf1}, json={"name": "C1 D"})
+    sid = client.get("/api/submissions/mine").json()[0]["id"]
+    csrf2 = _contrib_login(client, db_session)  # logs in as a different contributor
+    res = client.patch(f"/api/submissions/{sid}", headers={"X-CSRF-Token": csrf2}, json={"payload": {"name": "Hacked"}})
+    assert res.status_code == 404

@@ -27,3 +27,7 @@ class SubmissionRead(BaseModel):
 
 class ReviewRequest(BaseModel):
     reject_reason: str | None = None
+
+
+class AmendRequest(BaseModel):
+    payload: dict[str, Any]
