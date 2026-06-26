@@ -26,7 +26,7 @@ export default function VisionHistoryPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const isContributor = user?.role === "contributor";
-  const { showToast } = useToast();
+  const { showToast, showAck } = useToast();
   const canWrite = isAdmin || isContributor;
   const submitLabel = isContributor ? "Submit for Approval" : "Save";
   const contributorNotice = isContributor
@@ -83,7 +83,9 @@ export default function VisionHistoryPage() {
       }
       closeModal();
       await reload();
-      showToast(isContributor ? "Submitted for approval — an Admin will review it." : "Saved.");
+      isContributor
+        ? showAck("Submitted for approval — an Admin will review it.")
+        : showToast("Saved.");
     } catch {
       setModalError(modalMode === "edit" ? "Could not update record" : "Could not add record");
     }
@@ -94,7 +96,9 @@ export default function VisionHistoryPage() {
       ? "Submit a deletion request for this vision history record? An Admin must approve before it is removed."
       : "Delete this vision history record?";
     if (!window.confirm(msg)) return;
-    try { await visionHistoryApi.remove(id); await reload(); showToast(isContributor ? "Deletion submitted for approval." : "Deleted."); }
+    try { await visionHistoryApi.remove(id); await reload(); isContributor
+        ? showAck("Deletion submitted for approval.")
+        : showToast("Deleted."); }
     catch { setError("Could not delete record"); }
   }
 

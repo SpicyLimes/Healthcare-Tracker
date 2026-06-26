@@ -32,7 +32,7 @@ export default function MedicationsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const isContributor = user?.role === "contributor";
-  const { showToast } = useToast();
+  const { showToast, showAck } = useToast();
   const canWrite = isAdmin || isContributor;
   const submitLabel = isContributor ? "Submit for Approval" : "Save";
   const contributorNotice = isContributor
@@ -104,7 +104,9 @@ export default function MedicationsPage() {
       }
       closeModal();
       await reload();
-      showToast(isContributor ? "Submitted for approval — an Admin will review it." : "Saved.");
+      isContributor
+        ? showAck("Submitted for approval — an Admin will review it.")
+        : showToast("Saved.");
     } catch {
       setModalError(modalMode === "edit" ? "Could not update record" : "Could not add record");
     }
@@ -118,7 +120,9 @@ export default function MedicationsPage() {
     try {
       await medicationsApi.remove(id);
       await reload();
-      showToast(isContributor ? "Deletion submitted for approval." : "Deleted.");
+      isContributor
+        ? showAck("Deletion submitted for approval.")
+        : showToast("Deleted.");
     } catch {
       setError("Could not delete record");
     }
