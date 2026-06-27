@@ -3,17 +3,26 @@ import hashlib
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
+from app.limiter import limiter
 from app.models.audit_log import AuditAction, ActorType
 from app.models.share_link import ShareLink
 from app.models.user import User
-from app.schemas.share_link import ShareLinkCreate, ShareLinkCreated, ShareLinkRead
+from app.schemas.share_link import (
+    ShareLinkCreate,
+    ShareLinkCreated,
+    ShareLinkEmailRequest,
+    ShareLinkRead,
+)
 from app.security.dependencies import get_current_user, require_admin, verify_csrf
 from app.security.tokens import create_share_token
+from app.services import email_service
 from app.services.audit_service import log_event
+from app.services.email_service import mask_email, send_share_link_email
 
 router = APIRouter(prefix="/api/share-links", tags=["share-links"])
 
@@ -127,4 +136,57 @@ def delete_share_link(
         detail=f"Deleted share link: {link.label}",
     )
     db.delete(link)
+    db.commit()
+
+
+@router.post(
+    "/{link_id}/email",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(verify_csrf)],
+)
+@limiter.limit("10/hour")
+def email_share_link(
+    request: Request,
+    response: Response,
+    link_id: uuid.UUID,
+    payload: ShareLinkEmailRequest,
+    db: Session = Depends(get_db),
+    current: User = Depends(require_admin),
+):
+    link = db.get(ShareLink, link_id)
+    if link is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share link not found")
+
+    now = datetime.now(timezone.utc)
+    if link.revoked or link.expires_at <= now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot email an inactive link.",
+        )
+
+    raw_token = create_share_token(link.id, link.expires_at)
+    link_url = f"{settings.app_base_url}/guest?token={raw_token}"
+    expires_display = link.expires_at.strftime("%B %d, %Y %I:%M %p %Z").strip()
+
+    try:
+        send_share_link_email(
+            sender=email_service.get_email_sender(),
+            recipient=str(payload.recipient),
+            link_url=link_url,
+            expires_at_display=expires_display,
+            message=payload.message,
+        )
+    except email_service.EmailSendError:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Couldn't send the email. The link is still valid — you can copy it instead.",
+        )
+
+    log_event(
+        db,
+        action=AuditAction.share_link_emailed,
+        actor_type=ActorType.user,
+        actor_user_id=current.id,
+        detail=f'Emailed "{link.label}" to {mask_email(str(payload.recipient))}',
+    )
     db.commit()
