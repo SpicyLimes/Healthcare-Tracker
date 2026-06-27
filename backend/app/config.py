@@ -25,6 +25,18 @@ class Settings(BaseSettings):
     # File uploads
     uploads_root: str = "/app/uploads"
 
+    # --- Email (transactional) ---
+    email_backend: str = "console"  # "smtp" to actually send; "console" logs only
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_use_tls: bool = True
+    email_from: str = "Healthcare Tracker <noreply@example.com>"
+    email_footer: str = ""
+    # Absolute base URL for links built server-side (no browser origin available in email)
+    app_base_url: str = "http://localhost:1337"
+
     @model_validator(mode="after")
     def validate_secrets(self) -> "Settings":
         if "insecure" in self.jwt_secret or len(self.jwt_secret) < 32:
