@@ -1,7 +1,7 @@
 // frontend/src/pages/ShareLinksPage.tsx
 import { useEffect, useState } from "react";
 import {
-  listShareLinks, createShareLink, revokeShareLink, deleteShareLink,
+  listShareLinks, createShareLink, revokeShareLink, deleteShareLink, emailShareLink,
   type ShareLink, type ShareLinkCreated,
 } from "../api/shareLinks";
 import { AppShell } from "@/components/app-shell";
@@ -66,6 +66,12 @@ export default function ShareLinksPage() {
   const [created, setCreated] = useState<ShareLinkCreated | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [emailFor, setEmailFor] = useState<ShareLink | null>(null);
+  const [recipient, setRecipient] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [emailSent, setEmailSent] = useState("");
 
   async function reload() {
     try {
@@ -137,6 +143,30 @@ export default function ShareLinksPage() {
     setTimeout(() => setCopiedId(null), 2000);
   }
 
+  function openEmail(link: ShareLink) {
+    setEmailFor(link);
+    setRecipient("");
+    setEmailMessage("");
+    setEmailError("");
+    setEmailSent("");
+  }
+
+  async function handleSendEmail(e: React.FormEvent) {
+    e.preventDefault();
+    if (!emailFor) return;
+    setEmailSending(true);
+    setEmailError("");
+    try {
+      await emailShareLink(emailFor.id, { recipient, message: emailMessage });
+      setEmailSent(`Email sent to ${recipient}`);
+      setEmailFor(null);
+    } catch (err) {
+      setEmailError(err instanceof Error ? err.message : "Couldn't send the email.");
+    } finally {
+      setEmailSending(false);
+    }
+  }
+
   return (
     <AppShell>
       <PageLayout
@@ -149,6 +179,49 @@ export default function ShareLinksPage() {
         }
       >
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        {emailSent && <p role="status" className="text-sm text-emerald-600">{emailSent}</p>}
+
+        {emailFor && (
+          <div
+            role="dialog"
+            aria-label="Email share link"
+            className="mb-4 rounded-xl border border-border bg-card p-4"
+          >
+            <p className="font-medium text-foreground">
+              Email “{emailFor.label}” — expires {formatInTimezone(emailFor.expires_at, tz)}
+            </p>
+            <form onSubmit={handleSendEmail} className="mt-3 flex flex-col gap-3">
+              <FormField label="Recipient" htmlFor="email-recipient">
+                <Input
+                  id="email-recipient"
+                  type="email"
+                  required
+                  placeholder="doctor@example.com"
+                  value={recipient}
+                  onChange={(e) => setRecipient(e.target.value)}
+                />
+              </FormField>
+              <FormField label="Message (optional)" htmlFor="email-message">
+                <textarea
+                  id="email-message"
+                  className="min-h-[72px] w-full rounded-md border border-border bg-background p-2 text-sm"
+                  placeholder="Add a short note for the recipient"
+                  value={emailMessage}
+                  onChange={(e) => setEmailMessage(e.target.value)}
+                />
+              </FormField>
+              {emailError && <p role="alert" className="text-sm text-destructive">{emailError}</p>}
+              <div className="flex gap-2">
+                <Button type="submit" size="sm" disabled={emailSending}>
+                  {emailSending ? "Sending…" : "Send"}
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => setEmailFor(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {created && (
           <div
@@ -311,13 +384,20 @@ export default function ShareLinksPage() {
                 </div>
               )}
               renderRowActions={(r) => (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleCopyRow(r.token_url, r.id)}
-                >
-                  {copiedId === r.id ? "Copied!" : "Copy Link"}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCopyRow(r.token_url, r.id)}
+                  >
+                    {copiedId === r.id ? "Copied!" : "Copy Link"}
+                  </Button>
+                  {linkStatus(r) === "Active" && (
+                    <Button variant="outline" size="sm" onClick={() => openEmail(r)}>
+                      Email
+                    </Button>
+                  )}
+                </div>
               )}
               getHeadline={(r) => r.label}
               getSubtitle={(r) => `Expires: ${formatInTimezone(r.expires_at, tz)}`}
