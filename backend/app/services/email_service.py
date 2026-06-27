@@ -4,6 +4,7 @@ Both Share-Link delivery and (future) email-OTP reuse this. The router depends
 on the EmailSender interface, never on smtplib directly, so providers can be
 swapped via config alone.
 """
+import html as html_lib
 import logging
 import smtplib
 import ssl
@@ -84,3 +85,79 @@ def get_email_sender() -> EmailSender:
     if settings.email_backend == "smtp":
         return SmtpEmailSender()
     return ConsoleEmailSender()
+
+
+SHARE_LINK_SUBJECT = "A health summary has been shared with you"
+
+
+def render_share_link_email(
+    *, link_url: str, expires_at_display: str, message: Optional[str]
+) -> tuple[str, str, str]:
+    """Build (subject, text_body, html_body) for a shared-link email.
+
+    Minimal by design: no patient identity, no sender identity, no health details.
+    The optional admin `message` is rendered verbatim in text and HTML-escaped in HTML.
+    """
+    footer = settings.email_footer
+
+    msg_block_text = ""
+    if message:
+        msg_block_text = (
+            "\n── Message from the sender ──\n"
+            f"{message}\n"
+            "─────────────────────────────\n"
+        )
+
+    text_body = (
+        "Hello,\n\n"
+        "Someone has shared a health summary with you using Healthcare Tracker.\n"
+        f"{msg_block_text}\n"
+        "You can view the shared summary here:\n"
+        f"{link_url}\n\n"
+        f"This link expires on {expires_at_display}.\n"
+        "If the link has expired, please ask the sender to share a new one.\n\n"
+        "If you weren't expecting this email, you can safely ignore it.\n\n"
+        "— Healthcare Tracker\n"
+        f"{footer}\n"
+    )
+
+    safe_link = html_lib.escape(link_url, quote=True)
+    safe_expiry = html_lib.escape(expires_at_display)
+    safe_footer = html_lib.escape(footer)
+    msg_block_html = ""
+    if message:
+        msg_block_html = (
+            "<p style='border-left:3px solid #ccc;padding-left:12px;color:#555'>"
+            f"{html_lib.escape(message)}</p>"
+        )
+
+    html_body = (
+        "<p>Hello,</p>"
+        "<p>Someone has shared a health summary with you using Healthcare Tracker.</p>"
+        f"{msg_block_html}"
+        f"<p>You can view the shared summary here:<br>"
+        f"<a href=\"{safe_link}\">{safe_link}</a></p>"
+        f"<p>This link expires on {safe_expiry}. "
+        "If the link has expired, please ask the sender to share a new one.</p>"
+        "<p>If you weren't expecting this email, you can safely ignore it.</p>"
+        f"<p>— Healthcare Tracker<br>{safe_footer}</p>"
+    )
+
+    return SHARE_LINK_SUBJECT, text_body, html_body
+
+
+def send_share_link_email(
+    *,
+    sender: EmailSender,
+    recipient: str,
+    link_url: str,
+    expires_at_display: str,
+    message: Optional[str],
+) -> None:
+    """Build and send a shared-link email via the injected sender."""
+    subject, text_body, html_body = render_share_link_email(
+        link_url=link_url, expires_at_display=expires_at_display, message=message
+    )
+    sender.send(
+        EmailMessage(to=recipient, subject=subject, text_body=text_body, html_body=html_body)
+    )

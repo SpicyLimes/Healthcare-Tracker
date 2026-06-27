@@ -52,3 +52,47 @@ def test_smtp_sender_wraps_errors_in_email_send_error(monkeypatch):
     msg = EmailMessage(to="d@x.com", subject="Hi", text_body="body")
     with pytest.raises(EmailSendError):
         SmtpEmailSender().send(msg)
+
+
+from app.services.email_service import render_share_link_email, send_share_link_email
+
+
+def test_render_share_link_email_includes_link_and_expiry():
+    subject, text, html = render_share_link_email(
+        link_url="https://app.example/guest?token=abc",
+        expires_at_display="June 30, 2026 5:00 PM",
+        message=None,
+    )
+    assert subject == "A health summary has been shared with you"
+    assert "https://app.example/guest?token=abc" in text
+    assert "June 30, 2026 5:00 PM" in text
+    assert "<a" in html and "abc" in html
+
+
+def test_render_includes_optional_message_and_escapes_html():
+    _, text, html = render_share_link_email(
+        link_url="https://app.example/guest?token=abc",
+        expires_at_display="soon",
+        message="Hi <script>alert(1)</script> Dr.",
+    )
+    assert "Hi <script>alert(1)</script> Dr." in text  # raw in plain text
+    assert "<script>" not in html  # escaped in html
+    assert "&lt;script&gt;" in html
+
+
+def test_send_share_link_email_uses_injected_sender():
+    sent = {}
+
+    class FakeSender:
+        def send(self, message):
+            sent["msg"] = message
+
+    send_share_link_email(
+        sender=FakeSender(),
+        recipient="dr@x.com",
+        link_url="https://app.example/guest?token=abc",
+        expires_at_display="soon",
+        message=None,
+    )
+    assert sent["msg"].to == "dr@x.com"
+    assert "abc" in sent["msg"].text_body
