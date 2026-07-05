@@ -1,7 +1,7 @@
 // frontend/src/pages/ShareLinksPage.tsx
 import { useEffect, useState } from "react";
 import {
-  listShareLinks, createShareLink, revokeShareLink, deleteShareLink, emailShareLink,
+  listShareLinks, createShareLink, revokeShareLink, deleteShareLink, emailShareLink, getEmailStatus,
   type ShareLink, type ShareLinkCreated,
 } from "../api/shareLinks";
 import { AppShell } from "@/components/app-shell";
@@ -72,6 +72,8 @@ export default function ShareLinksPage() {
   const [emailSending, setEmailSending] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [emailSent, setEmailSent] = useState("");
+  // Hidden until the backend confirms a real email backend is configured.
+  const [emailConfigured, setEmailConfigured] = useState(false);
 
   async function reload() {
     try {
@@ -84,6 +86,7 @@ export default function ShareLinksPage() {
   useEffect(() => {
     setLoading(true);
     reload().finally(() => setLoading(false));
+    getEmailStatus().then(setEmailConfigured).catch(() => setEmailConfigured(false));
   }, []);
 
   async function handleCreate(e: React.FormEvent) {
@@ -206,6 +209,7 @@ export default function ShareLinksPage() {
                   id="email-message"
                   className="min-h-[72px] w-full rounded-md border border-border bg-background p-2 text-sm"
                   placeholder="Add a short note for the recipient"
+                  maxLength={500}
                   value={emailMessage}
                   onChange={(e) => setEmailMessage(e.target.value)}
                 />
@@ -392,7 +396,7 @@ export default function ShareLinksPage() {
                   >
                     {copiedId === r.id ? "Copied!" : "Copy Link"}
                   </Button>
-                  {linkStatus(r) === "Active" && (
+                  {emailConfigured && linkStatus(r) === "Active" && (
                     <Button variant="outline" size="sm" onClick={() => openEmail(r)}>
                       Email
                     </Button>

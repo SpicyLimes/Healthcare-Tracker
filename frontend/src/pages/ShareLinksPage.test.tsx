@@ -55,6 +55,7 @@ describe("ShareLinksPage", () => {
 
   it("email action opens the form and sends to the recipient", async () => {
     vi.spyOn(api, "listShareLinks").mockResolvedValue([LINK]);
+    vi.spyOn(api, "getEmailStatus").mockResolvedValue(true);
     const emailSpy = vi.spyOn(api, "emailShareLink").mockResolvedValue();
     render(<ShareLinksPage />);
     await screen.findAllByText("Dr. Smith");
@@ -75,6 +76,7 @@ describe("ShareLinksPage", () => {
 
   it("email failure shows error and keeps copy link available", async () => {
     vi.spyOn(api, "listShareLinks").mockResolvedValue([LINK]);
+    vi.spyOn(api, "getEmailStatus").mockResolvedValue(true);
     vi.spyOn(api, "emailShareLink").mockRejectedValue(
       new Error("Couldn't send the email. The link is still valid — you can copy it instead."),
     );
@@ -90,5 +92,15 @@ describe("ShareLinksPage", () => {
     expect(await screen.findByText(/still valid/i)).toBeInTheDocument();
     // Copy link affordance remains in the table.
     expect(screen.getByRole("button", { name: /copy link/i })).toBeInTheDocument();
+  });
+
+  it("hides the email action when email is not configured", async () => {
+    vi.spyOn(api, "listShareLinks").mockResolvedValue([LINK]);
+    vi.spyOn(api, "getEmailStatus").mockResolvedValue(false);
+    render(<ShareLinksPage />);
+    await screen.findAllByText("Dr. Smith");
+
+    expect(screen.getByRole("button", { name: /copy link/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^email$/i })).not.toBeInTheDocument();
   });
 });

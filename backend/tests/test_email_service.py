@@ -30,7 +30,23 @@ def test_console_sender_does_not_raise_and_logs(caplog):
     msg = EmailMessage(to="d@x.com", subject="Hi", text_body="body")
     with caplog.at_level("INFO"):
         ConsoleEmailSender().send(msg)
-    assert any("Hi" in r.message or "d@x.com" in r.message for r in caplog.records)
+    assert any("Hi" in r.getMessage() for r in caplog.records)
+
+
+def test_console_sender_masks_recipient_and_redacts_token(caplog):
+    """Docker logs must never hold a live share link or full recipient address."""
+    msg = EmailMessage(
+        to="dr.smith@hospital.com",
+        subject="Hi",
+        text_body="View here:\nhttps://app.example/guest?token=SECRETVALUE\nBye",
+    )
+    with caplog.at_level("INFO"):
+        ConsoleEmailSender().send(msg)
+    log = "\n".join(r.getMessage() for r in caplog.records)
+    assert "SECRETVALUE" not in log
+    assert "token=<redacted>" in log
+    assert "dr.smith@hospital.com" not in log
+    assert "d***@hospital.com" in log
 
 
 def test_factory_returns_console_by_default(monkeypatch):

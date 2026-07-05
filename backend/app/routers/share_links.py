@@ -2,6 +2,7 @@
 import hashlib
 import uuid
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
@@ -139,6 +140,12 @@ def delete_share_link(
     db.commit()
 
 
+@router.get("/email-status", dependencies=[Depends(require_admin)])
+def email_status():
+    """Whether a real email backend is configured (console mode = not configured)."""
+    return {"configured": settings.email_backend == "smtp"}
+
+
 @router.post(
     "/{link_id}/email",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -153,6 +160,14 @@ def email_share_link(
     db: Session = Depends(get_db),
     current: User = Depends(require_admin),
 ):
+    # Console mode logs instead of sending; returning 204 would be silent data
+    # loss on a deploy that forgot EMAIL_BACKEND. Refuse loudly instead.
+    if settings.email_backend != "smtp":
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Email sending is not configured on this server",
+        )
+
     link = db.get(ShareLink, link_id)
     if link is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share link not found")
@@ -166,7 +181,12 @@ def email_share_link(
 
     raw_token = create_share_token(link.id, link.expires_at)
     link_url = f"{settings.app_base_url}/guest?token={raw_token}"
-    expires_display = link.expires_at.strftime("%B %d, %Y %I:%M %p %Z").strip()
+    # Show the expiry in the sending admin's timezone so the email matches the UI.
+    try:
+        zone = ZoneInfo(current.timezone)
+    except (ZoneInfoNotFoundError, ValueError):
+        zone = ZoneInfo("America/Chicago")
+    expires_display = link.expires_at.astimezone(zone).strftime("%B %d, %Y %I:%M %p %Z").strip()
 
     try:
         send_share_link_email(

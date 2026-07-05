@@ -6,6 +6,7 @@ swapped via config alone.
 """
 import html as html_lib
 import logging
+import re
 import smtplib
 import ssl
 from dataclasses import dataclass
@@ -47,14 +48,20 @@ class EmailSender(Protocol):
 
 
 class ConsoleEmailSender:
-    """Default sender: logs instead of sending. Used in dev and tests; never raises."""
+    """Default sender: logs instead of sending. Used in dev and tests; never raises.
+
+    The body is logged so dev flows (e.g. future email-OTP codes) stay visible,
+    but the recipient is masked and share tokens are redacted — docker logs must
+    never hold a live link.
+    """
 
     def send(self, message: EmailMessage) -> None:
+        redacted_body = re.sub(r"token=\S+", "token=<redacted>", message.text_body)
         logger.info(
             "[ConsoleEmailSender] would send email to=%s subject=%r\n%s",
-            message.to,
+            mask_email(message.to),
             message.subject,
-            message.text_body,
+            redacted_body,
         )
 
 
