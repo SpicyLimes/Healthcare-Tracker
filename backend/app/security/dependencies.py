@@ -62,8 +62,8 @@ def require_contributor(current: User = Depends(get_current_user)) -> User:
     return current
 
 
-def require_viewer_or_admin(current: User = Depends(get_current_user)) -> User:
-    """Allow any authenticated user (admin or viewer); 403 for unauthenticated."""
+def require_authenticated(current: User = Depends(get_current_user)) -> User:
+    """Allow any authenticated user regardless of role; 401 for unauthenticated."""
     return current
 
 
