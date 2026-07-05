@@ -22,6 +22,15 @@ export function toLocalInputValue(isoUtc: string | null | undefined, timezone: s
 }
 
 /**
+ * Format a Date as a datetime-local input value (YYYY-MM-DDTHH:mm) in the
+ * browser's local time. Date#toISOString would render UTC and shift the time.
+ */
+export function dateToLocalInputValue(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/**
  * Convert a datetime-local input value (no timezone) to a UTC ISO string,
  * interpreting the input as being in the given IANA timezone.
  *
