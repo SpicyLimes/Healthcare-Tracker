@@ -54,6 +54,14 @@ class Settings(BaseSettings):
                 "INITIAL_ADMIN_PASSWORD still contains the placeholder value 'change-me'. "
                 "Set a strong password in your .env file."
             )
+        if self.email_backend == "smtp" and (
+            "localhost" in self.app_base_url or "127.0.0.1" in self.app_base_url
+        ):
+            raise ValueError(
+                "EMAIL_BACKEND is 'smtp' but APP_BASE_URL points at localhost — "
+                "emailed links would be unreachable for recipients. "
+                "Set APP_BASE_URL to the public URL of this deployment."
+            )
         return self
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
