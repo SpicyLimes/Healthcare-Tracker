@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.user import Role, User
 from app.security.passwords import hash_password, validate_password_policy
+from app.services import auth_service
 from app.utils.email import normalize_email
 
 
@@ -76,6 +77,8 @@ def set_password(db: Session, user_id: uuid.UUID, new_password: str) -> User:
     validate_password_policy(new_password)
     user = get_user(db, user_id)
     user.hashed_password = hash_password(new_password)
+    # Admin reset: kill all existing sessions; the target logs in with the new password.
+    auth_service.revoke_all_refresh_tokens_for_user(db, user.id)
     db.flush()
     return user
 

@@ -9,7 +9,7 @@ from app.models.audit_log import AuditAction, ActorType
 from app.models.user import User
 from app.schemas.ai import AiStatus, ChatRequest, ChatResponse
 from app.models.user import Role
-from app.security.dependencies import require_viewer_or_admin, verify_csrf
+from app.security.dependencies import require_authenticated, verify_csrf
 from app.services import ai_agent, ai_provider, ai_settings_service
 from app.services.audit_service import log_event
 
@@ -24,7 +24,7 @@ _UNAVAILABLE = HTTPException(
 
 
 @router.get("/status", response_model=AiStatus,
-            dependencies=[Depends(require_viewer_or_admin)])
+            dependencies=[Depends(require_authenticated)])
 def status_(db: Session = Depends(get_db)):
     """Viewer-safe AI status for the chat panel. Returns only enabled+model so
     any authenticated user can tell whether to show the assistant; the local
@@ -34,17 +34,17 @@ def status_(db: Session = Depends(get_db)):
 
 
 @router.post("/chat", response_model=ChatResponse,
-             # require_viewer_or_admin is listed here (in addition to the `current`
+             # require_authenticated is listed here (in addition to the `current`
              # param below) so authentication is evaluated BEFORE verify_csrf — an
              # anonymous caller gets 401, not a 403 that leaks the CSRF gate.
-             dependencies=[Depends(require_viewer_or_admin), Depends(verify_csrf)])
+             dependencies=[Depends(require_authenticated), Depends(verify_csrf)])
 @limiter.limit("20/minute")
 def chat(
     request: Request,
     response: Response,
     payload: ChatRequest,
     db: Session = Depends(get_db),
-    current: User = Depends(require_viewer_or_admin),
+    current: User = Depends(require_authenticated),
 ):
     s = ai_settings_service.get_settings(db)
     if not s.enabled or not s.base_url or not s.model:

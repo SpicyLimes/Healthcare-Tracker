@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime
+from zoneinfo import available_timezones
 
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
 
 from app.models.user import Role
 
@@ -39,6 +40,15 @@ class UpdateNameRequest(BaseModel):
 
 class UpdateTimezoneRequest(BaseModel):
     timezone: str
+
+    @field_validator("timezone")
+    @classmethod
+    def _must_be_iana_zone(cls, value: str) -> str:
+        stripped = value.strip()
+        # Empty is allowed: the router falls back to the default zone.
+        if stripped and stripped not in available_timezones():
+            raise ValueError("Unknown timezone; expected an IANA zone name like 'America/Chicago'")
+        return value
 
 
 class UserResponse(BaseModel):

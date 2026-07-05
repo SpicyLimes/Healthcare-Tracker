@@ -244,38 +244,66 @@ def test_guest_nutrition_plan_returns_acceptable_and_unacceptable_foods(client, 
     assert all("meal_type" not in x for x in rows)
 
 
-def test_guest_visit_logs_excludes_auto_created_from_completed_appointment(client, db_session):
-    """Auto-created VisitLog (via Appointment.visit_log_id) must NOT appear in the guest visit_logs list."""
-    csrf = _admin(client, db_session)
+def _seed_auto_and_manual_visit_logs(client, csrf):
+    """Complete an appointment (auto-creates a linked VisitLog) and add a manual VisitLog.
+
+    Returns (auto_vl_id, manual_vl_id).
+    """
     h = {"X-CSRF-Token": csrf}
-    # Create an appointment and mark it completed — this auto-creates a linked VisitLog
     appt = client.post(
         "/api/appointments",
         headers=h,
         json={"appointment_datetime": "2026-07-01T10:00:00", "status": "upcoming", "reason": "Auto-visit test"},
     ).json()
-    client.put(f"/api/appointments/{appt['id']}", headers=h, json={"status": "completed"})
-
-    # Create a manual visit log that SHOULD appear
+    completed = client.put(f"/api/appointments/{appt['id']}", headers=h, json={"status": "completed"}).json()
     manual_vl = client.post(
         "/api/visit-logs",
         headers=h,
         json={"visit_date": "2026-06-01", "reason": "Manual visit"},
     ).json()
+    assert completed["visit_log_id"] is not None
+    return completed["visit_log_id"], manual_vl["id"]
 
+
+def _guest_visit_log_ids(client, token):
+    r = client.get(f"/api/guest/visit_logs?token={token}")
+    assert r.status_code == 200
+    return [x["id"] for x in r.json()]
+
+
+def test_guest_visit_logs_excludes_auto_created_when_link_grants_appointments(client, db_session):
+    """On a link that also grants appointments, the auto-created VisitLog would duplicate
+    the completed appointment and must stay hidden."""
+    csrf = _admin(client, db_session)
+    auto_vl_id, manual_vl_id = _seed_auto_and_manual_visit_logs(client, csrf)
+    token = _create_link(client, csrf, sections=["visit_logs", "appointments"])
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+
+    ids = _guest_visit_log_ids(client, token)
+    assert manual_vl_id in ids
+    assert auto_vl_id not in ids
+
+
+def test_guest_visit_logs_excludes_auto_created_on_unscoped_link(client, db_session):
+    """Empty allowed_sections grants everything, including appointments — exclusion applies."""
+    csrf = _admin(client, db_session)
+    auto_vl_id, manual_vl_id = _seed_auto_and_manual_visit_logs(client, csrf)
+    token = _create_link(client, csrf, sections=[])
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
+
+    ids = _guest_visit_log_ids(client, token)
+    assert manual_vl_id in ids
+    assert auto_vl_id not in ids
+
+
+def test_guest_visit_logs_includes_auto_created_without_appointment_access(client, db_session):
+    """A link WITHOUT appointment access has no duplicate to avoid; guests must still
+    see visits that came from completed appointments."""
+    csrf = _admin(client, db_session)
+    auto_vl_id, manual_vl_id = _seed_auto_and_manual_visit_logs(client, csrf)
     token = _create_link(client, csrf, sections=["visit_logs"])
     client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
 
-    r = client.get(f"/api/guest/visit_logs?token={token}")
-    assert r.status_code == 200
-    ids = [x["id"] for x in r.json()]
-
-    # Manual visit log must be present
-    assert manual_vl["id"] in ids
-    # Auto-created visit log (linked from appointment) must be absent
-    appt_data = client.get(f"/api/appointments/{appt['id']}?token={token}")
-    # Re-login to check appointment visit_log_id
-    client.post("/api/auth/login", json={"email": "guestadmin@example.com", "password": "a-strong-passphrase-123"})
-    updated_appt = client.get(f"/api/appointments/{appt['id']}").json()
-    if updated_appt.get("visit_log_id"):
-        assert updated_appt["visit_log_id"] not in ids
+    ids = _guest_visit_log_ids(client, token)
+    assert manual_vl_id in ids
+    assert auto_vl_id in ids
