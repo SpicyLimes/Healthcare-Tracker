@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -29,8 +29,23 @@ def authenticate(db: Session, email: str, password: str) -> User | None:
     return user
 
 
+def _prune_stale_refresh_tokens(db: Session) -> None:
+    """Delete tokens expired/revoked more than 30 days ago.
+
+    Called opportunistically on every token issue; the 30-day grace window
+    keeps recent rows around for audit/debugging.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    db.execute(
+        delete(RefreshToken).where(
+            (RefreshToken.expires_at < cutoff) | (RefreshToken.revoked_at < cutoff)
+        )
+    )
+
+
 def issue_refresh_token(db: Session, user: User) -> str:
     """Create and persist a refresh token; return the raw token (stored hashed)."""
+    _prune_stale_refresh_tokens(db)
     raw = generate_refresh_token()
     expires = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_ttl_days)
     record = RefreshToken(

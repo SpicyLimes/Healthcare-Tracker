@@ -147,6 +147,17 @@ def test_user_can_set_own_timezone(client, db_session):
     assert me.json()["timezone"] == "America/Los_Angeles"
 
 
+def test_timezone_rejects_unknown_zone(client, db_session):
+    _login(client, db_session)
+    csrf = client.cookies.get("csrf_token")
+    resp = client.put(
+        "/api/auth/timezone",
+        headers={"X-CSRF-Token": csrf},
+        json={"timezone": "Mars/Olympus"},
+    )
+    assert resp.status_code == 422
+
+
 def test_timezone_requires_authentication(client, db_session):
     resp = client.put("/api/auth/timezone", json={"timezone": "America/Los_Angeles"})
     assert resp.status_code == 401
@@ -213,6 +224,27 @@ def test_admin_password_reset_revokes_target_sessions(client, db_session):
 
     dead = other.post("/api/auth/refresh", headers={"X-CSRF-Token": other.cookies.get("csrf_token")})
     assert dead.status_code == 401
+
+
+def test_login_prunes_stale_refresh_tokens(client, db_session):
+    from datetime import datetime, timedelta, timezone
+    from app.models.refresh_token import RefreshToken
+
+    user = user_service.create_user(db_session, "admin@example.com", "a-strong-passphrase-123", Role.admin)
+    now = datetime.now(timezone.utc)
+    db_session.add_all([
+        RefreshToken(user_id=user.id, token_hash="stale-hash", expires_at=now - timedelta(days=40)),
+        # expired only yesterday: inside the 30-day grace window, must survive
+        RefreshToken(user_id=user.id, token_hash="recent-hash", expires_at=now - timedelta(days=1)),
+    ])
+    db_session.flush()
+
+    resp = client.post("/api/auth/login", json={"email": "admin@example.com", "password": "a-strong-passphrase-123"})
+    assert resp.status_code == 200
+
+    remaining = {t.token_hash for t in db_session.query(RefreshToken).all()}
+    assert "stale-hash" not in remaining
+    assert "recent-hash" in remaining
 
 
 def test_failed_login_is_audit_logged(client, db_session):
