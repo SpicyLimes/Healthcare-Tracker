@@ -81,6 +81,9 @@ def change_password(
         auth_service.change_password(db, current, payload.current_password, payload.new_password)
     except auth_service.InvalidCurrentPasswordError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
+    # change_password revoked every refresh token; give the requesting device a
+    # fresh session so only *other* devices are logged out.
+    _issue_session(db, response, current)
     log_event(db, action=AuditAction.update, actor_type=ActorType.user,
               actor_user_id=current.id, detail=f"Password changed: {current.email}")
 

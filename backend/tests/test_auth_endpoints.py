@@ -159,6 +159,62 @@ def test_me_returns_timezone(client, db_session):
     assert me.json()["timezone"] == "America/Chicago"
 
 
+def test_change_password_revokes_other_sessions(client, db_session):
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    user_service.create_user(db_session, "admin@example.com", "a-strong-passphrase-123", Role.admin)
+    other = TestClient(app)  # a second device with its own cookie jar
+    other.post("/api/auth/login", json={"email": "admin@example.com", "password": "a-strong-passphrase-123"})
+    client.post("/api/auth/login", json={"email": "admin@example.com", "password": "a-strong-passphrase-123"})
+
+    csrf = client.cookies.get("csrf_token")
+    resp = client.put("/api/auth/password", headers={"X-CSRF-Token": csrf},
+                      json={"current_password": "a-strong-passphrase-123",
+                            "new_password": "new-strong-passphrase-456"})
+    assert resp.status_code == 204
+    assert "refresh_token" in resp.cookies  # requesting device got a fresh session
+
+    # the requesting device keeps working with its re-issued session
+    ok = client.post("/api/auth/refresh", headers={"X-CSRF-Token": client.cookies.get("csrf_token")})
+    assert ok.status_code == 200
+
+    # the other device's refresh token was revoked
+    dead = other.post("/api/auth/refresh", headers={"X-CSRF-Token": other.cookies.get("csrf_token")})
+    assert dead.status_code == 401
+
+
+def test_old_refresh_token_dead_after_password_change(client, db_session):
+    _login(client, db_session)
+    old_refresh = client.cookies.get("refresh_token")
+    csrf = client.cookies.get("csrf_token")
+    resp = client.put("/api/auth/password", headers={"X-CSRF-Token": csrf},
+                      json={"current_password": "a-strong-passphrase-123",
+                            "new_password": "new-strong-passphrase-456"})
+    assert resp.status_code == 204
+    client.cookies.set("refresh_token", old_refresh)
+    dead = client.post("/api/auth/refresh", headers={"X-CSRF-Token": client.cookies.get("csrf_token")})
+    assert dead.status_code == 401
+
+
+def test_admin_password_reset_revokes_target_sessions(client, db_session):
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    _login(client, db_session)  # admin
+    target = user_service.create_user(db_session, "viewer@example.com", "viewer-passphrase-123", Role.viewer)
+    other = TestClient(app)  # target's logged-in device
+    other.post("/api/auth/login", json={"email": "viewer@example.com", "password": "viewer-passphrase-123"})
+
+    csrf = client.cookies.get("csrf_token")
+    resp = client.put(f"/api/users/{target.id}/password", headers={"X-CSRF-Token": csrf},
+                      json={"new_password": "reset-strong-passphrase-789"})
+    assert resp.status_code == 204
+
+    dead = other.post("/api/auth/refresh", headers={"X-CSRF-Token": other.cookies.get("csrf_token")})
+    assert dead.status_code == 401
+
+
 def test_failed_login_is_audit_logged(client, db_session):
     from app.models.audit_log import AuditLog
     client.post("/api/auth/login", json={"email": "notauser@example.com", "password": "wrong"})

@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -76,10 +76,26 @@ def revoke_refresh_token(db: Session, raw: str) -> None:
         db.flush()
 
 
+def revoke_all_refresh_tokens_for_user(db: Session, user_id) -> None:
+    """Revoke every active refresh token for a user (e.g. after a password change)."""
+    now = datetime.now(timezone.utc)
+    db.execute(
+        update(RefreshToken)
+        .where(RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None))
+        .values(revoked_at=now)
+    )
+    db.flush()
+
+
 def change_password(db: Session, user: User, current_password: str, new_password: str) -> None:
-    """Verify current password, enforce policy, set the new password."""
+    """Verify current password, enforce policy, set the new password.
+
+    Revokes all of the user's refresh tokens so stolen sessions die with the
+    old password; the router re-issues a session for the requesting device.
+    """
     if not verify_password(current_password, user.hashed_password):
         raise InvalidCurrentPasswordError()
     validate_password_policy(new_password)
     user.hashed_password = hash_password(new_password)
+    revoke_all_refresh_tokens_for_user(db, user.id)
     db.flush()
