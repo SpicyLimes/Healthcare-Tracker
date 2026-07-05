@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -24,11 +24,19 @@ _appt_service = CRUDService(Appointment)
 _vl_service = CRUDService(VisitLog)
 
 
-def _auto_create_visit_log(db: Session, appt: Appointment, created_by: uuid.UUID) -> None:
-    """Create a Visit Log from a just-completed appointment (idempotent: skips if already linked)."""
+def _auto_create_visit_log(db: Session, appt: Appointment, created_by: uuid.UUID, tz: str) -> None:
+    """Create a Visit Log from a just-completed appointment (idempotent: skips if already linked).
+
+    visit_date/visit_time are wall-clock in the user's timezone everywhere else,
+    so convert the (UTC-stored) appointment datetime to `tz` before splitting.
+    """
     if appt.visit_log_id is not None:
         return
-    local_dt = appt.appointment_datetime.astimezone(timezone.utc)
+    try:
+        zone = ZoneInfo(tz)
+    except (ZoneInfoNotFoundError, ValueError):
+        zone = ZoneInfo("America/Chicago")
+    local_dt = appt.appointment_datetime.astimezone(zone)
     vl = _vl_service.create(db, {
         "visit_date": local_dt.date(),
         "visit_time": local_dt.time().replace(tzinfo=None),
@@ -95,7 +103,7 @@ def update_record(
 
     # Side effect: auto-create Visit Log when transitioning to completed for the first time
     if data.get("status") == "completed" and prev_status != "completed":
-        _auto_create_visit_log(db, record, current.id)
+        _auto_create_visit_log(db, record, current.id, current.timezone)
 
     try:
         log_event(db, action=AuditAction.update, actor_type=ActorType.user,

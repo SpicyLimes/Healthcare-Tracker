@@ -16,7 +16,7 @@ from app.schemas.summary import SummaryRequest
 from app.security.dependencies import (
     GuestContext,
     get_guest_access,
-    require_viewer_or_admin,
+    require_authenticated,
     verify_csrf,
 )
 from app.services import summary_service
@@ -32,17 +32,17 @@ def _get_patient(db: Session) -> dict | None:
     return ProfileResponse.model_validate(row).model_dump(mode="json") if row else None
 
 
-# require_viewer_or_admin is listed here (in addition to the `current` param
+# require_authenticated is listed here (in addition to the `current` param
 # below) so authentication is evaluated BEFORE verify_csrf — an anonymous caller
 # gets 401, not a 403 that leaks the CSRF gate.
-@router.post("", dependencies=[Depends(require_viewer_or_admin), Depends(verify_csrf)])
+@router.post("", dependencies=[Depends(require_authenticated), Depends(verify_csrf)])
 @limiter.limit("20/minute")
 def generate_summary(
     request: Request,
     response: Response,
     payload: SummaryRequest,
     db: Session = Depends(get_db),
-    current: User = Depends(require_viewer_or_admin),
+    current: User = Depends(require_authenticated),
 ):
     section_data = {
         s: summary_service.gather_section_rows(db, s, payload.date_from, payload.date_to)

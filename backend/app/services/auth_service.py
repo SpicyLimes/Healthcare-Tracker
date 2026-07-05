@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -29,8 +29,23 @@ def authenticate(db: Session, email: str, password: str) -> User | None:
     return user
 
 
+def _prune_stale_refresh_tokens(db: Session) -> None:
+    """Delete tokens expired/revoked more than 30 days ago.
+
+    Called opportunistically on every token issue; the 30-day grace window
+    keeps recent rows around for audit/debugging.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    db.execute(
+        delete(RefreshToken).where(
+            (RefreshToken.expires_at < cutoff) | (RefreshToken.revoked_at < cutoff)
+        )
+    )
+
+
 def issue_refresh_token(db: Session, user: User) -> str:
     """Create and persist a refresh token; return the raw token (stored hashed)."""
+    _prune_stale_refresh_tokens(db)
     raw = generate_refresh_token()
     expires = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_ttl_days)
     record = RefreshToken(
@@ -76,10 +91,26 @@ def revoke_refresh_token(db: Session, raw: str) -> None:
         db.flush()
 
 
+def revoke_all_refresh_tokens_for_user(db: Session, user_id) -> None:
+    """Revoke every active refresh token for a user (e.g. after a password change)."""
+    now = datetime.now(timezone.utc)
+    db.execute(
+        update(RefreshToken)
+        .where(RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None))
+        .values(revoked_at=now)
+    )
+    db.flush()
+
+
 def change_password(db: Session, user: User, current_password: str, new_password: str) -> None:
-    """Verify current password, enforce policy, set the new password."""
+    """Verify current password, enforce policy, set the new password.
+
+    Revokes all of the user's refresh tokens so stolen sessions die with the
+    old password; the router re-issues a session for the requesting device.
+    """
     if not verify_password(current_password, user.hashed_password):
         raise InvalidCurrentPasswordError()
     validate_password_policy(new_password)
     user.hashed_password = hash_password(new_password)
+    revoke_all_refresh_tokens_for_user(db, user.id)
     db.flush()

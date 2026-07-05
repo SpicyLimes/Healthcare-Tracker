@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FormField, Input } from "@/components/ui/form-field";
 import { formatDate } from "@/lib/format";
-import { formatInTimezone } from "@/lib/datetime";
+import { dateToLocalInputValue, formatInTimezone } from "@/lib/datetime";
 import { useAuth } from "../auth/useAuth";
 import { RecordTable } from "@/components/RecordTable";
 
@@ -29,7 +29,7 @@ function formatSection(s: string): string {
 function addDays(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 16);
+  return dateToLocalInputValue(d);
 }
 
 function linkStatus(link: ShareLink): string {
