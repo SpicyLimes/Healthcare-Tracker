@@ -200,10 +200,15 @@ def list_guest_records(
     if section == "visit_logs":
         from app.models.extended_records import Appointment, VisitLog as _VisitLog
         from app.routers.visit_logs import _attach_vitals_batch
-        auto_vl_ids = select(Appointment.visit_log_id).where(Appointment.visit_log_id.is_not(None)).scalar_subquery()
-        vl_rows = list(db.scalars(
-            select(_VisitLog).where(~_VisitLog.id.in_(auto_vl_ids))
-        ).all())
+        vl_query = select(_VisitLog)
+        # Hide appointment-auto-created Visit Logs only when this link also
+        # grants appointments (empty allowed_sections = all sections): there
+        # they'd duplicate the completed appointment. Links without appointment
+        # access must still see those visits.
+        if not ctx.allowed_sections or "appointments" in ctx.allowed_sections:
+            auto_vl_ids = select(Appointment.visit_log_id).where(Appointment.visit_log_id.is_not(None)).scalar_subquery()
+            vl_query = vl_query.where(~_VisitLog.id.in_(auto_vl_ids))
+        vl_rows = list(db.scalars(vl_query).all())
         rows = _attach_vitals_batch(vl_rows, db)
     else:
         rows = list(db.scalars(select(model)).all())
