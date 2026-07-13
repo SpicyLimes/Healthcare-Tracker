@@ -9,10 +9,10 @@ from app import __version__
 from app.config import settings
 from app.database import SessionLocal
 from app.routers import (
-    ai, ailments, appointments, audit_log, auth, calendar, dental_history, documents,
-    doctors, family_history, guest, health, hospitalizations, insurances, medications,
-    notes, nutrition, pharmacies, profile, share_links, submissions, summary, surgeries,
-    users, vaccinations, vision_history, visit_logs, vitals,
+    ai, ailments, appointments, audit_log, auth, backups, calendar, dental_history,
+    documents, doctors, family_history, guest, health, hospitalizations, insurances,
+    medications, notes, nutrition, pharmacies, profile, share_links, submissions,
+    summary, surgeries, users, vaccinations, vision_history, visit_logs, vitals,
 )
 from app.routers import settings as settings_router
 from app.limiter import limiter
@@ -71,6 +71,7 @@ app.include_router(documents.router)
 app.include_router(share_links.router)
 app.include_router(summary.router)
 app.include_router(audit_log.router)
+app.include_router(backups.router)
 app.include_router(calendar.router)
 app.include_router(guest.router)
 app.include_router(notes.router)
