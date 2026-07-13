@@ -105,6 +105,47 @@ def upload_backup(
     return BackupRead(**asdict(info))
 
 
+@router.post(
+    "/{backup_id}/restore",
+    response_model=RestoreResult,
+    dependencies=[Depends(verify_csrf)],
+)
+def restore_backup(
+    backup_id: str,
+    payload: RestoreRequest,
+    db: Session = Depends(get_db),
+    current: User = Depends(require_admin),
+):
+    if payload.confirm != backup_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Confirmation phrase does not match the backup name",
+        )
+    actor_id = current.id
+    # Release this request's connection BEFORE the database is dropped; the
+    # session transparently reconnects (to the restored DB) on next use.
+    db.close()
+    try:
+        safety_id = backup_service.perform_restore(backup_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    # The restored DB may not contain the acting admin; NULL the FK if so.
+    restored_actor = db.get(User, actor_id)
+    log_event(
+        db,
+        action=AuditAction.backup_restore,
+        actor_type=ActorType.user,
+        actor_user_id=restored_actor.id if restored_actor else None,
+        detail=f"Restored backup: {backup_id} (pre-restore safety: {safety_id})",
+    )
+    db.commit()
+    return RestoreResult(safety_backup_id=safety_id)
+
+
 @router.delete(
     "/{backup_id}",
     status_code=status.HTTP_204_NO_CONTENT,

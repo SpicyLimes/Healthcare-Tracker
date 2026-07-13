@@ -131,3 +131,54 @@ def test_delete_backup(client, db_session, tmp_backups_dir):
 def test_delete_missing_404(client, db_session, tmp_backups_dir):
     csrf = _admin(client, db_session)
     assert client.delete("/api/backups/2026-01-01", headers={"X-CSRF-Token": csrf}).status_code == 404
+
+
+def test_restore_requires_matching_confirm(client, db_session, tmp_backups_dir, monkeypatch):
+    csrf = _admin(client, db_session)
+    called = []
+    monkeypatch.setattr(svc, "perform_restore", lambda bid: called.append(bid) or "safety-x")
+    r = client.post(
+        "/api/backups/2026-07-12/restore",
+        headers={"X-CSRF-Token": csrf},
+        json={"confirm": "wrong"},
+    )
+    assert r.status_code == 400
+    assert called == []
+
+
+def test_restore_happy_path_audits(client, db_session, tmp_backups_dir, monkeypatch):
+    csrf = _admin(client, db_session)
+    monkeypatch.setattr(svc, "perform_restore", lambda bid: "safety-2026-07-13T020000")
+    r = client.post(
+        "/api/backups/2026-07-12/restore",
+        headers={"X-CSRF-Token": csrf},
+        json={"confirm": "2026-07-12"},
+    )
+    assert r.status_code == 200
+    assert r.json() == {"safety_backup_id": "safety-2026-07-13T020000"}
+    assert AuditAction.backup_restore in _audit_actions(db_session)
+
+
+def test_restore_missing_backup_404(client, db_session, tmp_backups_dir, monkeypatch):
+    csrf = _admin(client, db_session)
+
+    def missing(bid):
+        raise FileNotFoundError("nope")
+
+    monkeypatch.setattr(svc, "perform_restore", missing)
+    r = client.post(
+        "/api/backups/2026-07-12/restore",
+        headers={"X-CSRF-Token": csrf},
+        json={"confirm": "2026-07-12"},
+    )
+    assert r.status_code == 404
+
+
+def test_restore_requires_admin(client, db_session, tmp_backups_dir):
+    csrf = _viewer(client, db_session)
+    r = client.post(
+        "/api/backups/2026-07-12/restore",
+        headers={"X-CSRF-Token": csrf},
+        json={"confirm": "2026-07-12"},
+    )
+    assert r.status_code == 403
