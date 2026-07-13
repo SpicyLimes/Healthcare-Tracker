@@ -200,3 +200,98 @@ def store_uploaded_tar(fileobj) -> BackupInfo:
     finally:
         os.unlink(tmp)
     return _info(dest)
+
+
+def run_psql_restore(libpq_url: str, dump_gz: Path) -> None:
+    """Feed the gunzipped dump into psql (stops on first error)."""
+    proc = subprocess.Popen(
+        ["psql", libpq_url, "-q", "-v", "ON_ERROR_STOP=1", "-f", "-"],
+        stdin=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    assert proc.stdin is not None and proc.stderr is not None
+    with gzip.open(dump_gz, "rb") as gz:
+        shutil.copyfileobj(gz, proc.stdin)
+    proc.stdin.close()
+    proc.wait(timeout=_SUBPROCESS_TIMEOUT)
+    if proc.returncode != 0:
+        raise RuntimeError(f"psql restore failed: {proc.stderr.read().decode(errors='replace')[:500]}")
+
+
+def recreate_database() -> None:
+    """Terminate all other connections, then DROP and recreate the app DB."""
+    import psycopg
+
+    libpq = _libpq_url()
+    db_name = libpq.rsplit("/", 1)[1].split("?")[0]
+    maint_url = libpq.rsplit("/", 1)[0] + "/postgres"
+    with psycopg.connect(maint_url, autocommit=True) as conn:
+        conn.execute(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+            "WHERE datname = %s AND pid <> pg_backend_pid()",
+            (db_name,),
+        )
+        conn.execute(f'DROP DATABASE IF EXISTS "{db_name}" WITH (FORCE)')
+        conn.execute(f'CREATE DATABASE "{db_name}"')
+
+
+def run_migrations() -> None:
+    """Bring a restored (possibly older) schema up to the running code."""
+    from alembic import command
+    from alembic.config import Config
+
+    command.upgrade(Config("alembic.ini"), "head")
+
+
+def _swap_uploads(archive: Path) -> None:
+    """Replace the CONTENTS of uploads_root with the archive's uploads/ tree.
+    (Contents, not the dir itself: /app is root-owned; only /app/uploads is
+    writable by the app user.)"""
+    uploads_root = Path(settings.uploads_root)
+    tmp = Path(tempfile.mkdtemp(dir=str(_root())))
+    try:
+        with tarfile.open(archive, "r:gz") as tar:
+            tar.extractall(tmp, filter="data")
+        new_root = tmp / "uploads"
+        if not new_root.is_dir():
+            raise ValueError("uploads.tar.gz does not contain an uploads/ directory")
+        for child in uploads_root.iterdir():
+            shutil.rmtree(child) if child.is_dir() else child.unlink()
+        for child in new_root.iterdir():
+            shutil.move(str(child), str(uploads_root / child.name))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def perform_restore(
+    backup_id: str,
+    *,
+    dump_runner=None,
+    recreate=None,
+    sql_runner=None,
+    migrate=None,
+) -> str:
+    """Full restore; returns the pre-restore safety backup's id.
+
+    Order: validate -> safety backup -> dispose pool -> drop/recreate DB ->
+    load dump -> swap uploads -> alembic upgrade head -> prune.
+    Any failure before the drop leaves the database untouched."""
+    recreate = recreate or recreate_database
+    sql_runner = sql_runner or run_psql_restore
+    migrate = migrate or run_migrations
+
+    src = backup_dir(backup_id)
+    if not (src / DB_FILE).is_file() or not (src / UPLOADS_FILE).is_file():
+        raise FileNotFoundError(f"Backup not found or incomplete: {backup_id}")
+
+    safety = create_backup("safety", dump_runner=dump_runner)
+
+    from app.database import engine
+
+    engine.dispose()  # release pooled connections before terminating/dropping
+
+    recreate()
+    sql_runner(_libpq_url(), src / DB_FILE)
+    _swap_uploads(src / UPLOADS_FILE)
+    migrate()
+    prune_backups()
+    return safety.id

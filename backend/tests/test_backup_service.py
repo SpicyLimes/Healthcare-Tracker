@@ -194,3 +194,67 @@ class TestUpload:
         with pytest.raises(ValueError):
             svc.store_uploaded_tar(buf)
         assert list(tmp_backups_dir.iterdir()) == []
+
+
+def _uploads_member_tar(path, files):
+    """Write an uploads.tar.gz containing uploads/<name> for each file."""
+    with tarfile.open(path, "w:gz") as tar:
+        for name, data in files.items():
+            ti = tarfile.TarInfo(name=f"uploads/{name}")
+            ti.size = len(data)
+            tar.addfile(ti, io.BytesIO(data))
+
+
+class TestRestore:
+    def _target(self, tmp_backups_dir):
+        d = tmp_backups_dir / "2026-07-10"
+        d.mkdir()
+        with gzip.open(d / svc.DB_FILE, "wb") as f:
+            f.write(b"-- dump")
+        _uploads_member_tar(d / svc.UPLOADS_FILE, {"restored.txt": b"new"})
+        return d
+
+    def test_happy_path_order_and_uploads_swap(self, tmp_backups_dir, tmp_uploads_dir):
+        self._target(tmp_backups_dir)
+        (tmp_uploads_dir / "old.txt").write_text("old")
+        calls = []
+
+        def dump(url, p):
+            calls.append("dump")
+            _fake_dump(url, p)
+
+        safety_id = svc.perform_restore(
+            "2026-07-10",
+            dump_runner=dump,
+            recreate=lambda: calls.append("recreate"),
+            sql_runner=lambda url, p: calls.append("load"),
+            migrate=lambda: calls.append("migrate"),
+        )
+        assert calls == ["dump", "recreate", "load", "migrate"]
+        assert safety_id.startswith("safety-")
+        assert (tmp_backups_dir / safety_id).is_dir()
+        # uploads were swapped, not merged
+        assert (tmp_uploads_dir / "restored.txt").read_bytes() == b"new"
+        assert not (tmp_uploads_dir / "old.txt").exists()
+
+    def test_incomplete_backup_refused_before_any_action(self, tmp_backups_dir, tmp_uploads_dir):
+        (tmp_backups_dir / "2026-07-10").mkdir()  # empty dir: incomplete
+        calls = []
+        with pytest.raises(FileNotFoundError):
+            svc.perform_restore("2026-07-10", dump_runner=_fake_dump,
+                                recreate=lambda: calls.append("recreate"),
+                                sql_runner=lambda u, p: None, migrate=lambda: None)
+        assert calls == []
+
+    def test_safety_backup_failure_aborts_before_drop(self, tmp_backups_dir, tmp_uploads_dir):
+        self._target(tmp_backups_dir)
+
+        def boom(url, path):
+            raise RuntimeError("pg_dump failed")
+
+        calls = []
+        with pytest.raises(RuntimeError):
+            svc.perform_restore("2026-07-10", dump_runner=boom,
+                                recreate=lambda: calls.append("recreate"),
+                                sql_runner=lambda u, p: None, migrate=lambda: None)
+        assert calls == []  # database was never touched
