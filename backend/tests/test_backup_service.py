@@ -1,6 +1,7 @@
 # backend/tests/test_backup_service.py
 """backup_service: ids, listing, pruning, create/bundle/upload/restore (fakes only)."""
 import gzip
+import io
 import os
 import tarfile
 from datetime import datetime, timedelta, timezone
@@ -122,3 +123,74 @@ def test_libpq_url_strips_driver(monkeypatch):
     monkeypatch.setattr(app_config.settings, "database_url",
                         "postgresql+psycopg://u:p@db:5432/health")
     assert svc._libpq_url() == "postgresql://u:p@db:5432/health"
+
+
+def _combined_tar_bytes(members=None):
+    """Build an in-memory combined tar. members: dict name -> bytes."""
+    if members is None:
+        members = {svc.DB_FILE: b"gzdb", svc.UPLOADS_FILE: b"gzup"}
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+        for name, data in members.items():
+            ti = tarfile.TarInfo(name=name)
+            ti.size = len(data)
+            tar.addfile(ti, io.BytesIO(data))
+    buf.seek(0)
+    return buf
+
+
+class TestDownloadBundle:
+    def test_round_trip(self, tmp_backups_dir):
+        _mk(tmp_backups_dir, "2026-07-12", db=b"dbdata", uploads=b"updata")
+        path = svc.build_download_tar("2026-07-12")
+        try:
+            with tarfile.open(path) as tar:
+                assert sorted(tar.getnames()) == [svc.DB_FILE, svc.UPLOADS_FILE]
+                assert tar.extractfile(svc.DB_FILE).read() == b"dbdata"
+        finally:
+            path.unlink()
+
+    def test_incomplete_backup_raises(self, tmp_backups_dir):
+        _mk(tmp_backups_dir, "2026-07-12", uploads=None)
+        with pytest.raises(FileNotFoundError):
+            svc.build_download_tar("2026-07-12")
+
+
+class TestUpload:
+    def test_valid_upload_stored(self, tmp_backups_dir):
+        info = svc.store_uploaded_tar(_combined_tar_bytes())
+        assert info.type == "uploaded" and info.complete
+        d = tmp_backups_dir / info.id
+        assert (d / svc.DB_FILE).read_bytes() == b"gzdb"
+
+    def test_rejects_wrong_members(self, tmp_backups_dir):
+        with pytest.raises(ValueError):
+            svc.store_uploaded_tar(_combined_tar_bytes({svc.DB_FILE: b"x", "evil.sh": b"y"}))
+        with pytest.raises(ValueError):
+            svc.store_uploaded_tar(_combined_tar_bytes({svc.DB_FILE: b"x"}))  # missing uploads
+        assert list(tmp_backups_dir.iterdir()) == []
+
+    def test_rejects_path_traversal_member(self, tmp_backups_dir):
+        with pytest.raises(ValueError):
+            svc.store_uploaded_tar(_combined_tar_bytes({"../db.sql.gz": b"x", svc.UPLOADS_FILE: b"y"}))
+        assert list(tmp_backups_dir.iterdir()) == []
+
+    def test_rejects_non_tar(self, tmp_backups_dir):
+        with pytest.raises(ValueError):
+            svc.store_uploaded_tar(io.BytesIO(b"this is not a tar file"))
+        assert list(tmp_backups_dir.iterdir()) == []
+
+    def test_rejects_symlink_member(self, tmp_backups_dir):
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=buf, mode="w") as tar:
+            ti = tarfile.TarInfo(name=svc.DB_FILE)
+            ti.type = tarfile.SYMTYPE
+            ti.linkname = "/etc/passwd"
+            tar.addfile(ti)
+            ti2 = tarfile.TarInfo(name=svc.UPLOADS_FILE)
+            ti2.size = 1
+            tar.addfile(ti2, io.BytesIO(b"y"))
+        buf.seek(0)
+        with pytest.raises(ValueError):
+            svc.store_uploaded_tar(buf)
+        assert list(tmp_backups_dir.iterdir()) == []

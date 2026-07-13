@@ -149,3 +149,54 @@ def create_backup(kind: str, *, dump_runner=None) -> BackupInfo:
         shutil.rmtree(dest, ignore_errors=True)
         raise
     return _info(dest)
+
+
+def build_download_tar(backup_id: str) -> Path:
+    """Bundle a backup's two files into one uncompressed temp tar (members are
+    already gzipped). Caller is responsible for deleting the returned path."""
+    src = backup_dir(backup_id)
+    if not (src / DB_FILE).is_file() or not (src / UPLOADS_FILE).is_file():
+        raise FileNotFoundError(f"Backup not found or incomplete: {backup_id}")
+    fd, tmp = tempfile.mkstemp(suffix=".tar")
+    os.close(fd)
+    try:
+        with tarfile.open(tmp, "w") as tar:
+            tar.add(src / DB_FILE, arcname=DB_FILE)
+            tar.add(src / UPLOADS_FILE, arcname=UPLOADS_FILE)
+    except Exception:
+        os.unlink(tmp)
+        raise
+    return Path(tmp)
+
+
+def store_uploaded_tar(fileobj) -> BackupInfo:
+    """Validate and unpack an uploaded combined tar into uploaded-<ts>/."""
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%S")
+    dest = _root() / f"uploaded-{stamp}"
+    if dest.exists():
+        raise RuntimeError("An upload with this timestamp already exists; retry in a second")
+    fd, tmp = tempfile.mkstemp(suffix=".tar")
+    try:
+        with os.fdopen(fd, "wb") as out:
+            shutil.copyfileobj(fileobj, out)
+        try:
+            tar = tarfile.open(tmp, "r:*")
+        except tarfile.TarError:
+            raise ValueError("Not a valid backup archive (expected the downloaded .tar)")
+        with tar:
+            members = tar.getmembers()
+            names = sorted(m.name for m in members)
+            if names != sorted([DB_FILE, UPLOADS_FILE]):
+                raise ValueError(f"Archive must contain exactly {DB_FILE} and {UPLOADS_FILE}")
+            if not all(m.isreg() for m in members):
+                raise ValueError("Archive contains non-regular files")
+            dest.mkdir(parents=True)
+            try:
+                # filter='data' additionally strips suid/dev/symlink tricks
+                tar.extractall(dest, filter="data")
+            except Exception:
+                shutil.rmtree(dest, ignore_errors=True)
+                raise
+    finally:
+        os.unlink(tmp)
+    return _info(dest)
