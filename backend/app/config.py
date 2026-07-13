@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     # File uploads
     uploads_root: str = "/app/uploads"
 
+    # Backups volume (shared with the backup container)
+    backups_root: str = "/backups"
+
     @model_validator(mode="after")
     def validate_secrets(self) -> "Settings":
         if "insecure" in self.jwt_secret or len(self.jwt_secret) < 32:

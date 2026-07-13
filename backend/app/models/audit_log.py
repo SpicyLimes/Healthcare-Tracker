@@ -20,6 +20,11 @@ class AuditAction(str, enum.Enum):
     submission_approved = "submission_approved"
     submission_rejected = "submission_rejected"
     submission_withdrawn = "submission_withdrawn"
+    backup_create = "backup_create"
+    backup_download = "backup_download"
+    backup_upload = "backup_upload"
+    backup_restore = "backup_restore"
+    backup_delete = "backup_delete"
 
 
 class ActorType(str, enum.Enum):
