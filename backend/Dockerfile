@@ -22,6 +22,16 @@ RUN pip install --no-cache-dir \
     "filetype==1.2.0" \
     "httpx==0.28.1"
 
+# Postgres 17 client tools (pg_dump/psql) for the admin Backups feature.
+# Debian slim ships postgresql-client-15, and pg_dump refuses servers newer
+# than itself, so pull v17 from the official PGDG repo.
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+ && mkdir -p /etc/apt/keyrings \
+ && curl -fsSL -o /etc/apt/keyrings/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+ && echo "deb [signed-by=/etc/apt/keyrings/pgdg.asc] http://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+ && apt-get update && apt-get install -y --no-install-recommends postgresql-client-17 \
+ && apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+
 # Copy Alembic config and application code (migrations live under app/migrations)
 COPY alembic.ini ./
 COPY app ./app
@@ -29,8 +39,8 @@ COPY app ./app
 EXPOSE 8000
 
 RUN adduser --disabled-password --gecos "" appuser && \
-    mkdir -p /app/uploads && \
-    chown -R appuser:appuser /app/uploads
+    mkdir -p /app/uploads /backups && \
+    chown -R appuser:appuser /app/uploads /backups
 USER appuser
 
 # Apply migrations, then run the API. Host 0.0.0.0 for inter-container reach.

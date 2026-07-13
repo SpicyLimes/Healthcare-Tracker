@@ -37,6 +37,7 @@ services:
       start_period: 10s
     volumes:
       - uploads_data:/app/uploads
+      - backup_data:/backups
     restart: unless-stopped
 
   frontend:

@@ -21,6 +21,15 @@ RUN pip install --no-cache-dir \
     "freezegun==1.5.1" \
     "filetype==1.2.0"
 
+# Postgres 17 client tools so the backup.sh/restore.sh script tests run for
+# real (Debian slim's v15 pg_dump refuses the v17 test server; use PGDG).
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+ && mkdir -p /etc/apt/keyrings \
+ && curl -fsSL -o /etc/apt/keyrings/pgdg.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+ && echo "deb [signed-by=/etc/apt/keyrings/pgdg.asc] http://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+ && apt-get update && apt-get install -y --no-install-recommends postgresql-client-17 \
+ && apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+
 # Source code is mounted at runtime via docker compose volume (./backend:/app).
 # This image only provides the pre-installed environment.
 RUN adduser --disabled-password --gecos "" appuser
