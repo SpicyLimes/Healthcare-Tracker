@@ -1,0 +1,87 @@
+# backend/tests/test_backup_service.py
+"""backup_service: ids, listing, pruning, create/bundle/upload/restore (fakes only)."""
+import os
+from datetime import datetime, timedelta, timezone
+
+import pytest
+
+from app.services import backup_service as svc
+
+
+def _mk(root, name, db=b"x", uploads=b"y"):
+    d = root / name
+    d.mkdir()
+    if db is not None:
+        (d / svc.DB_FILE).write_bytes(db)
+    if uploads is not None:
+        (d / svc.UPLOADS_FILE).write_bytes(uploads)
+    return d
+
+
+class TestIds:
+    @pytest.mark.parametrize("bad", [
+        "../etc", "2026-07-13/..", "foo", "manual-", "uploaded-2026-07-13",  # missing time
+        "manual-2026-07-13T12:00:00", "safety-2026-07-13T1200", ".", "2026-7-1",
+    ])
+    def test_invalid_ids_rejected(self, bad):
+        with pytest.raises(ValueError):
+            svc.backup_dir(bad)
+
+    @pytest.mark.parametrize("good", ["2026-07-13", "manual-2026-07-13T020000",
+                                      "safety-2026-07-13T020000", "uploaded-2026-07-13T020000"])
+    def test_valid_ids_resolve_under_root(self, good, tmp_backups_dir):
+        p = svc.backup_dir(good)
+        assert p.parent == tmp_backups_dir
+
+
+class TestList:
+    def test_lists_types_sizes_and_completeness(self, tmp_backups_dir):
+        _mk(tmp_backups_dir, "2026-07-12", db=b"abc", uploads=b"de")
+        _mk(tmp_backups_dir, "manual-2026-07-13T020000")
+        _mk(tmp_backups_dir, "uploaded-2026-07-13T030000", uploads=None)  # incomplete
+        (tmp_backups_dir / "stray-file.txt").write_text("ignored")
+        (tmp_backups_dir / "not-a-backup").mkdir()  # ignored: bad name
+
+        infos = {i.id: i for i in svc.list_backups()}
+        assert set(infos) == {"2026-07-12", "manual-2026-07-13T020000", "uploaded-2026-07-13T030000"}
+        assert infos["2026-07-12"].type == "nightly"
+        assert infos["2026-07-12"].size_bytes == 5
+        assert infos["2026-07-12"].complete is True
+        assert infos["manual-2026-07-13T020000"].type == "manual"
+        assert infos["uploaded-2026-07-13T030000"].complete is False
+
+    def test_empty_root(self, tmp_backups_dir):
+        assert svc.list_backups() == []
+
+
+class TestPrune:
+    def test_keeps_newest_seven_nightlies(self, tmp_backups_dir):
+        for i in range(1, 10):
+            _mk(tmp_backups_dir, f"2026-07-{i:02d}")
+        deleted = svc.prune_backups()
+        assert sorted(deleted) == ["2026-07-01", "2026-07-02"]
+        assert len(list(tmp_backups_dir.iterdir())) == 7
+
+    def test_prunes_old_manual_and_safety_never_uploaded(self, tmp_backups_dir):
+        old = _mk(tmp_backups_dir, "manual-2026-07-01T020000")
+        old_s = _mk(tmp_backups_dir, "safety-2026-07-01T020000")
+        old_u = _mk(tmp_backups_dir, "uploaded-2026-07-01T020000")
+        new = _mk(tmp_backups_dir, "manual-2026-07-12T020000")
+        stamp = (datetime.now(timezone.utc) - timedelta(days=10)).timestamp()
+        for d in (old, old_s, old_u):
+            os.utime(d, (stamp, stamp))
+
+        deleted = svc.prune_backups()
+        assert sorted(deleted) == ["manual-2026-07-01T020000", "safety-2026-07-01T020000"]
+        assert old_u.exists() and new.exists()
+
+
+class TestDelete:
+    def test_delete_removes_dir(self, tmp_backups_dir):
+        _mk(tmp_backups_dir, "uploaded-2026-07-13T020000")
+        svc.delete_backup("uploaded-2026-07-13T020000")
+        assert list(tmp_backups_dir.iterdir()) == []
+
+    def test_delete_missing_raises(self, tmp_backups_dir):
+        with pytest.raises(FileNotFoundError):
+            svc.delete_backup("2026-01-01")

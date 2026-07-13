@@ -67,3 +67,12 @@ def tmp_uploads_dir(tmp_path, monkeypatch):
     """Redirect all file uploads to a temporary directory for tests."""
     monkeypatch.setattr(app_config.settings, "uploads_root", str(tmp_path))
     return tmp_path
+
+
+@pytest.fixture
+def tmp_backups_dir(tmp_path, monkeypatch):
+    """Redirect the backups root to a temporary directory for tests."""
+    root = tmp_path / "backups"
+    root.mkdir()
+    monkeypatch.setattr(app_config.settings, "backups_root", str(root))
+    return root
