@@ -111,3 +111,41 @@ def delete_backup(backup_id: str) -> None:
     if not d.is_dir():
         raise FileNotFoundError(f"Backup not found: {backup_id}")
     shutil.rmtree(d)
+
+
+def _libpq_url() -> str:
+    # pg_dump/psql need a plain libpq URL (no SQLAlchemy driver suffix)
+    return re.sub(r"^postgresql\+[^:]+://", "postgresql://", settings.database_url)
+
+
+def run_pg_dump(libpq_url: str, out_path: Path) -> None:
+    """Stream pg_dump output through gzip to out_path."""
+    proc = subprocess.Popen(["pg_dump", libpq_url], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    assert proc.stdout is not None
+    with gzip.open(out_path, "wb") as gz:
+        shutil.copyfileobj(proc.stdout, gz)
+    _, stderr = proc.communicate(timeout=_SUBPROCESS_TIMEOUT)
+    if proc.returncode != 0:
+        out_path.unlink(missing_ok=True)
+        raise RuntimeError(f"pg_dump failed: {stderr.decode(errors='replace')[:500]}")
+
+
+def create_backup(kind: str, *, dump_runner=None) -> BackupInfo:
+    # Resolve at call time so tests can monkeypatch backup_service.run_pg_dump
+    dump_runner = dump_runner or run_pg_dump
+    if kind not in ("manual", "safety"):
+        raise ValueError(f"Invalid backup kind: {kind!r}")
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%S")
+    dest = _root() / f"{kind}-{stamp}"
+    if dest.exists():
+        raise RuntimeError("A backup with this timestamp already exists; retry in a second")
+    dest.mkdir(parents=True)
+    try:
+        dump_runner(_libpq_url(), dest / DB_FILE)
+        with tarfile.open(dest / UPLOADS_FILE, "w:gz") as tar:
+            tar.add(settings.uploads_root, arcname="uploads")
+        prune_backups()
+    except Exception:
+        shutil.rmtree(dest, ignore_errors=True)
+        raise
+    return _info(dest)

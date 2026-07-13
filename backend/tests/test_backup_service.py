@@ -1,11 +1,18 @@
 # backend/tests/test_backup_service.py
 """backup_service: ids, listing, pruning, create/bundle/upload/restore (fakes only)."""
+import gzip
 import os
+import tarfile
 from datetime import datetime, timedelta, timezone
 
 import pytest
 
 from app.services import backup_service as svc
+
+
+def _fake_dump(libpq_url, out_path):
+    with gzip.open(out_path, "wb") as f:
+        f.write(b"-- fake dump\n")
 
 
 def _mk(root, name, db=b"x", uploads=b"y"):
@@ -85,3 +92,33 @@ class TestDelete:
     def test_delete_missing_raises(self, tmp_backups_dir):
         with pytest.raises(FileNotFoundError):
             svc.delete_backup("2026-01-01")
+
+
+class TestCreate:
+    def test_creates_manual_backup(self, tmp_backups_dir, tmp_uploads_dir):
+        (tmp_uploads_dir / "doc.pdf").write_bytes(b"pdf")
+        info = svc.create_backup("manual", dump_runner=_fake_dump)
+        assert info.type == "manual" and info.complete
+        d = tmp_backups_dir / info.id
+        assert (d / svc.DB_FILE).is_file() and (d / svc.UPLOADS_FILE).is_file()
+        # uploads tar has the uploads/ top-level dir (backup.sh-compatible)
+        with tarfile.open(d / svc.UPLOADS_FILE) as tar:
+            assert "uploads/doc.pdf" in tar.getnames()
+
+    def test_failure_cleans_up_dir(self, tmp_backups_dir, tmp_uploads_dir):
+        def boom(url, path):
+            raise RuntimeError("pg_dump failed")
+        with pytest.raises(RuntimeError):
+            svc.create_backup("manual", dump_runner=boom)
+        assert list(tmp_backups_dir.iterdir()) == []
+
+    def test_rejects_unknown_kind(self, tmp_backups_dir):
+        with pytest.raises(ValueError):
+            svc.create_backup("uploaded", dump_runner=_fake_dump)
+
+
+def test_libpq_url_strips_driver(monkeypatch):
+    import app.config as app_config
+    monkeypatch.setattr(app_config.settings, "database_url",
+                        "postgresql+psycopg://u:p@db:5432/health")
+    assert svc._libpq_url() == "postgresql://u:p@db:5432/health"
