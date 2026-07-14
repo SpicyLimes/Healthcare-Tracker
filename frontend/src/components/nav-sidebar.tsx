@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   Activity, User, Pill, Stethoscope, HeartPulse, Shield, Building2, Users,
   Scissors, Hospital, Eye, Smile, Syringe, ClipboardList,
-  FolderOpen, KeyRound, Share2, ScrollText, UserCog, LogOut,
+  FolderOpen, KeyRound, Share2, ScrollText, UserCog, LogOut, DatabaseBackup,
   LayoutDashboard, Calendar, CheckCircle2, Database, StickyNote, Salad, Bot, Inbox,
 } from "lucide-react";
 import { pendingSubmissionCount } from "@/api/submissions";
@@ -72,6 +72,7 @@ const adminItems = [
   { to: "/audit-log", label: "Audit Log", icon: ScrollText },
   { to: "/users", label: "Manage Users", icon: UserCog },
   { to: "/settings", label: "AI Settings", icon: Bot },
+  { to: "/backups", label: "Backups", icon: DatabaseBackup },
 ];
 
 interface NavSidebarProps {

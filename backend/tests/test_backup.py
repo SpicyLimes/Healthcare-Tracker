@@ -96,6 +96,30 @@ def test_backup_prunes_old_directories(backup_env, tmp_path):
 
 
 @pytest.mark.skipif(
+    not shutil.which("pg_dump"),
+    reason="pg_dump not available in this environment",
+)
+def test_backup_prunes_old_manual_but_never_uploaded(backup_env, tmp_path):
+    """backup.sh deletes manual-/safety- dirs older than 7 days, keeps uploaded-."""
+    backups_dir, uploads_dir = backup_env
+    old_stamp = (date.today() - timedelta(days=10)).strftime("%Y-%m-%d")
+    for prefix in ("manual", "safety", "uploaded"):
+        d = backups_dir / f"{prefix}-{old_stamp}T020000"
+        d.mkdir()
+        ts = (date.today() - timedelta(days=10)).strftime("%Y%m%d0200")
+        subprocess.run(["touch", "-t", ts, str(d)], check=True)
+
+    wrapper = _make_wrapper(tmp_path, backups_dir, uploads_dir, BACKUP_SH)
+    result = subprocess.run(["bash", str(wrapper)], capture_output=True, text=True)
+    assert result.returncode == 0, f"backup.sh failed:\nSTDERR: {result.stderr}"
+
+    remaining = {d.name for d in backups_dir.iterdir() if d.is_dir()}
+    assert f"uploaded-{old_stamp}T020000" in remaining
+    assert f"manual-{old_stamp}T020000" not in remaining
+    assert f"safety-{old_stamp}T020000" not in remaining
+
+
+@pytest.mark.skipif(
     not shutil.which("psql"),
     reason="psql not available in this environment",
 )
