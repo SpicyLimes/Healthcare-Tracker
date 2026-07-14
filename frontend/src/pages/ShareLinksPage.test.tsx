@@ -1,6 +1,11 @@
 // frontend/src/pages/ShareLinksPage.test.tsx
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+
+vi.mock("../auth/useAuth", () => ({
+  useAuth: () => ({ user: { timezone: "America/Chicago" } }),
+}));
+
 import ShareLinksPage from "./ShareLinksPage";
 import * as api from "../api/shareLinks";
 
@@ -46,5 +51,56 @@ describe("ShareLinksPage", () => {
     await screen.findAllByText("Dr. Smith");
     fireEvent.click(screen.getByRole("button", { name: /revoke/i }));
     await waitFor(() => expect(revokeSpy).toHaveBeenCalledWith("abc-123"));
+  });
+
+  it("email action opens the form and sends to the recipient", async () => {
+    vi.spyOn(api, "listShareLinks").mockResolvedValue([LINK]);
+    vi.spyOn(api, "getEmailStatus").mockResolvedValue(true);
+    const emailSpy = vi.spyOn(api, "emailShareLink").mockResolvedValue();
+    render(<ShareLinksPage />);
+    await screen.findAllByText("Dr. Smith");
+
+    fireEvent.click(screen.getByRole("button", { name: /^email$/i }));
+    fireEvent.change(screen.getByLabelText(/recipient/i), {
+      target: { value: "dr@x.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
+
+    await waitFor(() =>
+      expect(emailSpy).toHaveBeenCalledWith("abc-123", {
+        recipient: "dr@x.com",
+        message: "",
+      }),
+    );
+  });
+
+  it("email failure shows error and keeps copy link available", async () => {
+    vi.spyOn(api, "listShareLinks").mockResolvedValue([LINK]);
+    vi.spyOn(api, "getEmailStatus").mockResolvedValue(true);
+    vi.spyOn(api, "emailShareLink").mockRejectedValue(
+      new Error("Couldn't send the email. The link is still valid — you can copy it instead."),
+    );
+    render(<ShareLinksPage />);
+    await screen.findAllByText("Dr. Smith");
+
+    fireEvent.click(screen.getByRole("button", { name: /^email$/i }));
+    fireEvent.change(screen.getByLabelText(/recipient/i), {
+      target: { value: "dr@x.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
+
+    expect(await screen.findByText(/still valid/i)).toBeInTheDocument();
+    // Copy link affordance remains in the table.
+    expect(screen.getByRole("button", { name: /copy link/i })).toBeInTheDocument();
+  });
+
+  it("hides the email action when email is not configured", async () => {
+    vi.spyOn(api, "listShareLinks").mockResolvedValue([LINK]);
+    vi.spyOn(api, "getEmailStatus").mockResolvedValue(false);
+    render(<ShareLinksPage />);
+    await screen.findAllByText("Dr. Smith");
+
+    expect(screen.getByRole("button", { name: /copy link/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^email$/i })).not.toBeInTheDocument();
   });
 });

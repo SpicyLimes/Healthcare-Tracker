@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict
+from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
 
 
 def _must_be_future_and_within_cap(v: datetime) -> datetime:
@@ -37,3 +37,8 @@ class ShareLinkRead(BaseModel):
 class ShareLinkCreated(ShareLinkRead):
     """Returned at creation — token_url inherited from ShareLinkRead."""
     pass
+
+
+class ShareLinkEmailRequest(BaseModel):
+    recipient: EmailStr
+    message: str | None = Field(default=None, max_length=500)

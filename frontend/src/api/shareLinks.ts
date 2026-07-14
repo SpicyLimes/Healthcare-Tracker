@@ -52,3 +52,32 @@ export async function deleteShareLink(id: string): Promise<void> {
   });
   if (!res.ok) throw new Error("Failed to delete share link");
 }
+
+export async function getEmailStatus(): Promise<boolean> {
+  const res = await apiFetch("/api/share-links/email-status");
+  if (!res.ok) return false;
+  const body = await res.json();
+  return body?.configured === true;
+}
+
+export async function emailShareLink(
+  id: string,
+  input: { recipient: string; message?: string },
+): Promise<void> {
+  const res = await apiFetch(`/api/share-links/${id}/email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...csrfHeader() },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    let detail = "Couldn't send the email. The link is still valid — you can copy it instead.";
+    try {
+      const body = await res.json();
+      // 422 validation errors carry an array detail; keep the friendly fallback then.
+      if (typeof body?.detail === "string") detail = body.detail;
+    } catch {
+      // keep fallback
+    }
+    throw new Error(detail);
+  }
+}

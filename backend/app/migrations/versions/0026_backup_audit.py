@@ -4,8 +4,9 @@ Revision ID: 0026
 Revises: 0022
 Create Date: 2026-07-13
 
-Note: numbered 0026 because 0023-0025 are reserved by the email/2FA
-integration branch; down_revision intentionally remains 0022 (main's head).
+Note: numbered 0026 because 0023-0025 were reserved by the email/2FA
+integration branch (email's migration has since been renumbered to 0027,
+which revises this one); down_revision intentionally remains 0022.
 """
 from alembic import op
 

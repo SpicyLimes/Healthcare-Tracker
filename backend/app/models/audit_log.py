@@ -25,6 +25,7 @@ class AuditAction(str, enum.Enum):
     backup_upload = "backup_upload"
     backup_restore = "backup_restore"
     backup_delete = "backup_delete"
+    share_link_emailed = "share_link_emailed"
 
 
 class ActorType(str, enum.Enum):

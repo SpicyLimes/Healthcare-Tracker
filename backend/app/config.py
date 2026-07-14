@@ -28,6 +28,18 @@ class Settings(BaseSettings):
     # Backups volume (shared with the backup container)
     backups_root: str = "/backups"
 
+    # --- Email (transactional) ---
+    email_backend: str = "console"  # "smtp" to actually send; "console" logs only
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_use_tls: bool = True
+    email_from: str = "Healthcare Tracker <noreply@example.com>"
+    email_footer: str = ""
+    # Absolute base URL for links built server-side (no browser origin available in email)
+    app_base_url: str = "http://localhost:1337"
+
     @model_validator(mode="after")
     def validate_secrets(self) -> "Settings":
         if "insecure" in self.jwt_secret or len(self.jwt_secret) < 32:
@@ -44,6 +56,14 @@ class Settings(BaseSettings):
             raise ValueError(
                 "INITIAL_ADMIN_PASSWORD still contains the placeholder value 'change-me'. "
                 "Set a strong password in your .env file."
+            )
+        if self.email_backend == "smtp" and (
+            "localhost" in self.app_base_url or "127.0.0.1" in self.app_base_url
+        ):
+            raise ValueError(
+                "EMAIL_BACKEND is 'smtp' but APP_BASE_URL points at localhost — "
+                "emailed links would be unreachable for recipients. "
+                "Set APP_BASE_URL to the public URL of this deployment."
             )
         return self
 
