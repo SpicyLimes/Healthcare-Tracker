@@ -77,8 +77,20 @@ class SmtpEmailSender:
         if message.html_body:
             mime.add_alternative(message.html_body, subtype="html")
         try:
-            with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as smtp:
-                if settings.smtp_use_tls:
+            # Port 465 is implicit TLS (SMTPS): the socket is TLS from the first
+            # byte, so STARTTLS must not be issued. Other ports (587) start plain
+            # and upgrade via STARTTLS when smtp_use_tls is set.
+            if settings.smtp_port == 465:
+                connection = smtplib.SMTP_SSL(
+                    settings.smtp_host,
+                    settings.smtp_port,
+                    timeout=10,
+                    context=ssl.create_default_context(),
+                )
+            else:
+                connection = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10)
+            with connection as smtp:
+                if settings.smtp_use_tls and settings.smtp_port != 465:
                     smtp.starttls(context=ssl.create_default_context())
                 if settings.smtp_user:
                     smtp.login(settings.smtp_user, settings.smtp_password)

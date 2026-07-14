@@ -59,6 +59,62 @@ def test_factory_returns_smtp_when_configured(monkeypatch):
     assert isinstance(get_email_sender(), SmtpEmailSender)
 
 
+class _FakeSmtpConnection:
+    """Records how SmtpEmailSender drives smtplib without touching the network."""
+
+    calls: dict = {}
+
+    def __init__(self, host, port, timeout=None, context=None):
+        type(self).calls.update(cls=self.__class__.__name__, host=host, port=port, context=context)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def starttls(self, context=None):
+        type(self).calls["starttls"] = True
+
+    def login(self, user, password):
+        type(self).calls["login"] = (user, password)
+
+    def send_message(self, mime):
+        type(self).calls["sent"] = True
+
+
+def _patch_smtp(monkeypatch, *, host="mail.example.com", port=587, use_tls=True):
+    import app.services.email_service as es
+
+    _FakeSmtpConnection.calls = {}
+    monkeypatch.setattr(es.smtplib, "SMTP", type("FakeSMTP", (_FakeSmtpConnection,), {}))
+    monkeypatch.setattr(es.smtplib, "SMTP_SSL", type("FakeSMTP_SSL", (_FakeSmtpConnection,), {}))
+    monkeypatch.setattr(app_config.settings, "smtp_host", host)
+    monkeypatch.setattr(app_config.settings, "smtp_port", port)
+    monkeypatch.setattr(app_config.settings, "smtp_use_tls", use_tls)
+    monkeypatch.setattr(app_config.settings, "smtp_user", "noreply@example.com")
+    monkeypatch.setattr(app_config.settings, "smtp_password", "pw")
+    return _FakeSmtpConnection.calls
+
+
+def test_smtp_sender_uses_implicit_ssl_on_port_465(monkeypatch):
+    """cPanel-style port 465 is TLS from the first byte (SMTP_SSL) — STARTTLS would hang."""
+    calls = _patch_smtp(monkeypatch, port=465)
+    SmtpEmailSender().send(EmailMessage(to="d@x.com", subject="Hi", text_body="body"))
+    assert calls["cls"] == "FakeSMTP_SSL"
+    assert calls["context"] is not None  # verified TLS, not an unvalidated socket
+    assert "starttls" not in calls  # never STARTTLS on an already-TLS connection
+    assert calls["sent"] and calls["login"] == ("noreply@example.com", "pw")
+
+
+def test_smtp_sender_uses_starttls_on_port_587(monkeypatch):
+    calls = _patch_smtp(monkeypatch, port=587)
+    SmtpEmailSender().send(EmailMessage(to="d@x.com", subject="Hi", text_body="body"))
+    assert calls["cls"] == "FakeSMTP"
+    assert calls["starttls"] is True
+    assert calls["sent"] is True
+
+
 def test_smtp_sender_wraps_errors_in_email_send_error(monkeypatch):
     # Point smtp at an unreachable host so the connection fails fast; assert the
     # raw error is wrapped, not leaked.
