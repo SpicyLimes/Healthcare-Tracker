@@ -26,6 +26,7 @@ import VitalsPage from "./pages/VitalsPage";
 import CalendarPage from "./pages/CalendarPage";
 import DocumentsPage from "./pages/DocumentsPage";
 import ShareLinksPage from "./pages/ShareLinksPage";
+import BackupsPage from "./pages/BackupsPage";
 import AuditLogPage from "./pages/AuditLogPage";
 import SubmissionsPage from "./pages/SubmissionsPage";
 import MySubmissionsPage from "./pages/MySubmissionsPage";
@@ -72,6 +73,7 @@ export default function App() {
             <Route path="/submissions" element={<RequireAdmin><SubmissionsPage /></RequireAdmin>} />
             <Route path="/my-submissions" element={<ProtectedRoute><RequireContributor><MySubmissionsPage /></RequireContributor></ProtectedRoute>} />
             <Route path="/settings" element={<RequireAdmin><SettingsPage /></RequireAdmin>} />
+            <Route path="/backups" element={<RequireAdmin><BackupsPage /></RequireAdmin>} />
             <Route path="/assistant" element={<ProtectedRoute><AiAssistantPage /></ProtectedRoute>} />
             <Route path="/guest" element={<GuestEntryPage />} />
             <Route path="/guest/sections/:section" element={<GuestSectionPage />} />

@@ -64,6 +64,22 @@ def reset_rate_limiter():
 
 @pytest.fixture(autouse=False)
 def tmp_uploads_dir(tmp_path, monkeypatch):
-    """Redirect all file uploads to a temporary directory for tests."""
-    monkeypatch.setattr(app_config.settings, "uploads_root", str(tmp_path))
-    return tmp_path
+    """Redirect all file uploads to a temporary directory for tests.
+
+    Uses a subdirectory (not tmp_path itself) so it stays disjoint from
+    tmp_backups_dir — mirroring production, where /app/uploads and /backups
+    are separate mounts. Restore CLEARS uploads_root; overlap would be fatal.
+    """
+    root = tmp_path / "uploads"
+    root.mkdir()
+    monkeypatch.setattr(app_config.settings, "uploads_root", str(root))
+    return root
+
+
+@pytest.fixture
+def tmp_backups_dir(tmp_path, monkeypatch):
+    """Redirect the backups root to a temporary directory for tests."""
+    root = tmp_path / "backups"
+    root.mkdir()
+    monkeypatch.setattr(app_config.settings, "backups_root", str(root))
+    return root

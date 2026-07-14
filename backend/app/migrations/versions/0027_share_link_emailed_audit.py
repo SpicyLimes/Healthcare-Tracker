@@ -1,13 +1,17 @@
 """Add share_link_emailed audit action
 
-Revision ID: 0023
-Revises: 0022
+Revision ID: 0027
+Revises: 0026
 Create Date: 2026-06-26
+
+Note: originally authored as 0023 (off 0022); renumbered to 0027 when the
+Backups feature landed on main as 0026. 0023-0025 stay unused unless the
+tabled 2FA branch reclaims them.
 """
 from alembic import op
 
-revision = "0023"
-down_revision = "0022"
+revision = "0027"
+down_revision = "0026"
 branch_labels = None
 depends_on = None
 

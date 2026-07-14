@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     # File uploads
     uploads_root: str = "/app/uploads"
 
+    # Backups volume (shared with the backup container)
+    backups_root: str = "/backups"
+
     # --- Email (transactional) ---
     email_backend: str = "console"  # "smtp" to actually send; "console" logs only
     smtp_host: str = ""
