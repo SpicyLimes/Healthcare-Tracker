@@ -22,9 +22,9 @@
 - **AI assistant (optional):** A built-in chat that answers questions about the patient's records by querying the database through read-only tools — answers are grounded in real data, never invented. Available to any signed-in user (Admin, Contributor, or Viewer); write actions are role-gated, so Viewers get a read-only assistant. For Admins it can also **help manage records and notes conversationally**: describe an event in plain language ("follow-up with the cardiologist last Tuesday, prescribed a new medication") and the assistant drafts the corresponding records across the relevant sections for you to confirm, and it can likewise add, edit, or delete notes and to-dos on request. **Creating, editing, and deleting are deliberately gated** — the assistant reads its proposed change back to you and only writes after you confirm; edits and deletes require a one-time, server-side confirmation that the model cannot bypass, and every write goes through the same validation and audit log as a manual change. On phones the assistant opens as a dedicated full-screen page; on desktop it slides in as a resizable panel (Standard / Medium / Large, remembered across sessions) with an active model indicator and privacy note. Bring your own self-hosted, OpenAI-compatible endpoint (e.g. LM Studio or Ollama); the model URL and name are set in-app and the assistant is disabled by default. Record creation and document reading require a model that supports tool use (and vision, for documents). No record data is sent anywhere unless you configure and enable it.
 - **Role-based access:** Admin (full access), Contributor (propose changes for admin approval), Viewer (read-only), Guest (time-limited share links)
 - **Contributor submissions:** Contributors propose record changes that queue for admin review; admins approve or reject from a Submissions page, and contributors track their own pending items under "My Submissions"
-- **Share links:** Admin generates signed, expiring URLs scoped to specific sections for doctors; one-time token display, revocable
+- **Share links:** Admin generates signed, expiring URLs scoped to specific sections for doctors; one-time token display, revocable; **email delivery built in** — send a link (with an optional message) straight from the app via your own SMTP server, with only a masked recipient stored in the audit log
 - **Audit log:** Every write and share link access logged with actor, timestamp, and detail; filterable in-app
-- **Nightly backups:** Automated PostgreSQL dump + uploads archive with 7-day retention; single-command restore
+- **Backups:** Nightly automated PostgreSQL dump + uploads archive with 7-day retention, plus an admin **Backups page** — create a backup on demand, download or upload backup archives, and do a full guarded restore, all from the browser
 
 ---
 
@@ -108,13 +108,33 @@ Three account roles: **Admin** (full access and user management), **Contributor*
 
 ### Backups
 
-The `backup` container runs nightly at 2:00 AM. The 7 most recent daily backups are kept automatically. To restore:
+The `backup` container runs nightly at 2:00 AM. The 7 most recent daily backups are kept automatically.
+
+**In-app (recommended):** Admins manage everything from the **Backups** page — create a backup on demand, download any backup as a single archive, upload a previously downloaded archive, restore (guarded by a typed confirmation, with an automatic safety backup taken first), and delete. Uploaded backups are never auto-pruned.
+
+**CLI (alternative):**
 
 ```bash
 docker compose -f docker-compose.prod.yml down
 docker compose -f docker-compose.prod.yml run --rm backup restore YYYY-MM-DD
 docker compose -f docker-compose.prod.yml up -d
 ```
+
+### Email (optional)
+
+Share links can be emailed directly from the app. Out of the box `EMAIL_BACKEND=console` (nothing is sent; the Email button is hidden). To enable, point the app at any SMTP server in `.env`:
+
+```bash
+EMAIL_BACKEND=smtp
+SMTP_HOST=mail.example.com
+SMTP_PORT=465                 # 465 = implicit SSL; 587 = STARTTLS (auto-detected)
+SMTP_USER=noreply@example.com
+SMTP_PASSWORD=...
+EMAIL_FROM=Healthcare Tracker <noreply@example.com>
+APP_BASE_URL=https://your-app-domain   # used to build the links inside emails
+```
+
+Emails contain only the link, its expiry, and your optional message — no patient details. If your app sits behind an access gate (e.g. Cloudflare Access), make sure the `/guest` page, the `/api/guest` API prefix, and the static `/assets` path are reachable without authentication, or recipients will see a blank page.
 
 ### AI Assistant Setup
 
