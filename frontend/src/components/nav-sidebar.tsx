@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Activity, User, Pill, Stethoscope, HeartPulse, Shield, Building2, Users,
-  Scissors, Hospital, Eye, Smile, Syringe, ClipboardList,
+  Scissors, Hospital, Eye, Smile, Syringe, ClipboardList, Bell,
   FolderOpen, KeyRound, Share2, ScrollText, UserCog, LogOut, DatabaseBackup,
   LayoutDashboard, Calendar, CheckCircle2, Database, StickyNote, Salad, Bot, Inbox,
 } from "lucide-react";
@@ -68,6 +68,7 @@ const navGroups = [
 
 const adminItems = [
   { to: "/submissions", label: "Submissions", icon: Inbox },
+  { to: "/reminders", label: "Daily Reminders", icon: Bell },
   { to: "/share-links", label: "Share Links", icon: Share2 },
   { to: "/audit-log", label: "Audit Log", icon: ScrollText },
   { to: "/users", label: "Manage Users", icon: UserCog },

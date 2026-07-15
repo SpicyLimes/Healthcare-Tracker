@@ -17,6 +17,7 @@ import { parseAllergies, parseContacts, type Allergy, type EmergencyContact } fr
 import { useAuth } from "../auth/useAuth";
 import { formatDate } from "@/lib/format";
 import { formatInTimezone } from "@/lib/datetime";
+import { escapeHtml } from "@/lib/html";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -69,10 +70,6 @@ function Row({ label, value }: { label: string; value: string }) {
       <span className="text-foreground">{value || "—"}</span>
     </div>
   );
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c] ?? c));
 }
 
 function buildPrintHtml(opts: {

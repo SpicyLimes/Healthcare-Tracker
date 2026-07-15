@@ -19,6 +19,7 @@ from app.models.extended_records import (
     Appointment,
 )
 from app.models.submission import Submission, SubmissionAction, SubmissionStatus
+from app.models.reminder import ReminderPage
 
 __all__ = [
     "AiSettings",
@@ -45,4 +46,5 @@ __all__ = [
     "Submission",
     "SubmissionAction",
     "SubmissionStatus",
+    "ReminderPage",
 ]

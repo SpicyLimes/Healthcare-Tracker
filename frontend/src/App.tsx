@@ -26,6 +26,7 @@ import VitalsPage from "./pages/VitalsPage";
 import CalendarPage from "./pages/CalendarPage";
 import DocumentsPage from "./pages/DocumentsPage";
 import ShareLinksPage from "./pages/ShareLinksPage";
+import RemindersPage from "./pages/RemindersPage";
 import BackupsPage from "./pages/BackupsPage";
 import AuditLogPage from "./pages/AuditLogPage";
 import SubmissionsPage from "./pages/SubmissionsPage";
@@ -69,6 +70,7 @@ export default function App() {
             <Route path="/nutrition-plan" element={<ProtectedRoute><NutritionPlanPage /></ProtectedRoute>} />
             <Route path="/documents" element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
             <Route path="/share-links" element={<RequireAdmin><ShareLinksPage /></RequireAdmin>} />
+            <Route path="/reminders" element={<RequireAdmin><RemindersPage /></RequireAdmin>} />
             <Route path="/audit-log" element={<RequireAdmin><AuditLogPage /></RequireAdmin>} />
             <Route path="/submissions" element={<RequireAdmin><SubmissionsPage /></RequireAdmin>} />
             <Route path="/my-submissions" element={<ProtectedRoute><RequireContributor><MySubmissionsPage /></RequireContributor></ProtectedRoute>} />
