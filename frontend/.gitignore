@@ -1,0 +1,7 @@
+
+# Playwright: traces/screenshots capture the RUNNING app, so they can contain
+# real patient data. Never commit them — this repo is public.
+test-results/
+playwright-report/
+blob-report/
+.playwright/
