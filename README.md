@@ -14,6 +14,7 @@
 ## Features
 
 - **15 record sections:** Profile, Insurance, Pharmacies, Doctors & Specialists, Family Health History, Surgeries, Hospitalizations, Vision History, Dental History, Vaccinations, Medications / Vitamins / Supplements, Ailment History, Visit Logs, Appointments, Documents
+- **Linked records:** Medications link to their prescribing doctor and the pharmacy that fills them — names resolve automatically everywhere they're shown, including the dashboard, share links, and printed summaries
 - **Nutrition Plan:** Meal planner (by breakfast/lunch/dinner/snacks), acceptable and unacceptable foods lists with meal-type checkboxes, and section-level document uploads
 - **Notes / To-Do's:** Personal notes with pin-to-top and done/completed toggles; any user can create and edit their own notes
 - **Document uploads:** PDFs, images, and Office files attached to any section or record; preview in-browser
