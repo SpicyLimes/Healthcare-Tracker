@@ -1,13 +1,17 @@
 import enum
 import uuid
 from datetime import date, datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+if TYPE_CHECKING:
+    from app.models.doctor import Doctor
+    from app.models.extended_records import Pharmacy
 
 
 class MedicationKind(str, enum.Enum):
@@ -36,6 +40,9 @@ class Medication(Base):
     prescribing_doctor_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("doctors.id", ondelete="SET NULL"), nullable=True
     )
+    pharmacy_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("pharmacies.id", ondelete="SET NULL"), nullable=True
+    )
     start_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     end_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
@@ -46,3 +53,17 @@ class Medication(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
+
+    prescriber: Mapped[Optional["Doctor"]] = relationship("Doctor", lazy="selectin")
+    pharmacy: Mapped[Optional["Pharmacy"]] = relationship("Pharmacy", lazy="selectin")
+
+    @property
+    def pharmacy_name(self) -> Optional[str]:
+        return self.pharmacy.name if self.pharmacy is not None else None
+
+    @property
+    def prescribing_doctor_display(self) -> Optional[str]:
+        # Linked doctor wins; free-text is the fallback for unlinked prescribers.
+        if self.prescriber is not None:
+            return self.prescriber.name
+        return self.prescribing_doctor

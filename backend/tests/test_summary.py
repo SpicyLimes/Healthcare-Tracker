@@ -272,3 +272,26 @@ def test_guest_summary_empty_link_grants_all_sections(client, db_session):
     assert r.status_code == 200, r.text
     assert "AllAccessDoc" in r.text
     assert "AllAccessMed" in r.text
+
+
+def test_summary_medications_show_pharmacy_and_resolved_doctor(client, db_session):
+    from app.models.doctor import Doctor
+    from app.models.extended_records import Pharmacy
+    from app.models.medication import Medication
+    from app.schemas.summary import SummaryRequest
+
+    p = Pharmacy(name="Summary Pharm")
+    d = Doctor(name="Dr. Summary")
+    db_session.add_all([p, d])
+    db_session.commit()
+    db_session.add(Medication(name="SummaryMed", pharmacy_id=p.id, prescribing_doctor_id=d.id))
+    db_session.commit()
+
+    rows = summary_service.gather_section_rows(db_session, "medications", date_from=None, date_to=None)
+    req = SummaryRequest(sections=["medications"], include_patient_header=False)
+    html = summary_service.render_summary(req, {"medications": rows}, patient=None)
+
+    assert "Summary Pharm" in html
+    assert "Dr. Summary" in html
+    # Raw UUIDs must stay hidden
+    assert str(p.id) not in html

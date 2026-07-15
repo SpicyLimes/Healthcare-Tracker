@@ -73,3 +73,24 @@ def test_create_validation_error_422(client, db_session):
     csrf = _admin_login(client, db_session)
     resp = client.post("/api/medications", headers={"X-CSRF-Token": csrf}, json={"dose": "no name"})
     assert resp.status_code == 422
+
+
+def test_create_and_update_with_pharmacy(client, db_session):
+    from app.models.extended_records import Pharmacy
+    p = Pharmacy(name="API Pharm")
+    db_session.add(p)
+    db_session.commit()
+
+    csrf = _admin_login(client, db_session)
+    created = client.post("/api/medications", headers={"X-CSRF-Token": csrf},
+                          json={"name": "Linked Med", "pharmacy_id": str(p.id)})
+    assert created.status_code == 201
+    body = created.json()
+    assert body["pharmacy_id"] == str(p.id)
+    assert body["pharmacy_name"] == "API Pharm"
+
+    unlinked = client.put(f"/api/medications/{body['id']}", headers={"X-CSRF-Token": csrf},
+                          json={"pharmacy_id": None})
+    assert unlinked.status_code == 200
+    assert unlinked.json()["pharmacy_id"] is None
+    assert unlinked.json()["pharmacy_name"] is None

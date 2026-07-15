@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from app.models.ailment import AilmentStatus
 from app.models.medication import MedicationKind
@@ -50,6 +50,7 @@ class MedicationCreate(BaseModel):
     route: str | None = Field(default=None, max_length=128)
     prescribing_doctor: str | None = Field(default=None, max_length=256)
     prescribing_doctor_id: uuid.UUID | None = None
+    pharmacy_id: uuid.UUID | None = None
     start_date: date | None = None
     end_date: date | None = None
     is_active: bool = True
@@ -64,6 +65,7 @@ class MedicationUpdate(BaseModel):
     route: str | None = Field(default=None, max_length=128)
     prescribing_doctor: str | None = Field(default=None, max_length=256)
     prescribing_doctor_id: uuid.UUID | None = None
+    pharmacy_id: uuid.UUID | None = None
     start_date: date | None = None
     end_date: date | None = None
     is_active: bool | None = None
@@ -79,8 +81,14 @@ class MedicationResponse(BaseModel):
     dose: str | None
     frequency: str | None
     route: str | None
-    prescribing_doctor: str | None
+    # Resolved server-side: linked doctor's name, else the free-text value.
+    prescribing_doctor: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("prescribing_doctor_display", "prescribing_doctor"),
+    )
     prescribing_doctor_id: uuid.UUID | None
+    pharmacy_id: uuid.UUID | None = None
+    pharmacy_name: str | None = None
     start_date: date | None
     end_date: date | None
     is_active: bool

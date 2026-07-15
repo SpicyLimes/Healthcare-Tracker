@@ -108,7 +108,7 @@ function buildPrintHtml(opts: {
     : "<p>No vitals on file.</p>";
 
   const medsHtml = activeMeds.length > 0
-    ? `<ul>${activeMeds.map((m) => `<li>${escapeHtml(m.name)}</li>`).join("")}</ul>`
+    ? `<ul>${activeMeds.map((m) => `<li>${escapeHtml(m.name)}${m.pharmacy_name ? ` · ${escapeHtml(m.pharmacy_name)}` : ""}</li>`).join("")}</ul>`
     : "<p>None on file.</p>";
 
   const allergiesHtml = allergies.length > 0
@@ -409,7 +409,7 @@ export default function HomePage() {
                       {activeMeds.map((m) => (
                         <li key={m.id} className="flex items-start gap-1 text-sm text-foreground">
                           <span aria-hidden="true">•</span>
-                          <span>{m.name}</span>
+                          <span>{m.name}{m.pharmacy_name ? ` · ${m.pharmacy_name}` : ""}</span>
                         </li>
                       ))}
                     </ul>

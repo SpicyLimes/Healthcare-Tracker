@@ -2,8 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { medicationsApi, type Medication, type MedicationInput, type MedicationKind } from "../api/medications";
 import { amendMySubmission, getMySubmission } from "../api/submissions";
-import { doctorsApi, type Doctor } from "../api/doctors";
 import DoctorPicker from "../components/DoctorPicker";
+import PharmacyPicker from "../components/PharmacyPicker";
 import { useAuth } from "../auth/useAuth";
 import { useToast } from "../components/toast";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -23,6 +23,7 @@ const EMPTY: MedicationInput = {
   route: null,
   prescribing_doctor: null,
   prescribing_doctor_id: null,
+  pharmacy_id: null,
   start_date: null,
   end_date: null,
   is_active: true,
@@ -41,7 +42,6 @@ export default function MedicationsPage() {
     : null;
   const [rows, setRows] = useState<Medication[]>([]);
   const [loading, setLoading] = useState(true);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [error, setError] = useState("");
   const [modalMode, setModalMode] = useState<"add" | "edit" | null>(null);
   const [editingRow, setEditingRow] = useState<Medication | null>(null);
@@ -57,7 +57,6 @@ export default function MedicationsPage() {
   useEffect(() => {
     setLoading(true);
     reload().catch(() => { setError("Failed to load medications"); setRows([]); }).finally(() => setLoading(false));
-    doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -98,8 +97,12 @@ export default function MedicationsPage() {
     setEditingRow(r);
     setForm({
       name: r.name, kind: r.kind, dose: r.dose, frequency: r.frequency,
-      route: r.route, prescribing_doctor: r.prescribing_doctor,
+      route: r.route,
+      // prescribing_doctor arrives RESOLVED (linked doctor's name); writing it
+      // back would clobber the free-text column, so null it when linked by id.
+      prescribing_doctor: r.prescribing_doctor_id ? null : r.prescribing_doctor,
       prescribing_doctor_id: r.prescribing_doctor_id,
+      pharmacy_id: r.pharmacy_id,
       start_date: r.start_date, end_date: r.end_date,
       is_active: r.is_active, notes: r.notes,
     });
@@ -155,11 +158,6 @@ export default function MedicationsPage() {
     }
   }
 
-  function resolveDoctorName(id: string | null, other: string | null): string {
-    if (id) return doctors.find((d) => d.id === id)?.name ?? other ?? "";
-    return other ?? "";
-  }
-
   return (
     <AppShell>
       <PageLayout
@@ -187,7 +185,8 @@ export default function MedicationsPage() {
                 { label: "Dose", value: r.dose },
                 { label: "Frequency", value: r.frequency },
                 { label: "Route", value: r.route ? r.route.charAt(0).toUpperCase() + r.route.slice(1) : null },
-                { label: "Prescribing Doctor", value: resolveDoctorName(r.prescribing_doctor_id, r.prescribing_doctor) || null },
+                { label: "Prescribing Doctor", value: r.prescribing_doctor },
+                { label: "Pharmacy", value: r.pharmacy_name },
                 { label: "Start Date", value: r.start_date },
                 { label: "End Date", value: r.end_date },
                 { label: "Notes", value: r.notes },
@@ -273,6 +272,12 @@ export default function MedicationsPage() {
               doctorId={form.prescribing_doctor_id ?? null}
               doctorOther={form.prescribing_doctor ?? null}
               onChange={(id, other) => setForm((s) => ({ ...s, prescribing_doctor_id: id, prescribing_doctor: other }))}
+            />
+          </FormField>
+          <FormField label="Pharmacy" htmlFor="med-pharmacy">
+            <PharmacyPicker
+              pharmacyId={form.pharmacy_id ?? null}
+              onChange={(id) => setForm((s) => ({ ...s, pharmacy_id: id }))}
             />
           </FormField>
           <FormField label="Notes" htmlFor="med-notes">

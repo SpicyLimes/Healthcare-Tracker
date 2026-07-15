@@ -97,6 +97,25 @@ describe("Dashboard sections", () => {
     expect(screen.queryByText("OldMed")).not.toBeInTheDocument();
   });
 
+  it("active medication bullets include the linked pharmacy", async () => {
+    mockAuth();
+    mockAllApis();
+    vi.spyOn(medicationsApiModule.medicationsApi, "list").mockResolvedValue([
+      { id: "m1", name: "Lisinopril", kind: "medication", dose: null, frequency: null,
+        route: null, prescribing_doctor: null, prescribing_doctor_id: null,
+        pharmacy_id: "p1", pharmacy_name: "CVS Main St",
+        start_date: null, end_date: null, is_active: true, notes: null },
+      { id: "m2", name: "PlainMed", kind: "medication", dose: null, frequency: null,
+        route: null, prescribing_doctor: null, prescribing_doctor_id: null,
+        pharmacy_id: null, pharmacy_name: null,
+        start_date: null, end_date: null, is_active: true, notes: null },
+    ]);
+    render(<MemoryRouter><HomePage /></MemoryRouter>);
+
+    await waitFor(() => expect(screen.getByText("Lisinopril · CVS Main St")).toBeInTheDocument());
+    expect(screen.getByText("PlainMed")).toBeInTheDocument();
+  });
+
   it("shows most recent visit log date and reason", async () => {
     mockAuth();
     mockAllApis();

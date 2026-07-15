@@ -11,6 +11,8 @@ export interface Medication {
   route: string | null;
   prescribing_doctor: string | null;
   prescribing_doctor_id: string | null;
+  pharmacy_id: string | null;
+  pharmacy_name: string | null;
   start_date: string | null;
   end_date: string | null;
   is_active: boolean;
@@ -25,6 +27,7 @@ export interface MedicationInput {
   route?: string | null;
   prescribing_doctor?: string | null;
   prescribing_doctor_id?: string | null;
+  pharmacy_id?: string | null;
   start_date?: string | null;
   end_date?: string | null;
   is_active?: boolean;
