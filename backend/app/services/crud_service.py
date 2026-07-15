@@ -36,6 +36,10 @@ class CRUDService(Generic[ModelT]):
         for key, value in data.items():
             setattr(row, key, value)
         db.flush()
+        # Changing an FK column does not sync an already-loaded relationship
+        # (e.g. Medication.pharmacy after pharmacy_id changes); expire so the
+        # response serializes fresh values.
+        db.expire(row)
         return row
 
     def delete(self, db: Session, record_id: uuid.UUID) -> None:
