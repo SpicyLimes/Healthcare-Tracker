@@ -33,6 +33,7 @@ services:
       EMAIL_FROM: ${EMAIL_FROM:-Healthcare Tracker <noreply@example.com>}
       EMAIL_FOOTER: ${EMAIL_FOOTER:-}
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:1337}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:1337}
     depends_on:
       db:
         condition: service_healthy

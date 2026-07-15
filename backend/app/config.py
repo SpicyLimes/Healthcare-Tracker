@@ -40,6 +40,23 @@ class Settings(BaseSettings):
     # Absolute base URL for links built server-side (no browser origin available in email)
     app_base_url: str = "http://localhost:1337"
 
+    # --- CORS ---
+    # Comma-separated list of browser origins allowed to call this API.
+    # Multiple values exist to support a domain migration, where both the old
+    # and new hostnames must work at once: allow_credentials=True makes
+    # Starlette echo back a single exact origin, so a one-entry list hard-fails
+    # every request from the other domain.
+    cors_allowed_origins: str = "http://localhost:1337"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Parsed origins, ready to hand to CORSMiddleware."""
+        return [
+            origin.strip().rstrip("/")
+            for origin in self.cors_allowed_origins.split(",")
+            if origin.strip()
+        ]
+
     @model_validator(mode="after")
     def validate_secrets(self) -> "Settings":
         if "insecure" in self.jwt_secret or len(self.jwt_secret) < 32:
@@ -65,6 +82,30 @@ class Settings(BaseSettings):
                 "emailed links would be unreachable for recipients. "
                 "Set APP_BASE_URL to the public URL of this deployment."
             )
+
+        origins = self.cors_origins_list
+        if not origins:
+            raise ValueError(
+                "CORS_ALLOWED_ORIGINS is empty. Set it to the origin(s) the app is "
+                "served from, e.g. https://your-app-domain (comma-separate several)."
+            )
+        if "*" in origins:
+            # This API is cookie-authenticated (allow_credentials=True). Starlette
+            # permits "*" alongside credentials, but it would let ANY site on the
+            # internet issue authenticated requests with a logged-in user's cookies
+            # and read the responses. Never allow it on a PHI app.
+            raise ValueError(
+                "CORS_ALLOWED_ORIGINS may not contain '*'. This API authenticates "
+                "with cookies, so a wildcard origin would let any website read a "
+                "logged-in user's data. List each allowed origin explicitly."
+            )
+        for origin in origins:
+            if not origin.startswith(("http://", "https://")):
+                raise ValueError(
+                    f"CORS_ALLOWED_ORIGINS entry {origin!r} must include a scheme, "
+                    "e.g. https://your-app-domain — a browser Origin header always "
+                    "has one, so a bare hostname would never match."
+                )
         return self
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
