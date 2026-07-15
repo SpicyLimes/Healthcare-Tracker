@@ -388,7 +388,7 @@ export default function ShareLinksPage() {
                 </div>
               )}
               renderRowActions={(r) => (
-                <div className="flex gap-2">
+                <>
                   <Button
                     variant="outline"
                     size="sm"
@@ -401,7 +401,7 @@ export default function ShareLinksPage() {
                       Email
                     </Button>
                   )}
-                </div>
+                </>
               )}
               getHeadline={(r) => r.label}
               getSubtitle={(r) => `Expires: ${formatInTimezone(r.expires_at, tz)}`}
