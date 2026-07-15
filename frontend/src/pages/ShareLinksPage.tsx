@@ -389,6 +389,11 @@ export default function ShareLinksPage() {
               )}
               renderRowActions={(r) => (
                 <>
+                  {emailConfigured && linkStatus(r) === "Active" && (
+                    <Button variant="outline" size="sm" onClick={() => openEmail(r)}>
+                      Email
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
@@ -396,11 +401,6 @@ export default function ShareLinksPage() {
                   >
                     {copiedId === r.id ? "Copied!" : "Copy Link"}
                   </Button>
-                  {emailConfigured && linkStatus(r) === "Active" && (
-                    <Button variant="outline" size="sm" onClick={() => openEmail(r)}>
-                      Email
-                    </Button>
-                  )}
                 </>
               )}
               getHeadline={(r) => r.label}
