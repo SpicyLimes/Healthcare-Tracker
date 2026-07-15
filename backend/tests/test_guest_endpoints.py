@@ -307,3 +307,25 @@ def test_guest_visit_logs_includes_auto_created_without_appointment_access(clien
     ids = _guest_visit_log_ids(client, token)
     assert manual_vl_id in ids
     assert auto_vl_id in ids
+
+
+def test_guest_medications_include_pharmacy_and_resolved_doctor(client, db_session):
+    from app.models.doctor import Doctor
+    from app.models.extended_records import Pharmacy
+    from app.models.medication import Medication
+
+    p = Pharmacy(name="Guest Pharm")
+    d = Doctor(name="Dr. Guest")
+    db_session.add_all([p, d])
+    db_session.commit()
+    db_session.add(Medication(name="GuestMed", pharmacy_id=p.id, prescribing_doctor_id=d.id))
+    db_session.commit()
+
+    csrf = _admin(client, db_session)
+    token = _create_link(client, csrf, sections=["medications"])
+
+    r = client.get(f"/api/guest/medications?token={token}")
+    assert r.status_code == 200
+    row = next(m for m in r.json() if m["name"] == "GuestMed")
+    assert row["pharmacy_name"] == "Guest Pharm"
+    assert row["prescribing_doctor"] == "Dr. Guest"
