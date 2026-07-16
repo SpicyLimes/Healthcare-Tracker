@@ -136,7 +136,7 @@ EMAIL_FROM=Healthcare Tracker <noreply@example.com>
 APP_BASE_URL=https://your-app-domain   # used to build the links inside emails
 ```
 
-Emails contain only the link, its expiry, and your optional message — no patient details. If your app sits behind an access gate (e.g. Cloudflare Access), make sure the `/guest` page, the `/api/guest` API prefix, and the static `/assets` path are reachable without authentication, or recipients will see a blank page.
+Emails contain only the link, its expiry, and your optional message — no patient details. If your app sits behind an access gate (e.g. Cloudflare Access), make sure the `/guest` page, the `/api/guest` API prefix, and the static `/assets` and `/logo.png` paths are reachable without authentication, or recipients will see a blank page.
 
 ### AI Assistant Setup
 
