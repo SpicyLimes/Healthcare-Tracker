@@ -65,21 +65,19 @@ def test_cors_origins_defaults_to_localhost():
 
 
 def test_cors_origins_parses_single_origin():
-    s = _valid(cors_allowed_origins="https://healthcaretracker.app")
-    assert s.cors_origins_list == ["https://healthcaretracker.app"]
+    s = _valid(cors_allowed_origins="https://app.example.com")
+    assert s.cors_origins_list == ["https://app.example.com"]
 
 
 def test_cors_origins_parses_multiple_origins():
-    # The domain-migration case: both hosts must be allowed at once, because
-    # allow_credentials=True makes Starlette reflect one exact origin.
     s = _valid(
         cors_allowed_origins=(
-            "https://healthcaretracker.app,https://healthcare.spicylimeslabs.com"
+            "https://app.example.com,https://old.example.com"
         )
     )
     assert s.cors_origins_list == [
-        "https://healthcaretracker.app",
-        "https://healthcare.spicylimeslabs.com",
+        "https://app.example.com",
+        "https://old.example.com",
     ]
 
 
@@ -93,8 +91,8 @@ def test_cors_origins_tolerates_whitespace_and_trailing_comma():
 def test_cors_origins_strips_trailing_slash():
     # A browser Origin header never has a path, so "https://x.com/" would
     # silently never match. Normalise rather than fail confusingly at runtime.
-    s = _valid(cors_allowed_origins="https://healthcaretracker.app/")
-    assert s.cors_origins_list == ["https://healthcaretracker.app"]
+    s = _valid(cors_allowed_origins="https://app.example.com/")
+    assert s.cors_origins_list == ["https://app.example.com"]
 
 
 def test_cors_wildcard_origin_raises():
@@ -106,7 +104,7 @@ def test_cors_wildcard_origin_raises():
 
 def test_cors_wildcard_among_valid_origins_raises():
     with pytest.raises((ValidationError, ValueError)):
-        _valid(cors_allowed_origins="https://healthcaretracker.app,*")
+        _valid(cors_allowed_origins="https://app.example.com,*")
 
 
 def test_cors_empty_origins_raises():
@@ -115,7 +113,7 @@ def test_cors_empty_origins_raises():
 
 
 def test_cors_origin_without_scheme_raises():
-    # "healthcaretracker.app" never matches an Origin header; fail at boot
+    # "app.example.com" never matches an Origin header; fail at boot
     # rather than at 3am with an opaque CORS error in the browser console.
     with pytest.raises((ValidationError, ValueError)):
-        _valid(cors_allowed_origins="healthcaretracker.app")
+        _valid(cors_allowed_origins="app.example.com")
