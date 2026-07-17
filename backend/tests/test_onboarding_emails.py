@@ -1,10 +1,7 @@
-import logging
 from datetime import datetime, timezone
 
 from app.models.user import Role
 from app.services.email_service import (
-    ConsoleEmailSender,
-    EmailMessage,
     ONBOARDING_SUBJECT,
     RESET_SUBJECT,
     format_deadline,
@@ -69,10 +66,10 @@ def test_reset_email_contents_and_html_escaping():
     assert "<b>call me</b>" not in html
 
 
-def test_console_sender_redacts_temp_password(caplog):
-    with caplog.at_level(logging.INFO):
-        ConsoleEmailSender().send(
-            EmailMessage(to="x@example.com", subject="s", text_body="password:\n\n   Maple-Harbor-7482!\n")
-        )
-    assert "Maple-Harbor-7482!" not in caplog.text
-    assert "<redacted>" in caplog.text
+def test_redaction_strips_temp_passwords_and_tokens():
+    from app.services.email_service import _redact_email_body
+    body = "password:\n\n   Maple-Harbor-7482!\n\nlink?token=abc123\n"
+    redacted = _redact_email_body(body)
+    assert "Maple-Harbor-7482!" not in redacted
+    assert "abc123" not in redacted
+    assert redacted.count("<redacted>") == 2

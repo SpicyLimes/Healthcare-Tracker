@@ -50,6 +50,13 @@ class EmailSender(Protocol):
     def send(self, message: EmailMessage) -> None: ...
 
 
+def _redact_email_body(body: str) -> str:
+    """Strip live secrets before a body reaches docker logs."""
+    redacted = re.sub(r"token=\S+", "token=<redacted>", body)
+    # Temp passwords (Word-Word-NNNN! format) must never land in docker logs.
+    return re.sub(r"\b[A-Z][a-z]{3,5}-[A-Z][a-z]{3,5}-\d{4}!", "<redacted>", redacted)
+
+
 class ConsoleEmailSender:
     """Default sender: logs instead of sending. Used in dev and tests; never raises.
 
@@ -59,11 +66,7 @@ class ConsoleEmailSender:
     """
 
     def send(self, message: EmailMessage) -> None:
-        redacted_body = re.sub(r"token=\S+", "token=<redacted>", message.text_body)
-        # Temp passwords (Word-Word-NNNN! format) must never land in docker logs.
-        redacted_body = re.sub(
-            r"\b[A-Z][a-z]{3,5}-[A-Z][a-z]{3,5}-\d{4}!", "<redacted>", redacted_body
-        )
+        redacted_body = _redact_email_body(message.text_body)
         logger.info(
             "[ConsoleEmailSender] would send email to=%s subject=%r\n%s",
             mask_email(message.to),
