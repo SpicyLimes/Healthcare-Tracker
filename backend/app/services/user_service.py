@@ -1,11 +1,18 @@
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.user import Role, User
-from app.security.passwords import hash_password, validate_password_policy
+from app.security.passwords import generate_temp_password, hash_password, validate_password_policy
 from app.services import auth_service
+from app.services.email_service import (
+    EmailMessage,
+    format_deadline,
+    render_onboarding_email,
+    render_reset_email,
+)
 from app.utils.email import normalize_email
 
 
@@ -81,6 +88,41 @@ def set_password(db: Session, user_id: uuid.UUID, new_password: str) -> User:
     auth_service.revoke_all_refresh_tokens_for_user(db, user.id)
     db.flush()
     return user
+
+
+def issue_temp_password(
+    db: Session,
+    user: User,
+    *,
+    expires_minutes: int,
+    email_kind: str,
+    notes: str | None,
+    sender,
+) -> None:
+    """Email the user a fresh temp password, then commit the credential swap.
+
+    Send-first ordering: if the email fails (EmailSendError propagates), the
+    user's current password, flags, and sessions are untouched.
+    """
+    temp = generate_temp_password()
+    deadline = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
+    deadline_display = format_deadline(deadline, user.timezone)
+    if email_kind == "onboarding":
+        subject, text_body, html_body = render_onboarding_email(
+            recipient_name=user.full_name, role=user.role, temp_password=temp,
+            deadline_display=deadline_display, notes=notes,
+        )
+    else:
+        subject, text_body, html_body = render_reset_email(
+            recipient_name=user.full_name, temp_password=temp,
+            deadline_display=deadline_display, notes=notes,
+        )
+    sender.send(EmailMessage(to=user.email, subject=subject, text_body=text_body, html_body=html_body))
+    user.hashed_password = hash_password(temp)
+    user.must_change_password = True
+    user.temp_password_expires_at = deadline
+    auth_service.revoke_all_refresh_tokens_for_user(db, user.id)
+    db.flush()
 
 
 def delete_user(db: Session, user_id: uuid.UUID) -> None:
