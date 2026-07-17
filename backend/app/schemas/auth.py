@@ -60,6 +60,8 @@ class UserResponse(BaseModel):
     is_active: bool
     full_name: str | None = None
     created_at: datetime
+    must_change_password: bool = False
+    temp_password_expires_at: datetime | None = None
 
 
 class MeResponse(BaseModel):
@@ -70,3 +72,4 @@ class MeResponse(BaseModel):
     role: Role
     full_name: str | None = None
     timezone: str = "America/Chicago"
+    must_change_password: bool = False
