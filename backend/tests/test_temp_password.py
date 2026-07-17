@@ -1,4 +1,7 @@
+import re
+
 from app.models.user import Role
+from app.security.passwords import MIN_PASSWORD_LENGTH, generate_temp_password, validate_password_policy
 from app.services import user_service
 
 
@@ -21,3 +24,18 @@ def test_me_and_user_list_expose_temp_password_fields(client, db_session):
     listing = client.get("/api/users").json()
     assert listing[0]["must_change_password"] is False
     assert listing[0]["temp_password_expires_at"] is None
+
+
+TEMP_FORMAT = re.compile(r"^[A-Z][a-z]{3,5}-[A-Z][a-z]{3,5}-\d{4}!$")
+
+
+def test_generate_temp_password_format():
+    for _ in range(50):
+        pw = generate_temp_password()
+        assert TEMP_FORMAT.match(pw), pw
+        assert len(pw) >= MIN_PASSWORD_LENGTH
+        validate_password_policy(pw)  # must not raise
+
+
+def test_generate_temp_password_varies():
+    assert len({generate_temp_password() for _ in range(50)}) > 40
