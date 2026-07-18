@@ -181,4 +181,35 @@ describe("UsersPage", () => {
     await user.click(screen.getByRole("button", { name: /Send email/i }));
     expect(mockReset).toHaveBeenCalledWith("u2", 60, null);
   });
+
+  it("shows only the reset modal while it is open, and restores the edit modal on cancel", async () => {
+    const user = userEvent.setup();
+    mockAuth();
+    vi.spyOn(usersApi, "listUsers").mockResolvedValue([
+      { ...baseUser, id: "u2", email: "pending@example.com", must_change_password: true,
+        temp_password_expires_at: new Date(Date.now() + 3600_000).toISOString() },
+    ]);
+    render(<UsersPage />);
+    const editButtons = await screen.findAllByRole("button", { name: /edit/i });
+    await user.click(editButtons[0]);
+    await user.click(screen.getByRole("button", { name: /Reset Password/i }));
+    expect(screen.queryByRole("heading", { name: "Edit User" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Reset Password" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("heading", { name: "Edit User" })).toBeInTheDocument();
+  });
+
+  it("renders the Reset Password button with the destructive variant", async () => {
+    const user = userEvent.setup();
+    mockAuth();
+    vi.spyOn(usersApi, "listUsers").mockResolvedValue([
+      { ...baseUser, id: "u2", email: "pending@example.com", must_change_password: true,
+        temp_password_expires_at: new Date(Date.now() + 3600_000).toISOString() },
+    ]);
+    render(<UsersPage />);
+    const editButtons = await screen.findAllByRole("button", { name: /edit/i });
+    await user.click(editButtons[0]);
+    const btn = screen.getByRole("button", { name: /Reset Password/i });
+    expect(btn.className).toMatch(/destructive/);
+  });
 });

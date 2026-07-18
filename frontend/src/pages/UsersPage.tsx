@@ -341,7 +341,7 @@ export default function UsersPage() {
         )}
 
         {/* Edit user modal */}
-        {editingUser && (
+        {editingUser && !resetTarget && (
           <RecordFormModal
             title="Edit User"
             submitLabel="Save"
@@ -385,7 +385,7 @@ export default function UsersPage() {
                   <hr className="border-border" />
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="destructive"
                     onClick={() => {
                       setResetExpiry(720);
                       setResetNotes("");
