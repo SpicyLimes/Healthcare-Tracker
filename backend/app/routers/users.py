@@ -71,7 +71,7 @@ def create_user(
     db.refresh(user)
     log_event(
         db,
-        action=AuditAction.create,
+        action=AuditAction.user_created,
         actor_type=ActorType.user,
         actor_user_id=current.id,
         detail=(
@@ -97,6 +97,7 @@ def update_user(
     current: User = Depends(require_admin),
 ):
     try:
+        was_active = user_service.get_user(db, user_id).is_active
         kwargs = {}
         if payload.full_name is not None or "full_name" in payload.model_fields_set:
             kwargs["full_name"] = payload.full_name
@@ -105,9 +106,15 @@ def update_user(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
     except user_service.UserNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if was_active and not updated.is_active:
+        action = AuditAction.user_deactivated
+    elif not was_active and updated.is_active:
+        action = AuditAction.user_reactivated
+    else:
+        action = AuditAction.user_updated
     log_event(
         db,
-        action=AuditAction.update,
+        action=action,
         actor_type=ActorType.user,
         actor_user_id=current.id,
         detail=f"Admin updated user: {updated.email}",
@@ -134,7 +141,7 @@ def set_user_password(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     log_event(
         db,
-        action=AuditAction.update,
+        action=AuditAction.password_reset,
         actor_type=ActorType.user,
         actor_user_id=current.id,
         detail=f"Admin reset password for user: {target.email}",
@@ -178,7 +185,7 @@ def reset_user_password(
         )
     log_event(
         db,
-        action=AuditAction.update,
+        action=AuditAction.password_reset,
         actor_type=ActorType.user,
         actor_user_id=current.id,
         detail=(
@@ -208,7 +215,7 @@ def delete_user(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     log_event(
         db,
-        action=AuditAction.delete,
+        action=AuditAction.user_deleted,
         actor_type=ActorType.user,
         actor_user_id=current.id,
         detail=f"Admin deleted user: {email}",

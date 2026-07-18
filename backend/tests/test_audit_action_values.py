@@ -42,3 +42,50 @@ def test_login_logout_password_actions(client, db_session):
     csrf = client.cookies.get("csrf_token")
     client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf})
     assert _last_action_for(db_session, "User logged out: carol@example.com") == AuditAction.logout
+
+
+def _admin_csrf(client, db_session):
+    user_service.create_user(db_session, "boss@example.com", "a-strong-passphrase-123", Role.admin)
+    client.post("/api/auth/login", json={"email": "boss@example.com", "password": "a-strong-passphrase-123"})
+    return client.cookies.get("csrf_token")
+
+
+def test_user_management_actions(client, db_session):
+    csrf = _admin_csrf(client, db_session)
+
+    resp = client.post("/api/users", headers={"X-CSRF-Token": csrf},
+                       json={"email": "m@example.com", "password": "a-strong-passphrase-123", "role": "viewer"})
+    uid = resp.json()["id"]
+    assert _last_action_for(db_session, "Admin created user: m@example.com") == AuditAction.user_created
+
+    client.put(f"/api/users/{uid}", headers={"X-CSRF-Token": csrf},
+               json={"role": "contributor"})
+    assert _last_action_for(db_session, "Admin updated user: m@example.com") == AuditAction.user_updated
+
+    client.put(f"/api/users/{uid}", headers={"X-CSRF-Token": csrf},
+               json={"is_active": False})
+    assert _last_action_for(db_session, "Admin updated user: m@example.com") == AuditAction.user_deactivated
+
+    client.put(f"/api/users/{uid}", headers={"X-CSRF-Token": csrf},
+               json={"is_active": True})
+    assert _last_action_for(db_session, "Admin updated user: m@example.com") == AuditAction.user_reactivated
+
+    client.delete(f"/api/users/{uid}", headers={"X-CSRF-Token": csrf})
+    assert _last_action_for(db_session, "Admin deleted user: m@example.com") == AuditAction.user_deleted
+
+
+def test_password_reset_actions(client, db_session, monkeypatch):
+    from tests.test_temp_password import RecordingSender
+    monkeypatch.setattr("app.routers.users.get_email_sender", lambda: RecordingSender())
+    csrf = _admin_csrf(client, db_session)
+    resp = client.post("/api/users", headers={"X-CSRF-Token": csrf},
+                       json={"email": "r@example.com", "password": "a-strong-passphrase-123", "role": "viewer"})
+    uid = resp.json()["id"]
+
+    client.post(f"/api/users/{uid}/reset-password", headers={"X-CSRF-Token": csrf},
+                json={"expires_minutes": 60})
+    assert _last_action_for(db_session, "Admin emailed temporary password to user: r@example.com") == AuditAction.password_reset
+
+    client.put(f"/api/users/{uid}/password", headers={"X-CSRF-Token": csrf},
+               json={"new_password": "yet-another-passphrase-789"})
+    assert _last_action_for(db_session, "Admin reset password for user: r@example.com") == AuditAction.password_reset
