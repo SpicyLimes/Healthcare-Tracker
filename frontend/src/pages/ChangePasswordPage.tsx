@@ -67,14 +67,18 @@ export default function ChangePasswordPage() {
       setCurrent("");
       setNext("");
       setConfirm("");
-      if (forced) {
-        const fresh = await getMe();
-        if (fresh) setUser(fresh);
-        navigate("/", { replace: true });
-        return;
-      }
     } catch {
       setError("Could not change password.");
+      return;
+    }
+    if (forced) {
+      try {
+        const fresh = await getMe();
+        if (fresh) setUser(fresh);
+      } catch {
+        // password change succeeded; stale user state resolves on next load
+      }
+      navigate("/", { replace: true });
     }
   }
 

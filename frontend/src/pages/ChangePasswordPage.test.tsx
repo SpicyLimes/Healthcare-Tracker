@@ -134,4 +134,17 @@ describe("ChangePasswordPage — forced mode", () => {
     fireEvent.click(screen.getByRole("button", { name: /update password/i }));
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/", { replace: true }));
   });
+
+  it("still navigates home and shows no error when the post-change refresh fails", async () => {
+    mockAuth(null, { must_change_password: true });
+    vi.spyOn(authApi, "changePassword").mockResolvedValueOnce(undefined);
+    vi.spyOn(authApi, "getMe").mockRejectedValueOnce(new Error("network blip"));
+    render(<ChangePasswordPage />);
+    fireEvent.change(screen.getByLabelText(/temporary password/i), { target: { value: "old-temp-pass" } });
+    fireEvent.change(screen.getByLabelText(/^new password/i), { target: { value: "a-new-strong-pass" } });
+    fireEvent.change(screen.getByLabelText(/confirm new password/i), { target: { value: "a-new-strong-pass" } });
+    fireEvent.click(screen.getByRole("button", { name: /update password/i }));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/", { replace: true }));
+    expect(screen.queryByText(/could not change password/i)).not.toBeInTheDocument();
+  });
 });
