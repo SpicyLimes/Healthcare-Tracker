@@ -151,4 +151,34 @@ describe("UsersPage", () => {
       await screen.findByText(/email failed — use Reset Password to retry/i),
     ).toBeInTheDocument();
   });
+
+  it("shows temp-password badges", async () => {
+    mockAuth();
+    vi.spyOn(usersApi, "listUsers").mockResolvedValueOnce([
+      { ...baseUser, id: "u1", email: "pending@example.com", must_change_password: true,
+        temp_password_expires_at: new Date(Date.now() + 3600_000).toISOString() },
+      { ...baseUser, id: "u2", email: "expired@example.com", must_change_password: true,
+        temp_password_expires_at: new Date(Date.now() - 3600_000).toISOString() },
+    ]);
+    render(<UsersPage />);
+    expect(await screen.findByText(/Temp password — expires/)).toBeInTheDocument();
+    expect(screen.getByText(/Temp password expired/)).toBeInTheDocument();
+  });
+
+  it("reset password flow calls the API", async () => {
+    const user = userEvent.setup();
+    mockAuth();
+    vi.spyOn(usersApi, "listUsers").mockResolvedValue([
+      { ...baseUser, id: "u2", email: "pending@example.com", must_change_password: true,
+        temp_password_expires_at: new Date(Date.now() + 3600_000).toISOString() },
+    ]);
+    const mockReset = vi.spyOn(usersApi, "resetUserPassword").mockResolvedValue(undefined);
+    render(<UsersPage />);
+    const editButtons = await screen.findAllByRole("button", { name: /edit/i });
+    await user.click(editButtons[0]);
+    await user.click(screen.getByRole("button", { name: /Reset Password/i }));
+    await user.selectOptions(screen.getByLabelText(/Temporary password expires/i), "60");
+    await user.click(screen.getByRole("button", { name: /Send email/i }));
+    expect(mockReset).toHaveBeenCalledWith("u2", 60, null);
+  });
 });

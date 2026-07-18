@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { createUser, deleteUser, listUsers, updateUser, type ManagedUser } from "../api/users";
+import { createUser, deleteUser, listUsers, resetUserPassword, updateUser, type ManagedUser } from "../api/users";
+import { useAuth } from "../auth/useAuth";
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,7 +20,18 @@ const EXPIRY_OPTIONS = [
   { value: 1440, label: "24 hours" },
 ] as const;
 
+function tempBadge(u: ManagedUser) {
+  if (!u.must_change_password || !u.temp_password_expires_at) return null;
+  const expires = new Date(u.temp_password_expires_at);
+  if (expires < new Date()) {
+    return <span className="ml-2 text-xs font-medium text-destructive">Temp password expired</span>;
+  }
+  const when = expires.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return <span className="ml-2 text-xs font-medium text-amber-600 dark:text-amber-400">Temp password — expires {when}</span>;
+}
+
 export default function UsersPage() {
+  const { user: me } = useAuth();
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -41,6 +53,11 @@ export default function UsersPage() {
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState<"admin" | "contributor" | "viewer">("viewer");
   const [editActive, setEditActive] = useState(true);
+
+  // Reset-password modal state
+  const [resetTarget, setResetTarget] = useState<ManagedUser | null>(null);
+  const [resetExpiry, setResetExpiry] = useState(720);
+  const [resetNotes, setResetNotes] = useState("");
 
   async function reload() {
     setUsers(await listUsers());
@@ -126,6 +143,22 @@ export default function UsersPage() {
     }
   }
 
+  async function onSendReset(e: FormEvent) {
+    e.preventDefault();
+    if (!resetTarget) return;
+    setModalError("");
+    try {
+      await resetUserPassword(resetTarget.id, resetExpiry, resetNotes.trim() || null);
+      const email = resetTarget.email;
+      setResetTarget(null);
+      closeEdit();
+      setNotice(`Temporary password emailed to ${email}.`);
+      await reload();
+    } catch {
+      setModalError("Could not send the reset email — nothing was changed");
+    }
+  }
+
   async function onDelete(u: ManagedUser) {
     setError("");
     try {
@@ -176,6 +209,7 @@ export default function UsersPage() {
                       {!r.is_active && (
                         <span className="ml-2 text-xs text-muted-foreground">(inactive)</span>
                       )}
+                      {tempBadge(r)}
                     </span>
                   ),
                 },
@@ -196,6 +230,9 @@ export default function UsersPage() {
                 { label: "Role", value: r.role === "admin" ? "Admin" : r.role === "contributor" ? "Contributor" : "Viewer" },
                 { label: "Active", value: r.is_active ? "Yes" : "No" },
                 { label: "Created", value: formatDate(r.created_at) },
+                { label: "Temp password", value: r.must_change_password
+                    ? (r.temp_password_expires_at && new Date(r.temp_password_expires_at) < new Date()
+                        ? "Expired" : "Pending first login") : null },
               ]}
               getHeadline={(r) => r.email}
               getSubtitle={(r) => r.full_name ?? null}
@@ -343,6 +380,64 @@ export default function UsersPage() {
                 />
                 Active
               </label>
+              {editingUser.id !== me?.id && editingUser.is_active && (
+                <>
+                  <hr className="border-border" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setResetExpiry(720);
+                      setResetNotes("");
+                      setModalError("");
+                      setResetTarget(editingUser);
+                    }}
+                  >
+                    Reset Password…
+                  </Button>
+                </>
+              )}
+            </div>
+          </RecordFormModal>
+        )}
+
+        {/* Reset password confirm modal */}
+        {resetTarget && (
+          <RecordFormModal
+            title="Reset Password"
+            submitLabel="Send email"
+            error={modalError || null}
+            onClose={() => setResetTarget(null)}
+            onSubmit={onSendReset}
+          >
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-foreground">
+                Send <span className="font-medium">{resetTarget.email}</span> a new temporary password?
+              </p>
+              <p className="text-sm text-destructive">
+                Their current password and signed-in sessions stop working immediately.
+              </p>
+              <FormField label="Temporary password expires after" htmlFor="reset_expiry">
+                <Select
+                  id="reset_expiry"
+                  value={String(resetExpiry)}
+                  onChange={(e) => setResetExpiry(Number(e.target.value))}
+                >
+                  {EXPIRY_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField label="Note to include in the email (optional)" htmlFor="reset_notes">
+                <textarea
+                  id="reset_notes"
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  rows={3}
+                  maxLength={2000}
+                  value={resetNotes}
+                  onChange={(e) => setResetNotes(e.target.value)}
+                />
+              </FormField>
             </div>
           </RecordFormModal>
         )}
