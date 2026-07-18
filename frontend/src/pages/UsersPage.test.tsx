@@ -210,6 +210,6 @@ describe("UsersPage", () => {
     const editButtons = await screen.findAllByRole("button", { name: /edit/i });
     await user.click(editButtons[0]);
     const btn = screen.getByRole("button", { name: /Reset Password/i });
-    expect(btn.className).toMatch(/destructive/);
+    expect(btn.className).toContain("bg-destructive/10");
   });
 });
