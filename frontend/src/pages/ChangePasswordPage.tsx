@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { changePassword, updateName, updateTimezone } from "../api/auth";
+import { useNavigate } from "react-router-dom";
+import { changePassword, getMe, updateName, updateTimezone } from "../api/auth";
 import { useAuth } from "../auth/useAuth";
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
@@ -9,6 +10,8 @@ import { FormField, Input, Select } from "@/components/ui/form-field";
 
 export default function ChangePasswordPage() {
   const { user, setUser } = useAuth();
+  const navigate = useNavigate();
+  const forced = user?.must_change_password === true;
 
   const [displayName, setDisplayName] = useState(user?.full_name ?? "");
   const [nameMessage, setNameMessage] = useState("");
@@ -64,6 +67,12 @@ export default function ChangePasswordPage() {
       setCurrent("");
       setNext("");
       setConfirm("");
+      if (forced) {
+        const fresh = await getMe();
+        if (fresh) setUser(fresh);
+        navigate("/", { replace: true });
+        return;
+      }
     } catch {
       setError("Could not change password.");
     }
@@ -75,79 +84,89 @@ export default function ChangePasswordPage() {
         title="Settings"
         description="Manage your display name and password."
       >
+        {forced && (
+          <p role="alert" className="mb-4 rounded-md border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-foreground">
+            You're signed in with a temporary password. Set a new password now to
+            continue — the other pages unlock as soon as you do.
+          </p>
+        )}
         <Card>
           <CardContent className="pt-6 flex flex-col gap-0">
-            <form onSubmit={onSaveName}>
-              <h2 className="font-heading text-sm font-medium text-foreground mb-4">
-                Display Name
-              </h2>
-              {nameError && (
-                <p role="alert" className="mb-4 text-sm text-destructive">{nameError}</p>
-              )}
-              {nameMessage && (
-                <p role="status" className="mb-4 text-sm text-primary">{nameMessage}</p>
-              )}
-              <div className="flex flex-col gap-4 ">
-                <FormField label="Update Your Display Name" htmlFor="display_name">
-                  <Input
-                    id="display_name"
-                    type="text"
-                    placeholder="Your Name (Optional)"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                  />
-                </FormField>
-              </div>
-              <div className="mt-4 flex justify-end ">
-                <Button type="submit">Save name</Button>
-              </div>
-            </form>
+            {!forced && (
+              <>
+                <form onSubmit={onSaveName}>
+                  <h2 className="font-heading text-sm font-medium text-foreground mb-4">
+                    Display Name
+                  </h2>
+                  {nameError && (
+                    <p role="alert" className="mb-4 text-sm text-destructive">{nameError}</p>
+                  )}
+                  {nameMessage && (
+                    <p role="status" className="mb-4 text-sm text-primary">{nameMessage}</p>
+                  )}
+                  <div className="flex flex-col gap-4 ">
+                    <FormField label="Update Your Display Name" htmlFor="display_name">
+                      <Input
+                        id="display_name"
+                        type="text"
+                        placeholder="Your Name (Optional)"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                      />
+                    </FormField>
+                  </div>
+                  <div className="mt-4 flex justify-end ">
+                    <Button type="submit">Save name</Button>
+                  </div>
+                </form>
 
-            <hr className="my-6 border-border" />
+                <hr className="my-6 border-border" />
 
-            {/* Timezone */}
-            <form onSubmit={onSaveTimezone}>
-              <h2 className="font-heading text-sm font-medium text-foreground mb-4">
-                Timezone
-              </h2>
-              {tzError && (
-                <p role="alert" className="mb-4 text-sm text-destructive">{tzError}</p>
-              )}
-              {tzMessage && (
-                <p role="status" aria-label={tzMessage} className="mb-4 text-sm text-primary">{tzMessage}</p>
-              )}
-              <div className="flex flex-col gap-4">
-                <FormField label="Your Timezone" htmlFor="timezone">
-                  <Select
-                    id="timezone"
-                    value={timezone}
-                    onChange={(e) => setTimezone(e.target.value)}
-                  >
-                    <optgroup label="United States">
-                      <option value="America/New_York">Eastern Time (ET)</option>
-                      <option value="America/Chicago">Central Time (CT)</option>
-                      <option value="America/Denver">Mountain Time (MT)</option>
-                      <option value="America/Phoenix">Mountain Time – Arizona (no DST)</option>
-                      <option value="America/Los_Angeles">Pacific Time (PT)</option>
-                      <option value="America/Anchorage">Alaska Time (AKT)</option>
-                      <option value="Pacific/Honolulu">Hawaii Time (HT)</option>
-                    </optgroup>
-                    <optgroup label="Other">
-                      <option value="UTC">UTC</option>
-                      <option value="Europe/London">London (GMT/BST)</option>
-                      <option value="Europe/Paris">Central European (CET/CEST)</option>
-                      <option value="Asia/Tokyo">Japan (JST)</option>
-                      <option value="Australia/Sydney">Sydney (AEST/AEDT)</option>
-                    </optgroup>
-                  </Select>
-                </FormField>
-              </div>
-              <div className="mt-4 flex justify-end">
-                <Button type="submit">Save timezone</Button>
-              </div>
-            </form>
+                {/* Timezone */}
+                <form onSubmit={onSaveTimezone}>
+                  <h2 className="font-heading text-sm font-medium text-foreground mb-4">
+                    Timezone
+                  </h2>
+                  {tzError && (
+                    <p role="alert" className="mb-4 text-sm text-destructive">{tzError}</p>
+                  )}
+                  {tzMessage && (
+                    <p role="status" aria-label={tzMessage} className="mb-4 text-sm text-primary">{tzMessage}</p>
+                  )}
+                  <div className="flex flex-col gap-4">
+                    <FormField label="Your Timezone" htmlFor="timezone">
+                      <Select
+                        id="timezone"
+                        value={timezone}
+                        onChange={(e) => setTimezone(e.target.value)}
+                      >
+                        <optgroup label="United States">
+                          <option value="America/New_York">Eastern Time (ET)</option>
+                          <option value="America/Chicago">Central Time (CT)</option>
+                          <option value="America/Denver">Mountain Time (MT)</option>
+                          <option value="America/Phoenix">Mountain Time – Arizona (no DST)</option>
+                          <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                          <option value="America/Anchorage">Alaska Time (AKT)</option>
+                          <option value="Pacific/Honolulu">Hawaii Time (HT)</option>
+                        </optgroup>
+                        <optgroup label="Other">
+                          <option value="UTC">UTC</option>
+                          <option value="Europe/London">London (GMT/BST)</option>
+                          <option value="Europe/Paris">Central European (CET/CEST)</option>
+                          <option value="Asia/Tokyo">Japan (JST)</option>
+                          <option value="Australia/Sydney">Sydney (AEST/AEDT)</option>
+                        </optgroup>
+                      </Select>
+                    </FormField>
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <Button type="submit">Save timezone</Button>
+                  </div>
+                </form>
 
-            <hr className="my-6 border-border" />
+                <hr className="my-6 border-border" />
+              </>
+            )}
 
             {/* Change Password */}
             <form onSubmit={onSubmit}>
@@ -161,7 +180,7 @@ export default function ChangePasswordPage() {
                 <p role="status" className="mb-4 text-sm text-primary">{message}</p>
               )}
               <div className="flex flex-col gap-4 ">
-                <FormField label="Current Password" htmlFor="current_password">
+                <FormField label={forced ? "Temporary Password" : "Current Password"} htmlFor="current_password">
                   <Input
                     id="current_password"
                     type="password"
