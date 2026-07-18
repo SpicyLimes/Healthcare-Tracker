@@ -30,7 +30,7 @@ def _issue_session(db: Session, response: Response, user: User) -> None:
 def login(request: Request, payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = auth_service.authenticate(db, payload.email, payload.password)
     if user is None:
-        log_event(db, action=AuditAction.create, actor_type=ActorType.user,
+        log_event(db, action=AuditAction.login_failed, actor_type=ActorType.user,
                   detail=f"Failed login attempt: {payload.email}")
         db.commit()
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
@@ -39,7 +39,7 @@ def login(request: Request, payload: LoginRequest, response: Response, db: Sessi
         and user.temp_password_expires_at is not None
         and user.temp_password_expires_at <= datetime.now(timezone.utc)
     ):
-        log_event(db, action=AuditAction.create, actor_type=ActorType.user,
+        log_event(db, action=AuditAction.login_failed, actor_type=ActorType.user,
                   actor_user_id=user.id, detail=f"Login refused (temporary password expired): {user.email}")
         db.commit()
         raise HTTPException(
@@ -47,7 +47,7 @@ def login(request: Request, payload: LoginRequest, response: Response, db: Sessi
             detail="Temporary password expired — ask your administrator to send a new one.",
         )
     _issue_session(db, response, user)
-    log_event(db, action=AuditAction.create, actor_type=ActorType.user,
+    log_event(db, action=AuditAction.login, actor_type=ActorType.user,
               actor_user_id=user.id, detail=f"User logged in: {user.email}")
     return user
 
@@ -72,7 +72,7 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db), 
     raw = request.cookies.get(REFRESH_COOKIE)
     if raw:
         auth_service.revoke_refresh_token(db, raw)
-    log_event(db, action=AuditAction.delete, actor_type=ActorType.user,
+    log_event(db, action=AuditAction.logout, actor_type=ActorType.user,
               actor_user_id=current.id, detail=f"User logged out: {current.email}")
     clear_auth_cookies(response)
 
@@ -98,7 +98,7 @@ def change_password(
     # change_password revoked every refresh token; give the requesting device a
     # fresh session so only *other* devices are logged out.
     _issue_session(db, response, current)
-    log_event(db, action=AuditAction.update, actor_type=ActorType.user,
+    log_event(db, action=AuditAction.password_change, actor_type=ActorType.user,
               actor_user_id=current.id, detail=f"Password changed: {current.email}")
 
 

@@ -255,3 +255,5 @@ def test_failed_login_is_audit_logged(client, db_session):
     ).all()
     assert len(entries) == 1
     assert "Failed login" in entries[0].detail
+    from app.models.audit_log import AuditAction
+    assert entries[0].action == AuditAction.login_failed
