@@ -26,6 +26,16 @@ class AuditAction(str, enum.Enum):
     backup_restore = "backup_restore"
     backup_delete = "backup_delete"
     share_link_emailed = "share_link_emailed"
+    login = "login"
+    logout = "logout"
+    login_failed = "login_failed"
+    password_change = "password_change"
+    password_reset = "password_reset"
+    user_created = "user_created"
+    user_updated = "user_updated"
+    user_deactivated = "user_deactivated"
+    user_reactivated = "user_reactivated"
+    user_deleted = "user_deleted"
 
 
 class ActorType(str, enum.Enum):
