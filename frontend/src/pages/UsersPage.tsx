@@ -51,7 +51,12 @@ export default function UsersPage() {
     e.preventDefault();
     setModalError("");
     try {
-      await createUser(newEmail, newPassword, newRole, newName.trim() || null);
+      await createUser({
+        email: newEmail,
+        password: newPassword,
+        role: newRole,
+        full_name: newName.trim() || null,
+      });
       setAddOpen(false);
       await reload();
     } catch {

@@ -7,6 +7,7 @@ export interface CurrentUser {
   role: "admin" | "contributor" | "viewer";
   full_name: string | null;
   timezone: string;
+  must_change_password: boolean;
 }
 
 export async function login(email: string, password: string): Promise<CurrentUser> {
@@ -15,7 +16,16 @@ export async function login(email: string, password: string): Promise<CurrentUse
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-  if (!res.ok) throw new Error("Invalid credentials");
+  if (!res.ok) {
+    let detail = "Invalid credentials";
+    try {
+      const body = await res.json();
+      if (typeof body.detail === "string") detail = body.detail;
+    } catch {
+      // non-JSON body → keep generic message
+    }
+    throw new Error(detail);
+  }
   return (await res.json()) as CurrentUser;
 }
 

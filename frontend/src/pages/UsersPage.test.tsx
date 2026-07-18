@@ -18,8 +18,8 @@ function mockAuth() {
 }
 
 const MOCK_USERS = [
-  { id: "u1", email: "admin@example.com", role: "admin" as const, full_name: "Admin User", is_active: true, created_at: "2026-01-01T00:00:00Z" },
-  { id: "u2", email: "carol@example.com", role: "viewer" as const, full_name: null, is_active: true, created_at: "2026-01-02T00:00:00Z" },
+  { id: "u1", email: "admin@example.com", role: "admin" as const, full_name: "Admin User", is_active: true, created_at: "2026-01-01T00:00:00Z", must_change_password: false, temp_password_expires_at: null },
+  { id: "u2", email: "carol@example.com", role: "viewer" as const, full_name: null, is_active: true, created_at: "2026-01-02T00:00:00Z", must_change_password: false, temp_password_expires_at: null },
 ];
 
 describe("UsersPage", () => {
@@ -91,7 +91,9 @@ describe("UsersPage", () => {
   it("passes full_name to createUser when name is entered", async () => {
     mockAuth();
     vi.spyOn(usersApi, "listUsers").mockResolvedValue(MOCK_USERS);
-    const mockCreate = vi.spyOn(usersApi, "createUser").mockResolvedValue(MOCK_USERS[0]);
+    const mockCreate = vi
+      .spyOn(usersApi, "createUser")
+      .mockResolvedValue({ ...MOCK_USERS[0], email_sent: null });
     render(<UsersPage />);
     await screen.findAllByText("Admin User");
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "new@example.com" } });
@@ -99,7 +101,12 @@ describe("UsersPage", () => {
     fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "strong-passphrase-123" } });
     fireEvent.click(screen.getByRole("button", { name: /add user/i }));
     await waitFor(() =>
-      expect(mockCreate).toHaveBeenCalledWith("new@example.com", "strong-passphrase-123", "viewer", "New Person")
+      expect(mockCreate).toHaveBeenCalledWith({
+        email: "new@example.com",
+        password: "strong-passphrase-123",
+        role: "viewer",
+        full_name: "New Person",
+      })
     );
   });
 });

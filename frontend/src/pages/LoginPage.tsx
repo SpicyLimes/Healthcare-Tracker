@@ -22,8 +22,8 @@ export default function LoginPage() {
     try {
       await login(email, password);
       navigate(from.startsWith("/") ? from : "/");
-    } catch {
-      setError("Invalid email or password");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid email or password");
     } finally {
       setLoading(false);
     }
