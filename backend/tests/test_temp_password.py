@@ -211,3 +211,30 @@ def test_create_user_manual_mode_unchanged(client, db_session):
     body = resp.json()
     assert body["email_sent"] is None
     assert body["must_change_password"] is False
+
+
+def _issue_temp_and_grab_password(db_session, user, minutes=60):
+    sender = RecordingSender()
+    user_service.issue_temp_password(
+        db_session, user, expires_minutes=minutes, email_kind="reset", notes=None, sender=sender
+    )
+    text = sender.sent[0].text_body
+    return next(tok for tok in text.split() if tok.endswith("!") and tok.count("-") == 2)
+
+
+def test_login_with_valid_temp_password(client, db_session):
+    carol = user_service.create_user(db_session, "carol@example.com", "a-strong-passphrase-123", Role.viewer)
+    temp = _issue_temp_and_grab_password(db_session, carol)
+    resp = client.post("/api/auth/login", json={"email": "carol@example.com", "password": temp})
+    assert resp.status_code == 200
+    assert resp.json()["must_change_password"] is True
+
+
+def test_login_with_expired_temp_password_refused(client, db_session):
+    carol = user_service.create_user(db_session, "carol@example.com", "a-strong-passphrase-123", Role.viewer)
+    temp = _issue_temp_and_grab_password(db_session, carol)
+    carol.temp_password_expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+    db_session.flush()
+    resp = client.post("/api/auth/login", json={"email": "carol@example.com", "password": temp})
+    assert resp.status_code == 401
+    assert "Temporary password expired" in resp.json()["detail"]

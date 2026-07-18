@@ -1,4 +1,5 @@
 import secrets
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
@@ -32,6 +33,17 @@ def login(request: Request, payload: LoginRequest, response: Response, db: Sessi
         log_event(db, action=AuditAction.create, actor_type=ActorType.user,
                   detail=f"Failed login attempt: {payload.email}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    if (
+        user.must_change_password
+        and user.temp_password_expires_at is not None
+        and user.temp_password_expires_at <= datetime.now(timezone.utc)
+    ):
+        log_event(db, action=AuditAction.create, actor_type=ActorType.user,
+                  detail=f"Login refused (temporary password expired): {user.email}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Temporary password expired — ask your administrator to send a new one.",
+        )
     _issue_session(db, response, user)
     log_event(db, action=AuditAction.create, actor_type=ActorType.user,
               actor_user_id=user.id, detail=f"User logged in: {user.email}")
