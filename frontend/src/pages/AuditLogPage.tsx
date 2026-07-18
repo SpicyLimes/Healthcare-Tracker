@@ -9,7 +9,14 @@ import { FormField, Select, Input } from "@/components/ui/form-field";
 import { formatDatetime } from "@/lib/format";
 import { RecordTable } from "@/components/RecordTable";
 
-const ACTIONS = ["create", "update", "delete", "share_link_access"];
+const ACTIONS = [
+  "login", "logout", "login_failed", "password_change", "password_reset",
+  "user_created", "user_updated", "user_deactivated", "user_reactivated", "user_deleted",
+  "create", "update", "delete",
+  "share_link_access", "share_link_emailed", "ai_query",
+  "submission_created", "submission_approved", "submission_rejected", "submission_withdrawn",
+  "backup_create", "backup_download", "backup_upload", "backup_restore", "backup_delete",
+];
 
 function formatAction(action: string): string {
   return action.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -20,8 +27,18 @@ type ActionBadgeVariant = "default" | "secondary" | "destructive" | "outline";
 function actionVariant(action: string): ActionBadgeVariant {
   switch (action) {
     case "create": return "default";
+    case "login": return "default";
+    case "user_created": return "default";
+    case "user_reactivated": return "default";
     case "update": return "secondary";
+    case "logout": return "secondary";
+    case "password_change": return "secondary";
+    case "password_reset": return "secondary";
+    case "user_updated": return "secondary";
     case "delete": return "destructive";
+    case "login_failed": return "destructive";
+    case "user_deleted": return "destructive";
+    case "user_deactivated": return "destructive";
     case "share_link_access": return "outline";
     default: return "outline";
   }
