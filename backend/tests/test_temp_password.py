@@ -104,3 +104,61 @@ def test_issue_temp_password_revokes_refresh_tokens(client, db_session):
     from sqlalchemy import select
     tokens = list(db_session.scalars(select(RefreshToken).where(RefreshToken.user_id == user.id)))
     assert tokens and all(t.revoked_at is not None for t in tokens)
+
+
+def test_reset_password_endpoint_happy_path(client, db_session, monkeypatch):
+    sender = RecordingSender()
+    monkeypatch.setattr("app.routers.users.get_email_sender", lambda: sender)
+    csrf = _admin_login(client, db_session)
+    carol = user_service.create_user(db_session, "carol@example.com", "a-strong-passphrase-123", Role.viewer)
+    resp = client.post(f"/api/users/{carol.id}/reset-password", headers={"X-CSRF-Token": csrf},
+                       json={"expires_minutes": 60, "notes": "call me"})
+    assert resp.status_code == 204
+    assert len(sender.sent) == 1
+    assert carol.must_change_password is True
+
+
+def test_reset_password_invalid_expiry_rejected(client, db_session):
+    csrf = _admin_login(client, db_session)
+    carol = user_service.create_user(db_session, "carol@example.com", "a-strong-passphrase-123", Role.viewer)
+    resp = client.post(f"/api/users/{carol.id}/reset-password", headers={"X-CSRF-Token": csrf},
+                       json={"expires_minutes": 45})
+    assert resp.status_code == 422
+
+
+def test_reset_password_self_blocked(client, db_session):
+    csrf = _admin_login(client, db_session)
+    me = client.get("/api/auth/me").json()
+    resp = client.post(f"/api/users/{me['id']}/reset-password", headers={"X-CSRF-Token": csrf},
+                       json={"expires_minutes": 60})
+    assert resp.status_code == 400
+
+
+def test_reset_password_deactivated_blocked(client, db_session):
+    csrf = _admin_login(client, db_session)
+    carol = user_service.create_user(db_session, "carol@example.com", "a-strong-passphrase-123", Role.viewer)
+    carol.is_active = False
+    db_session.flush()
+    resp = client.post(f"/api/users/{carol.id}/reset-password", headers={"X-CSRF-Token": csrf},
+                       json={"expires_minutes": 60})
+    assert resp.status_code == 409
+
+
+def test_reset_password_email_failure_is_502_and_no_change(client, db_session, monkeypatch):
+    monkeypatch.setattr("app.routers.users.get_email_sender", lambda: FailingSender())
+    csrf = _admin_login(client, db_session)
+    carol = user_service.create_user(db_session, "carol@example.com", "a-strong-passphrase-123", Role.viewer)
+    old_hash = carol.hashed_password
+    resp = client.post(f"/api/users/{carol.id}/reset-password", headers={"X-CSRF-Token": csrf},
+                       json={"expires_minutes": 60})
+    assert resp.status_code == 502
+    assert carol.hashed_password == old_hash and carol.must_change_password is False
+
+
+def test_reset_password_requires_admin(client, db_session):
+    user_service.create_user(db_session, "v@example.com", "a-strong-passphrase-123", Role.viewer)
+    client.post("/api/auth/login", json={"email": "v@example.com", "password": "a-strong-passphrase-123"})
+    csrf = client.cookies.get("csrf_token")
+    resp = client.post("/api/users/00000000-0000-0000-0000-000000000000/reset-password",
+                       headers={"X-CSRF-Token": csrf}, json={"expires_minutes": 60})
+    assert resp.status_code == 403

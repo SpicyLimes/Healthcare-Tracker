@@ -7,11 +7,18 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.audit_log import AuditAction, ActorType
 from app.models.user import User
-from app.schemas.auth import SetPasswordRequest, UserCreateRequest, UserResponse, UserUpdateRequest
+from app.schemas.auth import (
+    AdminResetPasswordRequest,
+    SetPasswordRequest,
+    UserCreateRequest,
+    UserResponse,
+    UserUpdateRequest,
+)
 from app.security.dependencies import require_admin, verify_csrf
 from app.security.passwords import PasswordPolicyError
 from app.services import user_service
 from app.services.audit_service import log_event
+from app.services.email_service import EmailSendError, get_email_sender
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -107,6 +114,53 @@ def set_user_password(
         actor_type=ActorType.user,
         actor_user_id=current.id,
         detail=f"Admin reset password for user: {target.email}",
+    )
+
+
+@router.post(
+    "/{user_id}/reset-password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(verify_csrf)],
+)
+def reset_user_password(
+    user_id: uuid.UUID,
+    payload: AdminResetPasswordRequest,
+    db: Session = Depends(get_db),
+    current: User = Depends(require_admin),
+):
+    try:
+        target = user_service.get_user(db, user_id)
+    except user_service.UserNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if target.id == current.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Use the Change Password page to change your own password",
+        )
+    if not target.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User is deactivated — reactivate first",
+        )
+    try:
+        user_service.issue_temp_password(
+            db, target, expires_minutes=payload.expires_minutes,
+            email_kind="reset", notes=payload.notes, sender=get_email_sender(),
+        )
+    except EmailSendError:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Email could not be sent — nothing was changed",
+        )
+    log_event(
+        db,
+        action=AuditAction.update,
+        actor_type=ActorType.user,
+        actor_user_id=current.id,
+        detail=(
+            f"Admin emailed temporary password to user: {target.email} "
+            f"(expires in {payload.expires_minutes} min)"
+        ),
     )
 
 

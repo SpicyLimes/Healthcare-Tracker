@@ -1,8 +1,9 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 from zoneinfo import available_timezones
 
-from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
+from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 
 from app.models.user import Role
 
@@ -32,6 +33,11 @@ class UserUpdateRequest(BaseModel):
 
 class SetPasswordRequest(BaseModel):
     new_password: str
+
+
+class AdminResetPasswordRequest(BaseModel):
+    expires_minutes: Literal[30, 60, 180, 360, 720, 1440] = 720
+    notes: str | None = Field(default=None, max_length=2000)
 
 
 class UpdateNameRequest(BaseModel):
