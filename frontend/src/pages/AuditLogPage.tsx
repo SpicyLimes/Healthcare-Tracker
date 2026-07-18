@@ -27,7 +27,7 @@ type ActionBadgeVariant = "default" | "secondary" | "destructive" | "outline";
 function actionVariant(action: string): ActionBadgeVariant {
   switch (action) {
     case "create": return "default";
-    case "login": return "default";
+    case "login": return "secondary";
     case "user_created": return "default";
     case "user_reactivated": return "default";
     case "update": return "secondary";

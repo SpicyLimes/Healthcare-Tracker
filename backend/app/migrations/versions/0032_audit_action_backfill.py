@@ -26,6 +26,14 @@ _MAPPINGS = (
     ("delete", "Admin deleted user:", "user_deleted"),
 )
 
+# Written organically by the new code only — never produced by upgrade()'s
+# backfill (user_updated claims the prefix), but a downgrade must still map
+# them back so pre-branch code can deserialize every row.
+_DOWNGRADE_ONLY = (
+    ("update", "Admin updated user:", "user_deactivated"),
+    ("update", "Admin updated user:", "user_reactivated"),
+)
+
 
 def upgrade() -> None:
     for old, prefix, new in _MAPPINGS:
@@ -38,7 +46,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    for old, prefix, new in _MAPPINGS:
+    for old, prefix, new in _MAPPINGS + _DOWNGRADE_ONLY:
         op.execute(
             "UPDATE audit_log SET action = '{old}' "
             "WHERE action = '{new}' AND detail LIKE '{prefix}%'".format(

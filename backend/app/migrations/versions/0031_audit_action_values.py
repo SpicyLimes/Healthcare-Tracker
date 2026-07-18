@@ -19,11 +19,14 @@ _NEW_VALUES = (
 
 
 def upgrade() -> None:
-    # PG 12+ allows ALTER TYPE ... ADD VALUE inside a transaction; the new
-    # values may not be USED until commit, which is why the backfill lives
-    # in migration 0032, not here.
-    for value in _NEW_VALUES:
-        op.execute(f"ALTER TYPE auditaction ADD VALUE IF NOT EXISTS '{value}'")
+    # A single `alembic upgrade head` run executes 0031 and 0032 in one
+    # transaction (env.py has no transaction_per_migration). Postgres raises
+    # UnsafeNewEnumValueUsage if a newly added enum value is used before the
+    # adding transaction commits, so we wrap the ADD VALUE statements in their
+    # own autocommit_block to commit them before 0032's backfill runs.
+    with op.get_context().autocommit_block():
+        for value in _NEW_VALUES:
+            op.execute(f"ALTER TYPE auditaction ADD VALUE IF NOT EXISTS '{value}'")
 
 
 def downgrade() -> None:

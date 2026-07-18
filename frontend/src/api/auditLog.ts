@@ -3,7 +3,7 @@ import { apiFetch } from "./client";
 export interface AuditLogEntry {
   id: number;
   timestamp: string;
-  action: "create" | "update" | "delete" | "share_link_access";
+  action: string;
   actor_type: "user" | "guest";
   actor_label: string;
   section: string | null;

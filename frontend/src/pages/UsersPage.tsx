@@ -407,7 +407,7 @@ export default function UsersPage() {
             title="Reset Password"
             submitLabel="Send email"
             error={modalError || null}
-            onClose={() => setResetTarget(null)}
+            onClose={() => { setResetTarget(null); setModalError(""); }}
             onSubmit={onSendReset}
           >
             <div className="flex flex-col gap-4">
