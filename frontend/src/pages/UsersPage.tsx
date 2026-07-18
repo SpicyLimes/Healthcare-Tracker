@@ -10,11 +10,21 @@ import { RecordTable } from "@/components/RecordTable";
 import { RecordFormModal } from "@/components/RecordFormModal";
 import { formatDate } from "@/lib/format";
 
+const EXPIRY_OPTIONS = [
+  { value: 30, label: "30 minutes" },
+  { value: 60, label: "1 hour" },
+  { value: 180, label: "3 hours" },
+  { value: 360, label: "6 hours" },
+  { value: 720, label: "12 hours" },
+  { value: 1440, label: "24 hours" },
+] as const;
+
 export default function UsersPage() {
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalError, setModalError] = useState("");
+  const [notice, setNotice] = useState("");
 
   // Add modal state
   const [addOpen, setAddOpen] = useState(false);
@@ -22,6 +32,9 @@ export default function UsersPage() {
   const [newPassword, setNewPassword] = useState("");
   const [newName, setNewName] = useState("");
   const [newRole, setNewRole] = useState<"admin" | "contributor" | "viewer">("viewer");
+  const [sendOnboarding, setSendOnboarding] = useState(true);
+  const [newExpiry, setNewExpiry] = useState(720);
+  const [newNotes, setNewNotes] = useState("");
 
   // Edit modal state
   const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
@@ -43,6 +56,9 @@ export default function UsersPage() {
     setNewPassword("");
     setNewName("");
     setNewRole("viewer");
+    setSendOnboarding(true);
+    setNewExpiry(720);
+    setNewNotes("");
     setModalError("");
     setAddOpen(true);
   }
@@ -50,14 +66,31 @@ export default function UsersPage() {
   async function onCreate(e: FormEvent) {
     e.preventDefault();
     setModalError("");
+    setNotice("");
     try {
-      await createUser({
-        email: newEmail,
-        password: newPassword,
-        role: newRole,
-        full_name: newName.trim() || null,
-      });
+      const created = await createUser(
+        sendOnboarding
+          ? {
+              email: newEmail,
+              role: newRole,
+              full_name: newName.trim() || null,
+              send_onboarding_email: true,
+              expires_minutes: newExpiry,
+              notes: newNotes.trim() || null,
+            }
+          : {
+              email: newEmail,
+              role: newRole,
+              full_name: newName.trim() || null,
+              password: newPassword,
+            },
+      );
       setAddOpen(false);
+      if (created.email_sent === false) {
+        setNotice(`User created, but the email failed — use Reset Password to retry.`);
+      } else if (created.email_sent === true) {
+        setNotice(`Onboarding email sent to ${created.email}.`);
+      }
       await reload();
     } catch {
       setModalError("Could not create user");
@@ -112,6 +145,9 @@ export default function UsersPage() {
       >
         {error && (
           <p role="alert" className="mb-4 text-sm text-destructive">{error}</p>
+        )}
+        {notice && (
+          <p role="status" className="mb-4 text-sm text-primary">{notice}</p>
         )}
 
         <Card>
@@ -203,17 +239,55 @@ export default function UsersPage() {
                   onChange={(e) => setNewName(e.target.value)}
                 />
               </FormField>
-              <FormField label="Password" htmlFor="new_user_password">
-                <Input
-                  id="new_user_password"
-                  type="password"
-                  placeholder="Min 12 characters"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  minLength={12}
+              <label className="sm:col-span-2 flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={sendOnboarding}
+                  onChange={(e) => setSendOnboarding(e.target.checked)}
+                  className="rounded border-border"
+                  aria-label="Send onboarding email"
                 />
-              </FormField>
+                Send onboarding email with a temporary password
+              </label>
+              {!sendOnboarding && (
+                <FormField label="Password" htmlFor="new_user_password">
+                  <Input
+                    id="new_user_password"
+                    type="password"
+                    placeholder="Min 12 characters"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    minLength={12}
+                  />
+                </FormField>
+              )}
+              {sendOnboarding && (
+                <>
+                  <FormField label="Temporary password expires after" htmlFor="new_user_expiry">
+                    <Select
+                      id="new_user_expiry"
+                      value={String(newExpiry)}
+                      onChange={(e) => setNewExpiry(Number(e.target.value))}
+                    >
+                      {EXPIRY_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </Select>
+                  </FormField>
+                  <FormField label="Note to include in the email (optional)" htmlFor="new_user_notes">
+                    <textarea
+                      id="new_user_notes"
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                      rows={3}
+                      maxLength={2000}
+                      placeholder="e.g. You'll get a Cloudflare email code first — enter it, then sign in."
+                      value={newNotes}
+                      onChange={(e) => setNewNotes(e.target.value)}
+                    />
+                  </FormField>
+                </>
+              )}
               <FormField label="Role" htmlFor="new_user_role">
                 <Select
                   id="new_user_role"

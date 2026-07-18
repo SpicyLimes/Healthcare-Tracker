@@ -1,8 +1,10 @@
 // frontend/src/pages/UsersPage.test.tsx
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import UsersPage from "./UsersPage";
 import * as usersApi from "../api/users";
+import type { CreatedUser } from "../api/users";
 import * as useAuthModule from "../auth/useAuth";
 
 afterEach(() => vi.restoreAllMocks());
@@ -21,6 +23,8 @@ const MOCK_USERS = [
   { id: "u1", email: "admin@example.com", role: "admin" as const, full_name: "Admin User", is_active: true, created_at: "2026-01-01T00:00:00Z", must_change_password: false, temp_password_expires_at: null },
   { id: "u2", email: "carol@example.com", role: "viewer" as const, full_name: null, is_active: true, created_at: "2026-01-02T00:00:00Z", must_change_password: false, temp_password_expires_at: null },
 ];
+
+const baseUser: CreatedUser = { ...MOCK_USERS[0], email_sent: null };
 
 describe("UsersPage", () => {
   it("renders Name column header", async () => {
@@ -108,5 +112,43 @@ describe("UsersPage", () => {
         full_name: "New Person",
       })
     );
+  });
+
+  it("onboarding checkbox hides password and shows expiry + notes", async () => {
+    const user = userEvent.setup();
+    mockAuth();
+    vi.spyOn(usersApi, "listUsers").mockResolvedValue(MOCK_USERS);
+    render(<UsersPage />);
+    await screen.findAllByText("Admin User");
+    await user.click(screen.getByRole("button", { name: /\+ add/i }));
+
+    expect(screen.getByLabelText(/Send onboarding email/i)).toBeChecked();
+    expect(screen.queryByLabelText(/^Password$/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Temporary password expires/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Note to include/i)).toBeInTheDocument();
+
+    await user.click(screen.getByLabelText(/Send onboarding email/i));
+    expect(screen.getByLabelText(/^Password$/i)).toBeInTheDocument();
+  });
+
+  it("creates a user in onboarding mode and warns when the email failed", async () => {
+    const user = userEvent.setup();
+    mockAuth();
+    vi.spyOn(usersApi, "listUsers").mockResolvedValue(MOCK_USERS);
+    const mockCreate = vi.spyOn(usersApi, "createUser").mockResolvedValueOnce({
+      ...baseUser, email_sent: false,
+    } as CreatedUser);
+    render(<UsersPage />);
+    await screen.findAllByText("Admin User");
+    await user.click(screen.getByRole("button", { name: /\+ add/i }));
+    await user.type(screen.getByLabelText(/^Email$/i), "new@example.com");
+    await user.click(screen.getByRole("button", { name: /add user/i }));
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ send_onboarding_email: true, expires_minutes: 720 }),
+    );
+    expect(
+      await screen.findByText(/email failed — use Reset Password to retry/i),
+    ).toBeInTheDocument();
   });
 });
