@@ -1,3 +1,4 @@
+import secrets
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -11,6 +12,7 @@ from app.schemas.auth import (
     AdminResetPasswordRequest,
     SetPasswordRequest,
     UserCreateRequest,
+    UserCreateResponse,
     UserResponse,
     UserUpdateRequest,
 )
@@ -30,7 +32,7 @@ def list_users(db: Session = Depends(get_db)):
 
 @router.post(
     "",
-    response_model=UserResponse,
+    response_model=UserCreateResponse,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(verify_csrf)],
 )
@@ -39,8 +41,13 @@ def create_user(
     db: Session = Depends(get_db),
     current: User = Depends(require_admin),
 ):
+    # Onboarding mode: the row is born with an unknowable placeholder password;
+    # issue_temp_password swaps in the real (emailed) temp credential.
+    initial_password = (
+        secrets.token_urlsafe(24) if payload.send_onboarding_email else payload.password
+    )
     try:
-        user = user_service.create_user(db, payload.email, payload.password, payload.role)
+        user = user_service.create_user(db, payload.email, initial_password, payload.role)
     except PasswordPolicyError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     except IntegrityError:
@@ -49,16 +56,33 @@ def create_user(
     if payload.full_name:
         stripped = payload.full_name.strip()
         user.full_name = stripped if stripped else None
-        db.commit()
-        db.refresh(user)
+        db.flush()  # greeting in the onboarding email uses full_name
+    email_sent: bool | None = None
+    if payload.send_onboarding_email:
+        try:
+            user_service.issue_temp_password(
+                db, user, expires_minutes=payload.expires_minutes,
+                email_kind="onboarding", notes=payload.notes, sender=get_email_sender(),
+            )
+            email_sent = True
+        except EmailSendError:
+            email_sent = False
+    db.commit()
+    db.refresh(user)
     log_event(
         db,
         action=AuditAction.create,
         actor_type=ActorType.user,
         actor_user_id=current.id,
-        detail=f"Admin created user: {user.email} role={user.role.value}",
+        detail=(
+            f"Admin created user: {user.email} role={user.role.value}"
+            + (f" (onboarding email {'sent' if email_sent else 'FAILED'})"
+               if email_sent is not None else "")
+        ),
     )
-    return user
+    response = UserCreateResponse.model_validate(user)
+    response.email_sent = email_sent
+    return response
 
 
 @router.put(

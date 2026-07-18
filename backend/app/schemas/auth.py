@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Literal
 from zoneinfo import available_timezones
 
-from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
+from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator, model_validator
 
 from app.models.user import Role
 
@@ -20,9 +20,20 @@ class ChangePasswordRequest(BaseModel):
 
 class UserCreateRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str | None = None
     role: Role
     full_name: str | None = None
+    send_onboarding_email: bool = False
+    expires_minutes: Literal[30, 60, 180, 360, 720, 1440] = 720
+    notes: str | None = Field(default=None, max_length=2000)
+
+    @model_validator(mode="after")
+    def _password_xor_onboarding(self):
+        if self.send_onboarding_email and self.password is not None:
+            raise ValueError("Do not supply a password when sending an onboarding email")
+        if not self.send_onboarding_email and not self.password:
+            raise ValueError("A password is required when not sending an onboarding email")
+        return self
 
 
 class UserUpdateRequest(BaseModel):
@@ -68,6 +79,11 @@ class UserResponse(BaseModel):
     created_at: datetime
     must_change_password: bool = False
     temp_password_expires_at: datetime | None = None
+
+
+class UserCreateResponse(UserResponse):
+    # True/False = onboarding email attempted; None = manual-password create
+    email_sent: bool | None = None
 
 
 class MeResponse(BaseModel):

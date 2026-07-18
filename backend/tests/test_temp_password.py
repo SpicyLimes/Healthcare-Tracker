@@ -162,3 +162,52 @@ def test_reset_password_requires_admin(client, db_session):
     resp = client.post("/api/users/00000000-0000-0000-0000-000000000000/reset-password",
                        headers={"X-CSRF-Token": csrf}, json={"expires_minutes": 60})
     assert resp.status_code == 403
+
+
+def test_create_user_with_onboarding_email(client, db_session, monkeypatch):
+    sender = RecordingSender()
+    monkeypatch.setattr("app.routers.users.get_email_sender", lambda: sender)
+    csrf = _admin_login(client, db_session)
+    resp = client.post("/api/users", headers={"X-CSRF-Token": csrf},
+                       json={"email": "new@example.com", "role": "viewer", "full_name": "New Person",
+                             "send_onboarding_email": True, "expires_minutes": 360, "notes": "hi"})
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["email_sent"] is True
+    assert body["must_change_password"] is True
+    assert len(sender.sent) == 1
+    assert "Hello New Person," in sender.sent[0].text_body  # full_name set before send
+
+
+def test_create_user_onboarding_email_failure_keeps_user(client, db_session, monkeypatch):
+    monkeypatch.setattr("app.routers.users.get_email_sender", lambda: FailingSender())
+    csrf = _admin_login(client, db_session)
+    resp = client.post("/api/users", headers={"X-CSRF-Token": csrf},
+                       json={"email": "new@example.com", "role": "viewer", "send_onboarding_email": True})
+    assert resp.status_code == 201
+    assert resp.json()["email_sent"] is False
+    listing = client.get("/api/users").json()
+    assert "new@example.com" in [u["email"] for u in listing]
+
+
+def test_create_user_password_xor_onboarding(client, db_session):
+    csrf = _admin_login(client, db_session)
+    # neither password nor onboarding
+    resp = client.post("/api/users", headers={"X-CSRF-Token": csrf},
+                       json={"email": "a@example.com", "role": "viewer"})
+    assert resp.status_code == 422
+    # both password and onboarding
+    resp = client.post("/api/users", headers={"X-CSRF-Token": csrf},
+                       json={"email": "a@example.com", "role": "viewer",
+                             "password": "a-strong-passphrase-123", "send_onboarding_email": True})
+    assert resp.status_code == 422
+
+
+def test_create_user_manual_mode_unchanged(client, db_session):
+    csrf = _admin_login(client, db_session)
+    resp = client.post("/api/users", headers={"X-CSRF-Token": csrf},
+                       json={"email": "m@example.com", "password": "a-strong-passphrase-123", "role": "viewer"})
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["email_sent"] is None
+    assert body["must_change_password"] is False
