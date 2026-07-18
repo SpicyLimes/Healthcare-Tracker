@@ -238,3 +238,37 @@ def test_login_with_expired_temp_password_refused(client, db_session):
     resp = client.post("/api/auth/login", json={"email": "carol@example.com", "password": temp})
     assert resp.status_code == 401
     assert "Temporary password expired" in resp.json()["detail"]
+
+
+def test_gate_blocks_api_until_password_changed(client, db_session):
+    carol = user_service.create_user(db_session, "carol@example.com", "a-strong-passphrase-123", Role.viewer)
+    temp = _issue_temp_and_grab_password(db_session, carol)
+    client.post("/api/auth/login", json={"email": "carol@example.com", "password": temp})
+    csrf = client.cookies.get("csrf_token")
+
+    # Blocked: a normal data endpoint
+    blocked = client.get("/api/doctors")
+    assert blocked.status_code == 403
+    assert blocked.json()["detail"] == "password_change_required"
+
+    # Allowed: me
+    assert client.get("/api/auth/me").status_code == 200
+
+    # Allowed: changing the password (temp is the current password)
+    change = client.put("/api/auth/password", headers={"X-CSRF-Token": csrf},
+                        json={"current_password": temp, "new_password": "brand-new-passphrase-456"})
+    assert change.status_code == 204
+
+    # Flag cleared → data endpoints open again
+    db_session.refresh(carol)
+    assert carol.must_change_password is False
+    assert carol.temp_password_expires_at is None
+    assert client.get("/api/doctors").status_code == 200
+
+
+def test_gate_allows_logout(client, db_session):
+    carol = user_service.create_user(db_session, "carol@example.com", "a-strong-passphrase-123", Role.viewer)
+    temp = _issue_temp_and_grab_password(db_session, carol)
+    client.post("/api/auth/login", json={"email": "carol@example.com", "password": temp})
+    csrf = client.cookies.get("csrf_token")
+    assert client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf}).status_code == 204

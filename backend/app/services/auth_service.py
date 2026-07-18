@@ -112,5 +112,7 @@ def change_password(db: Session, user: User, current_password: str, new_password
         raise InvalidCurrentPasswordError()
     validate_password_policy(new_password)
     user.hashed_password = hash_password(new_password)
+    user.must_change_password = False
+    user.temp_password_expires_at = None
     revoke_all_refresh_tokens_for_user(db, user.id)
     db.flush()

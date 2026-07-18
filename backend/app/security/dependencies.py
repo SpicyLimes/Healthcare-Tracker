@@ -14,8 +14,15 @@ _CREDENTIALS_EXCEPTION = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
 )
 
+# Paths a must-change-password user may still call: see their session, change
+# the password, and leave. Everything else 403s until the change is done.
+_PASSWORD_CHANGE_ALLOWED_PATHS = frozenset(
+    {"/api/auth/me", "/api/auth/password", "/api/auth/logout"}
+)
+
 
 def get_current_user(
+    request: Request,
     access_token: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ) -> User:
@@ -38,6 +45,10 @@ def get_current_user(
     user = db.get(User, uid)
     if user is None or not user.is_active:
         raise _CREDENTIALS_EXCEPTION
+    if user.must_change_password and request.url.path not in _PASSWORD_CHANGE_ALLOWED_PATHS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="password_change_required"
+        )
     return user
 
 
