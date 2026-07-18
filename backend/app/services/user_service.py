@@ -84,6 +84,8 @@ def set_password(db: Session, user_id: uuid.UUID, new_password: str) -> User:
     validate_password_policy(new_password)
     user = get_user(db, user_id)
     user.hashed_password = hash_password(new_password)
+    user.must_change_password = False
+    user.temp_password_expires_at = None
     # Admin reset: kill all existing sessions; the target logs in with the new password.
     auth_service.revoke_all_refresh_tokens_for_user(db, user.id)
     db.flush()
@@ -112,11 +114,13 @@ def issue_temp_password(
             recipient_name=user.full_name, role=user.role, temp_password=temp,
             deadline_display=deadline_display, notes=notes,
         )
-    else:
+    elif email_kind == "reset":
         subject, text_body, html_body = render_reset_email(
             recipient_name=user.full_name, temp_password=temp,
             deadline_display=deadline_display, notes=notes,
         )
+    else:
+        raise ValueError(f"unknown email_kind: {email_kind!r}")
     sender.send(EmailMessage(to=user.email, subject=subject, text_body=text_body, html_body=html_body))
     user.hashed_password = hash_password(temp)
     user.must_change_password = True

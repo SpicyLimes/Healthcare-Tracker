@@ -266,6 +266,30 @@ def test_gate_blocks_api_until_password_changed(client, db_session):
     assert client.get("/api/doctors").status_code == 200
 
 
+def test_set_password_clears_temp_password_flags(client, db_session):
+    carol = user_service.create_user(db_session, "carol@example.com", "a-strong-passphrase-123", Role.viewer)
+    carol.must_change_password = True
+    carol.temp_password_expires_at = datetime.now(timezone.utc) + timedelta(minutes=60)
+    db_session.flush()
+    user_service.set_password(db_session, carol.id, "another-strong-passphrase-789")
+    assert carol.must_change_password is False
+    assert carol.temp_password_expires_at is None
+
+
+def test_issue_temp_password_invalid_email_kind_raises_and_changes_nothing(client, db_session):
+    carol = user_service.create_user(db_session, "carol@example.com", "a-strong-passphrase-123", Role.viewer)
+    old_hash = carol.hashed_password
+    sender = RecordingSender()
+    with pytest.raises(ValueError):
+        user_service.issue_temp_password(
+            db_session, carol, expires_minutes=60, email_kind="bogus", notes=None, sender=sender
+        )
+    assert sender.sent == []
+    assert carol.hashed_password == old_hash
+    assert carol.must_change_password is False
+    assert carol.temp_password_expires_at is None
+
+
 def test_gate_allows_logout(client, db_session):
     carol = user_service.create_user(db_session, "carol@example.com", "a-strong-passphrase-123", Role.viewer)
     temp = _issue_temp_and_grab_password(db_session, carol)

@@ -32,6 +32,7 @@ def login(request: Request, payload: LoginRequest, response: Response, db: Sessi
     if user is None:
         log_event(db, action=AuditAction.create, actor_type=ActorType.user,
                   detail=f"Failed login attempt: {payload.email}")
+        db.commit()
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     if (
         user.must_change_password
@@ -39,7 +40,8 @@ def login(request: Request, payload: LoginRequest, response: Response, db: Sessi
         and user.temp_password_expires_at <= datetime.now(timezone.utc)
     ):
         log_event(db, action=AuditAction.create, actor_type=ActorType.user,
-                  detail=f"Login refused (temporary password expired): {user.email}")
+                  actor_user_id=user.id, detail=f"Login refused (temporary password expired): {user.email}")
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Temporary password expired — ask your administrator to send a new one.",
