@@ -60,7 +60,8 @@ describe("VaccinationsPage", () => {
     await waitFor(() => expect(mockList).toHaveBeenCalled());
     fireEvent.click(screen.getByRole("button", { name: /\+ add/i }));
     fireEvent.change(screen.getByLabelText("Vaccine"), { target: { value: "COVID-19" } });
-    fireEvent.click(screen.getByRole("button", { name: /add vaccination/i }));
+    // Admin submit label is "Save" ("Submit for Approval" for contributors)
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
     expect((await screen.findAllByText("COVID-19")).length).toBeGreaterThan(0);
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ vaccine: "COVID-19" }));
   });

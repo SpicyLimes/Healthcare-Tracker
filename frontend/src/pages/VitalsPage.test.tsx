@@ -88,7 +88,7 @@ describe("VitalsPage", () => {
     // Enter 5 ft 4 in = 64 total inches
     await userEvent.type(within(dialog).getByPlaceholderText(/^ft$/i), "5");
     await userEvent.type(within(dialog).getByPlaceholderText(/^in$/i), "4");
-    await userEvent.click(within(dialog).getByRole("button", { name: /add vitals/i }));
+    await userEvent.click(within(dialog).getByRole("button", { name: /^save$/i }));
     await waitFor(() => expect(create).toHaveBeenCalled());
     const payload = create.mock.calls[0][0];
     expect(payload.height_in).toBe(64);

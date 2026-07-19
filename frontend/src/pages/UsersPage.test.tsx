@@ -1,6 +1,6 @@
 // frontend/src/pages/UsersPage.test.tsx
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import UsersPage from "./UsersPage";
 import * as usersApi from "../api/users";
@@ -50,12 +50,20 @@ describe("UsersPage", () => {
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
   });
 
+  // The table sorts by full_name ascending (null names first), so "first edit
+  // button" is not stable — target the Edit button inside a specific user's row.
+  async function clickEditFor(name: string) {
+    const cells = await screen.findAllByText(name);
+    const row = cells.map((el) => el.closest("tr")).find(Boolean);
+    expect(row).toBeTruthy();
+    fireEvent.click(within(row as HTMLElement).getByRole("button", { name: /edit/i }));
+  }
+
   it("opens edit modal with pre-populated fields when Edit is clicked", async () => {
     mockAuth();
     vi.spyOn(usersApi, "listUsers").mockResolvedValue(MOCK_USERS);
     render(<UsersPage />);
-    const editButtons = await screen.findAllByRole("button", { name: /edit/i });
-    fireEvent.click(editButtons[0]);
+    await clickEditFor("Admin User");
     expect(screen.getByLabelText(/display name/i)).toHaveValue("Admin User");
   });
 
@@ -64,8 +72,7 @@ describe("UsersPage", () => {
     vi.spyOn(usersApi, "listUsers").mockResolvedValue(MOCK_USERS);
     const mockUpdate = vi.spyOn(usersApi, "updateUser").mockResolvedValue(MOCK_USERS[0]);
     render(<UsersPage />);
-    const editButtons = await screen.findAllByRole("button", { name: /edit/i });
-    fireEvent.click(editButtons[0]);
+    await clickEditFor("Admin User");
     fireEvent.change(screen.getByLabelText(/display name/i), { target: { value: "New Name" } });
     fireEvent.click(screen.getByRole("button", { name: /save/i }));
     await waitFor(() =>
@@ -89,6 +96,7 @@ describe("UsersPage", () => {
     vi.spyOn(usersApi, "listUsers").mockResolvedValue(MOCK_USERS);
     render(<UsersPage />);
     await screen.findAllByText("Admin User");
+    fireEvent.click(screen.getByRole("button", { name: /\+ add/i }));
     expect(screen.getByLabelText(/name \(optional\)/i)).toBeInTheDocument();
   });
 
@@ -100,9 +108,12 @@ describe("UsersPage", () => {
       .mockResolvedValue({ ...MOCK_USERS[0], email_sent: null });
     render(<UsersPage />);
     await screen.findAllByText("Admin User");
-    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "new@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /\+ add/i }));
+    // Onboarding email is the default; uncheck it to expose the password flow
+    fireEvent.click(screen.getByLabelText("Send onboarding email"));
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "new@example.com" } });
     fireEvent.change(screen.getByLabelText(/name \(optional\)/i), { target: { value: "New Person" } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "strong-passphrase-123" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "strong-passphrase-123" } });
     fireEvent.click(screen.getByRole("button", { name: /add user/i }));
     await waitFor(() =>
       expect(mockCreate).toHaveBeenCalledWith({

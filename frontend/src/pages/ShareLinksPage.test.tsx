@@ -1,6 +1,6 @@
 // frontend/src/pages/ShareLinksPage.test.tsx
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 
 vi.mock("../auth/useAuth", () => ({
   useAuth: () => ({ user: { timezone: "America/Chicago" } }),
@@ -49,7 +49,9 @@ describe("ShareLinksPage", () => {
     const revokeSpy = vi.spyOn(api, "revokeShareLink").mockResolvedValue();
     render(<ShareLinksPage />);
     await screen.findAllByText("Dr. Smith");
-    fireEvent.click(screen.getByRole("button", { name: /revoke/i }));
+    // Revoke lives in the row's detail modal (More button), Active links only
+    fireEvent.click(screen.getAllByRole("button", { name: /more/i })[0]);
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /revoke/i }));
     await waitFor(() => expect(revokeSpy).toHaveBeenCalledWith("abc-123"));
   });
 

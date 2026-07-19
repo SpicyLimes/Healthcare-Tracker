@@ -37,6 +37,6 @@ describe("AuditLogPage", () => {
   it("shows empty state when no entries", async () => {
     vi.spyOn(api, "listAuditLog").mockResolvedValue([]);
     render(<AuditLogPage />);
-    expect(await screen.findByText(/no entries found/i)).toBeInTheDocument();
+    expect(await screen.findByText(/no audit log entries/i)).toBeInTheDocument();
   });
 });
