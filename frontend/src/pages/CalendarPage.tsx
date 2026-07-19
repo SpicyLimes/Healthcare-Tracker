@@ -260,11 +260,15 @@ interface AgendaToolbarProps {
   onSortDirChange: (d: "desc" | "asc") => void;
   activeTypes: Set<CalendarEventType>;
   onToggleType: (t: CalendarEventType) => void;
+  from: string;
+  to: string;
+  onFromChange: (v: string) => void;
+  onToChange: (v: string) => void;
   filtered: boolean;
   onClear: () => void;
 }
 
-function AgendaToolbar({ sortDir, onSortDirChange, activeTypes, onToggleType, filtered, onClear }: AgendaToolbarProps) {
+function AgendaToolbar({ sortDir, onSortDirChange, activeTypes, onToggleType, from, to, onFromChange, onToChange, filtered, onClear }: AgendaToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
       <Button
@@ -293,6 +297,23 @@ function AgendaToolbar({ sortDir, onSortDirChange, activeTypes, onToggleType, fi
           </button>
         );
       })}
+      <div className="flex items-center gap-1.5">
+        <Input
+          type="date"
+          aria-label="From date"
+          value={from}
+          onChange={(e) => onFromChange(e.target.value)}
+          className="h-8 w-36 text-xs"
+        />
+        <span className="text-xs text-muted-foreground">–</span>
+        <Input
+          type="date"
+          aria-label="To date"
+          value={to}
+          onChange={(e) => onToChange(e.target.value)}
+          className="h-8 w-36 text-xs"
+        />
+      </div>
       {filtered && (
         <Button variant="ghost" size="sm" onClick={onClear}>
           Clear
@@ -624,6 +645,8 @@ export default function CalendarPage() {
   const [view, setView] = useState<View>("month");
   const [agendaSortDir, setAgendaSortDir] = useState<"desc" | "asc">("desc");
   const [agendaTypes, setAgendaTypes] = useState<Set<CalendarEventType>>(() => new Set(ALL_EVENT_TYPES));
+  const [agendaFrom, setAgendaFrom] = useState("");
+  const [agendaTo, setAgendaTo] = useState("");
 
   function toggleAgendaType(t: CalendarEventType) {
     setAgendaTypes((prev) => {
@@ -636,6 +659,8 @@ export default function CalendarPage() {
 
   function clearAgendaFilters() {
     setAgendaTypes(new Set(ALL_EVENT_TYPES));
+    setAgendaFrom("");
+    setAgendaTo("");
   }
 
   const now = new Date();
@@ -672,8 +697,13 @@ export default function CalendarPage() {
   const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
   const monthEvents = events.filter((e) => e.date.startsWith(monthPrefix));
 
-  const agendaFiltered = agendaTypes.size < ALL_EVENT_TYPES.length;
-  const agendaEvents = events.filter((e) => agendaTypes.has(e.type));
+  const agendaFiltered = agendaTypes.size < ALL_EVENT_TYPES.length || agendaFrom !== "" || agendaTo !== "";
+  const agendaEvents = events.filter(
+    (e) =>
+      agendaTypes.has(e.type) &&
+      (!agendaFrom || e.date >= agendaFrom) &&
+      (!agendaTo || e.date <= agendaTo)
+  );
 
   return (
     <AppShell>
@@ -761,6 +791,10 @@ export default function CalendarPage() {
                     onSortDirChange={setAgendaSortDir}
                     activeTypes={agendaTypes}
                     onToggleType={toggleAgendaType}
+                    from={agendaFrom}
+                    to={agendaTo}
+                    onFromChange={setAgendaFrom}
+                    onToChange={setAgendaTo}
                     filtered={agendaFiltered}
                     onClear={clearAgendaFilters}
                   />
@@ -811,6 +845,10 @@ export default function CalendarPage() {
                       onSortDirChange={setAgendaSortDir}
                       activeTypes={agendaTypes}
                       onToggleType={toggleAgendaType}
+                      from={agendaFrom}
+                      to={agendaTo}
+                      onFromChange={setAgendaFrom}
+                      onToChange={setAgendaTo}
                       filtered={agendaFiltered}
                       onClear={clearAgendaFilters}
                     />

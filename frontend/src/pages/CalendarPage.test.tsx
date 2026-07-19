@@ -253,4 +253,22 @@ describe("CalendarPage", () => {
     fireEvent.click(pill);
     expect(pill).toHaveAttribute("aria-pressed", "false");
   });
+
+  it("date range bounds agenda rows inclusively", async () => {
+    await renderAgenda(SORT_EVENTS);
+    fireEvent.change(screen.getAllByLabelText("From date")[0], { target: { value: "2025-02-05" } });
+    fireEvent.change(screen.getAllByLabelText("To date")[0], { target: { value: "2025-02-28" } });
+    expect(screen.getAllByText("Middle event").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("Oldest event").length).toBe(0);
+    expect(screen.queryAllByText("Newest event").length).toBe(0);
+    fireEvent.click(screen.getAllByRole("button", { name: /^clear$/i })[0]);
+    expect(screen.getAllByText("Oldest event").length).toBeGreaterThan(0);
+    expect((screen.getAllByLabelText("From date")[0] as HTMLInputElement).value).toBe("");
+  });
+
+  it("shows filtered empty state when filters exclude everything", async () => {
+    await renderAgenda(SORT_EVENTS);
+    fireEvent.change(screen.getAllByLabelText("From date")[0], { target: { value: "2030-01-01" } });
+    expect((await screen.findAllByText("No events match your filters")).length).toBeGreaterThan(0);
+  });
 });
