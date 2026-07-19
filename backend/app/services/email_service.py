@@ -139,14 +139,14 @@ def render_share_link_email(
 
     text_body = (
         "Hello,\n\n"
-        "Someone has shared a health summary with you using Healthcare Tracker.\n"
+        "Someone has shared a health summary with you using HealthCare Tracker.\n"
         f"{msg_block_text}\n"
         "You can view the shared summary here:\n"
         f"{link_url}\n\n"
         f"This link expires on {expires_at_display}.\n"
         "If the link has expired, please ask the sender to share a new one.\n\n"
         "If you weren't expecting this email, you can safely ignore it.\n\n"
-        "— Healthcare Tracker\n"
+        "— HealthCare Tracker\n"
         f"{footer}\n"
     )
 
@@ -162,14 +162,14 @@ def render_share_link_email(
 
     html_body = (
         "<p>Hello,</p>"
-        "<p>Someone has shared a health summary with you using Healthcare Tracker.</p>"
+        "<p>Someone has shared a health summary with you using HealthCare Tracker.</p>"
         f"{msg_block_html}"
         f"<p>You can view the shared summary here:<br>"
         f"<a href=\"{safe_link}\">{safe_link}</a></p>"
         f"<p>This link expires on {safe_expiry}. "
         "If the link has expired, please ask the sender to share a new one.</p>"
         "<p>If you weren't expecting this email, you can safely ignore it.</p>"
-        f"<p>— Healthcare Tracker<br>{safe_footer}</p>"
+        f"<p>— HealthCare Tracker<br>{safe_footer}</p>"
     )
 
     return SHARE_LINK_SUBJECT, text_body, html_body

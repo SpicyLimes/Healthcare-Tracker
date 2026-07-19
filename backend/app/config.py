@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_use_tls: bool = True
-    email_from: str = "Healthcare Tracker <noreply@example.com>"
+    email_from: str = "HealthCare Tracker <noreply@example.com>"
     email_footer: str = ""
     # Absolute base URL for links built server-side (no browser origin available in email)
     app_base_url: str = "http://localhost:1337"

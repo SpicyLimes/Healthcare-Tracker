@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="frontend/public/logo.png" alt="Healthcare Tracker" width="80" />
+  <img src="frontend/public/logo.png" alt="HealthCare Tracker" width="80" />
 </p>
 
-<h1 align="center">Healthcare Tracker</h1>
+<h1 align="center">HealthCare Tracker</h1>
 
 <p align="center">
   A private, self-hosted web app for managing a patient's medical records as a caregiver.<br/>
@@ -132,7 +132,7 @@ SMTP_HOST=mail.example.com
 SMTP_PORT=465                 # 465 = implicit SSL; 587 = STARTTLS (auto-detected)
 SMTP_USER=noreply@example.com
 SMTP_PASSWORD=...
-EMAIL_FROM=Healthcare Tracker <noreply@example.com>
+EMAIL_FROM=HealthCare Tracker <noreply@example.com>
 APP_BASE_URL=https://your-app-domain   # used to build the links inside emails
 ```
 

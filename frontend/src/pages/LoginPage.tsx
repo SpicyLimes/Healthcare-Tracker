@@ -34,9 +34,9 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-primary">
-            <img src="/logo.png" alt="Healthcare Tracker" className="size-10 shrink-0 rounded-lg" />
+            <img src="/logo.png" alt="HealthCare Tracker" className="size-10 shrink-0 rounded-lg" />
           </div>
-          <p className="text-sm font-medium text-muted-foreground">Healthcare Tracker</p>
+          <p className="text-sm font-medium text-muted-foreground">HealthCare Tracker</p>
           <h1 className="mt-1 text-xl font-semibold text-foreground">Sign in</h1>
           <p className="mt-1 text-sm text-muted-foreground">Enter your credentials to continue</p>
         </div>

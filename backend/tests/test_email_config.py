@@ -18,7 +18,7 @@ def test_email_settings_have_safe_defaults():
     assert s.email_backend == "console"
     assert s.smtp_port == 587
     assert s.smtp_use_tls is True
-    assert s.email_from == "Healthcare Tracker <noreply@example.com>"
+    assert s.email_from == "HealthCare Tracker <noreply@example.com>"
     assert s.email_footer == ""
     assert s.app_base_url == "http://localhost:1337"
 

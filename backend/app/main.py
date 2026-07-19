@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Healthcare Tracker API", version=__version__, lifespan=lifespan)
+app = FastAPI(title="HealthCare Tracker API", version=__version__, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,

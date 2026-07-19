@@ -144,10 +144,10 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
             collapsed ? "justify-center px-0 pb-5" : "gap-2.5 px-4 pb-2"
           )}
         >
-          <img src="/logo.png" alt="Healthcare Tracker" className="size-10 shrink-0 rounded-lg" />
+          <img src="/logo.png" alt="HealthCare Tracker" className="size-10 shrink-0 rounded-lg" />
           {!collapsed && (
             <span className="text-[1.0rem] font-semibold text-foreground">
-              Healthcare Tracker
+              HealthCare Tracker
             </span>
           )}
         </Link>

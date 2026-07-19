@@ -1,3 +1,3 @@
-# Healthcare Tracker backend package
+# HealthCare Tracker backend package
 
 __version__ = "0.8.0"
