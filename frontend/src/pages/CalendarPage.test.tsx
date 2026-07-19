@@ -93,8 +93,9 @@ describe("CalendarPage", () => {
     // "No appointment records yet." appears in the empty Appointments card before the calendar
     const allText = document.body.textContent ?? "";
     const apptIdx = allText.indexOf("No appointment records yet.");
-    // "Sun" appears in the MonthGrid weekday header row — a reliable marker for the calendar body
-    const sunIdx = allText.indexOf("Sun");
+    // The contiguous weekday header row is a reliable marker for the calendar body
+    // (a bare "Sun" also matches the AppShell date line on Sundays)
+    const sunIdx = allText.indexOf("SunMonTue");
     expect(apptIdx).toBeGreaterThanOrEqual(0);
     expect(sunIdx).toBeGreaterThanOrEqual(0);
     expect(apptIdx).toBeLessThan(sunIdx);
