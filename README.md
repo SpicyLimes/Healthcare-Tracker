@@ -25,7 +25,7 @@
 - **Role-based access:** Admin (full access), Contributor (propose changes for admin approval), Viewer (read-only), Guest (time-limited share links)
 - **Contributor submissions:** Contributors propose record changes that queue for admin review; admins approve or reject from a Submissions page, and contributors track their own pending items under "My Submissions"
 - **Share links:** Admin generates signed, expiring URLs scoped to specific sections for doctors; one-time token display, revocable; **email delivery built in** — send a link (with an optional message) straight from the app via your own SMTP server, with only a masked recipient stored in the audit log
-- **Audit log:** Every write and share link access logged with actor, timestamp, and detail; filterable in-app
+- **Audit log:** Every write, authentication event (login, logout, failed login, password change/reset), user-management action, and share link access logged with a specific action label, actor, timestamp, and detail; filterable in-app
 - **Backups:** Nightly automated PostgreSQL dump + uploads archive with 7-day retention, plus an admin **Backups page** — create a backup on demand, download or upload backup archives, and do a full guarded restore, all from the browser
 
 ---
@@ -107,6 +107,8 @@ Three account roles: **Admin** (full access and user management), **Contributor*
 - `INITIAL_ADMIN_PASSWORD` must be at least 12 characters or startup fails
 - Set `JWT_SECRET` to a long random string: `openssl rand -hex 32`
 - Set `COOKIE_SECURE=true` in any environment served over HTTPS
+
+**Onboarding & password reset:** when an admin creates a user, they can send a **welcome email** with a temporary password (with a configurable expiry) instead of setting one by hand — the new user logs in and is required to choose their own password before reaching any records. Admins can likewise **reset a user's password**, emailing a fresh temporary password. Both require [email](#email-optional) to be configured; temporary passwords never leave the server in plaintext beyond the email itself. The `PUT /api/users/{id}/password` endpoint remains as a manual break-glass alternative.
 
 ### Backups
 
