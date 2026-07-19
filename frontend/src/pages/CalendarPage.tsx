@@ -255,19 +255,25 @@ function MonthGrid({ events, year, month, onEventClick }: MonthGridProps) {
 
 interface AgendaListProps {
   events: CalendarEvent[];
+  sortDir: "desc" | "asc";
+  filtered: boolean;
   onEventClick: (e: CalendarEvent) => void;
 }
 
-function AgendaList({ events, onEventClick }: AgendaListProps) {
+function AgendaList({ events, sortDir, filtered, onEventClick }: AgendaListProps) {
   if (events.length === 0) {
     return (
-      <div className="py-16 text-center text-sm text-muted-foreground">No events to show</div>
+      <div className="py-16 text-center text-sm text-muted-foreground">
+        {filtered ? "No events match your filters" : "No events to show"}
+      </div>
     );
   }
 
   const today = isoToday();
-  const sorted = [...events].sort((a, b) => b.date.localeCompare(a.date));
-  const groups = groupByMonth(sorted).reverse();
+  const sorted = [...events].sort((a, b) =>
+    sortDir === "desc" ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date)
+  );
+  const groups = groupByMonth(sorted);
 
   const formatAgendaDate = (iso: string) =>
     new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(
@@ -296,13 +302,15 @@ function AgendaList({ events, onEventClick }: AgendaListProps) {
         const past = groupEvents.filter((e) => e.date < today);
         const future = groupEvents.filter((e) => e.date >= today);
         const hasTodayDivider = past.length > 0 && future.length > 0;
+        const first = sortDir === "desc" ? future : past;
+        const second = sortDir === "desc" ? past : future;
         return (
           <div key={label}>
             <div className="bg-muted/50 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               {label}
             </div>
             <div className="px-4">
-              {past.map(renderRow)}
+              {first.map(renderRow)}
               {hasTodayDivider && (
                 <div className="flex items-center gap-2 py-1">
                   <div className="h-px flex-1 bg-primary/30" />
@@ -310,7 +318,7 @@ function AgendaList({ events, onEventClick }: AgendaListProps) {
                   <div className="h-px flex-1 bg-primary/30" />
                 </div>
               )}
-              {future.map(renderRow)}
+              {second.map(renderRow)}
             </div>
           </div>
         );
@@ -679,7 +687,7 @@ export default function CalendarPage() {
               </Card>
               <Card>
                 <CardContent className="p-0 max-h-[420px] overflow-y-auto">
-                  <AgendaList events={events} onEventClick={handleEventClick} />
+                  <AgendaList events={events} sortDir="desc" filtered={false} onEventClick={handleEventClick} />
                 </CardContent>
               </Card>
             </div>
@@ -719,7 +727,7 @@ export default function CalendarPage() {
               <div className="hidden md:block">
                 <Card>
                   <CardContent className="p-0">
-                    <AgendaList events={events} onEventClick={handleEventClick} />
+                    <AgendaList events={events} sortDir="desc" filtered={false} onEventClick={handleEventClick} />
                   </CardContent>
                 </Card>
               </div>

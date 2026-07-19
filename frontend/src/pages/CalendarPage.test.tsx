@@ -29,6 +29,26 @@ const ALL_EVENTS: CalendarEvent[] = [
   { id: "6", type: "medication", title: "Metformin 500mg", date: "2026-07-01", color: "#eab308" },
 ];
 
+const SORT_EVENTS: CalendarEvent[] = [
+  { id: "s1", type: "appointment", title: "Oldest event", date: "2025-01-10", color: "#3b82f6" },
+  { id: "s2", type: "visit_log", title: "Middle event", date: "2025-02-05", color: "#8b5cf6" },
+  { id: "s3", type: "vaccination", title: "Newest event", date: "2025-03-20", color: "#10b981" },
+];
+
+async function renderAgenda(events: CalendarEvent[]) {
+  mockAuth();
+  vi.spyOn(calApi.calendarApi, "list").mockResolvedValue(events);
+  vi.spyOn(apptApiModule.appointmentsApi, "list").mockResolvedValue([]);
+  render(<MemoryRouter><CalendarPage /></MemoryRouter>);
+  await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
+  fireEvent.click(screen.getByText("Agenda"));
+  await screen.findAllByTestId("agenda-row");
+}
+
+function agendaRowTitles(): string[] {
+  return screen.getAllByTestId("agenda-row").map((r) => r.textContent ?? "");
+}
+
 describe("CalendarPage", () => {
   it("shows loading state initially", () => {
     mockAuth();
@@ -165,5 +185,21 @@ describe("CalendarPage", () => {
     // Completed appointment should NOT be visible in the Appointments card
     const completedBadges = screen.queryAllByText("completed");
     expect(completedBadges.length).toBe(0);
+  });
+
+  it("agenda defaults to newest event first", async () => {
+    await renderAgenda(SORT_EVENTS);
+    const titles = agendaRowTitles();
+    expect(titles[0]).toContain("Newest event");
+    expect(
+      titles.findIndex((t) => t.includes("Newest event"))
+    ).toBeLessThan(titles.findIndex((t) => t.includes("Oldest event")));
+  });
+
+  it("agenda shows newest month group first", async () => {
+    await renderAgenda(SORT_EVENTS);
+    const text = document.body.textContent ?? "";
+    expect(text.indexOf("March 2025")).toBeGreaterThanOrEqual(0);
+    expect(text.indexOf("March 2025")).toBeLessThan(text.indexOf("January 2025"));
   });
 });
