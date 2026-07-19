@@ -202,4 +202,36 @@ describe("CalendarPage", () => {
     expect(text.indexOf("March 2025")).toBeGreaterThanOrEqual(0);
     expect(text.indexOf("March 2025")).toBeLessThan(text.indexOf("January 2025"));
   });
+
+  it("sort toggle flips agenda to oldest-first and back", async () => {
+    await renderAgenda(SORT_EVENTS);
+    fireEvent.click(screen.getAllByRole("button", { name: /newest first/i })[0]);
+    let titles = agendaRowTitles();
+    expect(titles[0]).toContain("Oldest event");
+    const text = document.body.textContent ?? "";
+    expect(text.indexOf("January 2025")).toBeLessThan(text.indexOf("March 2025"));
+    fireEvent.click(screen.getAllByRole("button", { name: /oldest first/i })[0]);
+    titles = agendaRowTitles();
+    expect(titles[0]).toContain("Newest event");
+  });
+
+  it("Today divider sits between future and past per direction", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-07-15T12:00:00Z"));
+    try {
+      await renderAgenda([
+        { id: "p1", type: "appointment", title: "Past event", date: "2026-07-05", color: "#3b82f6" },
+        { id: "f1", type: "visit_log", title: "Future event", date: "2026-07-25", color: "#8b5cf6" },
+      ]);
+      let text = document.body.textContent ?? "";
+      expect(text.indexOf("Future event")).toBeLessThan(text.indexOf("Today"));
+      expect(text.indexOf("Today")).toBeLessThan(text.indexOf("Past event"));
+      fireEvent.click(screen.getAllByRole("button", { name: /newest first/i })[0]);
+      text = document.body.textContent ?? "";
+      expect(text.indexOf("Past event")).toBeLessThan(text.indexOf("Today"));
+      expect(text.indexOf("Today")).toBeLessThan(text.indexOf("Future event"));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

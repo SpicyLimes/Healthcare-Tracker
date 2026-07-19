@@ -1,7 +1,7 @@
 // frontend/src/pages/CalendarPage.tsx
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { calendarApi, type CalendarEvent, type CalendarEventType, EVENT_TYPE_LABELS } from "../api/calendar";
 import {
   appointmentsApi,
@@ -247,6 +247,28 @@ function MonthGrid({ events, year, month, onEventClick }: MonthGridProps) {
           )
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Agenda Toolbar ──────────────────────────────────────────────────────────
+
+interface AgendaToolbarProps {
+  sortDir: "desc" | "asc";
+  onSortDirChange: (d: "desc" | "asc") => void;
+}
+
+function AgendaToolbar({ sortDir, onSortDirChange }: AgendaToolbarProps) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onSortDirChange(sortDir === "desc" ? "asc" : "desc")}
+      >
+        {sortDir === "desc" ? <ArrowDown className="size-3.5" /> : <ArrowUp className="size-3.5" />}
+        {sortDir === "desc" ? "Newest first" : "Oldest first"}
+      </Button>
     </div>
   );
 }
@@ -571,6 +593,7 @@ export default function CalendarPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>("month");
+  const [agendaSortDir, setAgendaSortDir] = useState<"desc" | "asc">("desc");
 
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -686,8 +709,11 @@ export default function CalendarPage() {
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="p-0 max-h-[420px] overflow-y-auto">
-                  <AgendaList events={events} sortDir="desc" filtered={false} onEventClick={handleEventClick} />
+                <CardContent className="p-0">
+                  <AgendaToolbar sortDir={agendaSortDir} onSortDirChange={setAgendaSortDir} />
+                  <div className="max-h-[420px] overflow-y-auto">
+                    <AgendaList events={events} sortDir={agendaSortDir} filtered={false} onEventClick={handleEventClick} />
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -727,7 +753,8 @@ export default function CalendarPage() {
               <div className="hidden md:block">
                 <Card>
                   <CardContent className="p-0">
-                    <AgendaList events={events} sortDir="desc" filtered={false} onEventClick={handleEventClick} />
+                    <AgendaToolbar sortDir={agendaSortDir} onSortDirChange={setAgendaSortDir} />
+                    <AgendaList events={events} sortDir={agendaSortDir} filtered={false} onEventClick={handleEventClick} />
                   </CardContent>
                 </Card>
               </div>
