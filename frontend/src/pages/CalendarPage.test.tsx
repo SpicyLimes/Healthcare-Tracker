@@ -234,4 +234,23 @@ describe("CalendarPage", () => {
       vi.useRealTimers();
     }
   });
+
+  it("type pills filter agenda rows and Clear restores them", async () => {
+    await renderAgenda(ALL_EVENTS);
+    expect(screen.queryAllByRole("button", { name: /^clear$/i }).length).toBe(0);
+    fireEvent.click(screen.getAllByRole("button", { name: "Medication" })[0]);
+    expect(screen.queryAllByText("Metformin 500mg").length).toBe(0);
+    expect(screen.getAllByText("Flu Shot").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByRole("button", { name: /^clear$/i })[0]);
+    expect(screen.getAllByText("Metformin 500mg").length).toBeGreaterThan(0);
+    expect(screen.queryAllByRole("button", { name: /^clear$/i }).length).toBe(0);
+  });
+
+  it("pills expose pressed state", async () => {
+    await renderAgenda(ALL_EVENTS);
+    const pill = screen.getAllByRole("button", { name: "Surgery" })[0];
+    expect(pill).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(pill);
+    expect(pill).toHaveAttribute("aria-pressed", "false");
+  });
 });

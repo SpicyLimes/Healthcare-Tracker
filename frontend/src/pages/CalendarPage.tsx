@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from "lucide-react";
-import { calendarApi, type CalendarEvent, type CalendarEventType, EVENT_TYPE_LABELS } from "../api/calendar";
+import { calendarApi, EVENT_COLORS, type CalendarEvent, type CalendarEventType, EVENT_TYPE_LABELS } from "../api/calendar";
 import {
   appointmentsApi,
   type Appointment,
@@ -34,6 +34,8 @@ const EVENT_ROUTES: Partial<Record<CalendarEventType, string>> = {
   vaccination: "/vaccinations",
   medication: "/medications",
 };
+
+const ALL_EVENT_TYPES = Object.keys(EVENT_TYPE_LABELS) as CalendarEventType[];
 
 // ─── Appointment helpers ─────────────────────────────────────────────────────
 
@@ -256,9 +258,13 @@ function MonthGrid({ events, year, month, onEventClick }: MonthGridProps) {
 interface AgendaToolbarProps {
   sortDir: "desc" | "asc";
   onSortDirChange: (d: "desc" | "asc") => void;
+  activeTypes: Set<CalendarEventType>;
+  onToggleType: (t: CalendarEventType) => void;
+  filtered: boolean;
+  onClear: () => void;
 }
 
-function AgendaToolbar({ sortDir, onSortDirChange }: AgendaToolbarProps) {
+function AgendaToolbar({ sortDir, onSortDirChange, activeTypes, onToggleType, filtered, onClear }: AgendaToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
       <Button
@@ -269,6 +275,29 @@ function AgendaToolbar({ sortDir, onSortDirChange }: AgendaToolbarProps) {
         {sortDir === "desc" ? <ArrowDown className="size-3.5" /> : <ArrowUp className="size-3.5" />}
         {sortDir === "desc" ? "Newest first" : "Oldest first"}
       </Button>
+      {ALL_EVENT_TYPES.map((t) => {
+        const active = activeTypes.has(t);
+        return (
+          <button
+            key={t}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onToggleType(t)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs font-medium transition-colors",
+              active ? "bg-background text-foreground" : "bg-muted text-muted-foreground opacity-50"
+            )}
+          >
+            <span className="size-2 rounded-full" style={{ backgroundColor: EVENT_COLORS[t] }} />
+            {EVENT_TYPE_LABELS[t]}
+          </button>
+        );
+      })}
+      {filtered && (
+        <Button variant="ghost" size="sm" onClick={onClear}>
+          Clear
+        </Button>
+      )}
     </div>
   );
 }
@@ -594,6 +623,20 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>("month");
   const [agendaSortDir, setAgendaSortDir] = useState<"desc" | "asc">("desc");
+  const [agendaTypes, setAgendaTypes] = useState<Set<CalendarEventType>>(() => new Set(ALL_EVENT_TYPES));
+
+  function toggleAgendaType(t: CalendarEventType) {
+    setAgendaTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(t)) next.delete(t);
+      else next.add(t);
+      return next;
+    });
+  }
+
+  function clearAgendaFilters() {
+    setAgendaTypes(new Set(ALL_EVENT_TYPES));
+  }
 
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -628,6 +671,9 @@ export default function CalendarPage() {
 
   const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
   const monthEvents = events.filter((e) => e.date.startsWith(monthPrefix));
+
+  const agendaFiltered = agendaTypes.size < ALL_EVENT_TYPES.length;
+  const agendaEvents = events.filter((e) => agendaTypes.has(e.type));
 
   return (
     <AppShell>
@@ -710,9 +756,16 @@ export default function CalendarPage() {
               </Card>
               <Card>
                 <CardContent className="p-0">
-                  <AgendaToolbar sortDir={agendaSortDir} onSortDirChange={setAgendaSortDir} />
+                  <AgendaToolbar
+                    sortDir={agendaSortDir}
+                    onSortDirChange={setAgendaSortDir}
+                    activeTypes={agendaTypes}
+                    onToggleType={toggleAgendaType}
+                    filtered={agendaFiltered}
+                    onClear={clearAgendaFilters}
+                  />
                   <div className="max-h-[420px] overflow-y-auto">
-                    <AgendaList events={events} sortDir={agendaSortDir} filtered={false} onEventClick={handleEventClick} />
+                    <AgendaList events={agendaEvents} sortDir={agendaSortDir} filtered={agendaFiltered} onEventClick={handleEventClick} />
                   </div>
                 </CardContent>
               </Card>
@@ -753,8 +806,15 @@ export default function CalendarPage() {
               <div className="hidden md:block">
                 <Card>
                   <CardContent className="p-0">
-                    <AgendaToolbar sortDir={agendaSortDir} onSortDirChange={setAgendaSortDir} />
-                    <AgendaList events={events} sortDir={agendaSortDir} filtered={false} onEventClick={handleEventClick} />
+                    <AgendaToolbar
+                      sortDir={agendaSortDir}
+                      onSortDirChange={setAgendaSortDir}
+                      activeTypes={agendaTypes}
+                      onToggleType={toggleAgendaType}
+                      filtered={agendaFiltered}
+                      onClear={clearAgendaFilters}
+                    />
+                    <AgendaList events={agendaEvents} sortDir={agendaSortDir} filtered={agendaFiltered} onEventClick={handleEventClick} />
                   </CardContent>
                 </Card>
               </div>
