@@ -95,6 +95,7 @@ class FamilyHistoryResponse(BaseModel):
 # ---- Surgery ----
 class SurgeryCreate(BaseModel):
     procedure: str
+    procedure_type: ProcedureType = "surgery"
     surgery_date: date | None = None
     surgeon_id: uuid.UUID | None = None
     surgeon_other: str | None = None
@@ -104,6 +105,7 @@ class SurgeryCreate(BaseModel):
 
 class SurgeryUpdate(BaseModel):
     procedure: str | None = None
+    procedure_type: ProcedureType | None = None
     surgery_date: date | None = None
     surgeon_id: uuid.UUID | None = None
     surgeon_other: str | None = None
@@ -115,6 +117,7 @@ class SurgeryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     procedure: str
+    procedure_type: str
     surgery_date: date | None
     surgeon_id: uuid.UUID | None
     surgeon_other: str | None

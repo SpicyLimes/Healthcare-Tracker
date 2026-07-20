@@ -72,6 +72,7 @@ class Surgery(Base):
     __tablename__ = "surgeries"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    procedure_type: Mapped[str] = mapped_column(String, nullable=False, default="surgery", server_default="surgery")
     procedure: Mapped[str] = mapped_column(String, nullable=False)
     surgery_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     surgeon_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("doctors.id", ondelete="SET NULL"), nullable=True)

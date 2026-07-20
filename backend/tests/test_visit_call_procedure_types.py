@@ -49,3 +49,30 @@ def test_calendar_prefixes_call_titles(client, db_session):
     assert "Call: Lab results" in titles
     assert "Call" in titles
     assert "Annual" in titles
+
+
+def test_procedure_type_defaults_to_surgery(client, db_session):
+    csrf = _admin(client, db_session)
+    r = client.post("/api/surgeries", headers={"X-CSRF-Token": csrf}, json={"procedure": "Appendectomy"})
+    assert r.status_code == 201, r.text
+    assert r.json()["procedure_type"] == "surgery"
+
+
+def test_procedure_type_accepts_outpatient_clinic_and_updates(client, db_session):
+    csrf = _admin(client, db_session)
+    r = client.post("/api/surgeries", headers={"X-CSRF-Token": csrf},
+                    json={"procedure": "Mole removal", "procedure_type": "outpatient"})
+    assert r.status_code == 201, r.text
+    rid = r.json()["id"]
+    assert r.json()["procedure_type"] == "outpatient"
+    r = client.put(f"/api/surgeries/{rid}", headers={"X-CSRF-Token": csrf},
+                   json={"procedure_type": "clinic"})
+    assert r.status_code == 200, r.text
+    assert r.json()["procedure_type"] == "clinic"
+
+
+def test_procedure_type_rejects_invalid(client, db_session):
+    csrf = _admin(client, db_session)
+    r = client.post("/api/surgeries", headers={"X-CSRF-Token": csrf},
+                    json={"procedure": "x", "procedure_type": "house_call"})
+    assert r.status_code == 422
