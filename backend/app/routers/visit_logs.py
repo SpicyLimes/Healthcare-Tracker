@@ -30,6 +30,7 @@ _VITALS_FIELDS = (
 _VISIT_LOG_COLUMNS = (
     "visit_date", "visit_time", "doctor_id", "doctor_other",
     "reason", "summary", "follow_up", "follow_up_date", "notes",
+    "visit_type",
 )
 
 

@@ -86,10 +86,14 @@ def get_calendar_events(
         )
     ).scalars().all()
     for v in visits:
+        if v.visit_type in ("phone_call", "telehealth"):
+            title = f"Call: {v.reason}" if v.reason else "Call"
+        else:
+            title = v.reason or "Visit"
         events.append({
             "id": str(v.id),
             "type": "visit_log",
-            "title": v.reason or "Visit",
+            "title": title,
             "date": _to_iso(v.visit_date),
             "end_date": None,
             "color": COLORS["visit_log"],

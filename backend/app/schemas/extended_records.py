@@ -1,10 +1,14 @@
 # backend/app/schemas/extended_records.py
 import uuid
 from datetime import date, datetime, time
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, computed_field
 
 from app.models.extended_records import AppointmentStatus, AppointmentType
+
+VisitType = Literal["in_person", "phone_call", "telehealth", "other"]
+ProcedureType = Literal["surgery", "outpatient", "clinic"]
 
 
 # ---- Insurance ----
@@ -249,6 +253,7 @@ class VaccinationResponse(BaseModel):
 
 # ---- Visit Log ----
 class VisitLogCreate(BaseModel):
+    visit_type: VisitType = "in_person"
     visit_date: date | None = None
     visit_time: time | None = None
     doctor_id: uuid.UUID | None = None
@@ -269,6 +274,7 @@ class VisitLogCreate(BaseModel):
     blood_glucose: int | None = None
 
 class VisitLogUpdate(BaseModel):
+    visit_type: VisitType | None = None
     visit_date: date | None = None
     visit_time: time | None = None
     doctor_id: uuid.UUID | None = None
@@ -291,6 +297,7 @@ class VisitLogUpdate(BaseModel):
 class VisitLogResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
+    visit_type: str
     visit_date: date | None
     visit_time: time | None
     doctor_id: uuid.UUID | None

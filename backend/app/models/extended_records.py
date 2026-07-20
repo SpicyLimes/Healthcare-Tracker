@@ -145,6 +145,7 @@ class VisitLog(Base):
     __tablename__ = "visit_logs"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    visit_type: Mapped[str] = mapped_column(String, nullable=False, default="in_person", server_default="in_person")
     visit_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     visit_time: Mapped[Optional[time]] = mapped_column(Time, nullable=True)
     doctor_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("doctors.id", ondelete="SET NULL"), nullable=True)
