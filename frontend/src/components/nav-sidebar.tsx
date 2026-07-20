@@ -52,7 +52,7 @@ const navGroups = [
   {
     label: "Activity",
     items: [
-      { to: "/visit-logs", label: "Visit Logs", icon: ClipboardList },
+      { to: "/doc-logs", label: "Visit & Call Logs", icon: ClipboardList },
       { to: "/vitals", label: "Vitals", icon: Activity },
       { to: "/nutrition-plan", label: "Nutrition Plan", icon: Salad },
       { to: "/documents", label: "Documents", icon: FolderOpen },

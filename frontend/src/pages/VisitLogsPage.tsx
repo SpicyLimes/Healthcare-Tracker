@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
-import { visitLogsApi, type VisitLog, type VisitLogInput } from "../api/visitLogs";
+import { visitLogsApi, VISIT_TYPES, VISIT_TYPE_LABELS, type VisitLog, type VisitLogInput } from "../api/visitLogs";
 import { doctorsApi, type Doctor } from "../api/doctors";
 import DoctorPicker from "../components/DoctorPicker";
 import { useAuth } from "../auth/useAuth";
@@ -9,7 +9,9 @@ import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FormField, Input, Textarea } from "@/components/ui/form-field";
+import { FormField, Input, Select, Textarea } from "@/components/ui/form-field";
+import { Badge } from "@/components/ui/badge";
+import { TypeFilterPills } from "@/components/TypeFilterPills";
 import { formatDate, feetInchesToIn, inToFeetInches, formatHeight } from "@/lib/format";
 import { RecordTable } from "@/components/RecordTable";
 import { RecordFormModal } from "@/components/RecordFormModal";
@@ -27,6 +29,7 @@ function formatDateWithTime(dateStr: string | null, timeStr: string | null): str
 }
 
 const EMPTY: VisitLogInput = {
+  visit_type: "in_person",
   visit_date: null,
   visit_time: null,
   doctor_id: null,
@@ -61,6 +64,16 @@ export default function VisitLogsPage() {
   const [heightFt, setHeightFt] = useState<number | null>(null);
   const [heightIn, setHeightIn] = useState<number | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [typeFilter, setTypeFilter] = useState<Set<string>>(() => new Set(VISIT_TYPES.map((t) => t.value)));
+
+  function toggleType(v: string) {
+    setTypeFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(v)) next.delete(v);
+      else next.add(v);
+      return next;
+    });
+  }
 
   async function reload() { setRows(await visitLogsApi.list()); }
   useEffect(() => {
@@ -99,6 +112,7 @@ export default function VisitLogsPage() {
     setHeightFt(ft);
     setHeightIn(inches);
     setForm({
+      visit_type: r.visit_type,
       visit_date: r.visit_date,
       visit_time: r.visit_time,
       doctor_id: r.doctor_id,
@@ -156,14 +170,15 @@ export default function VisitLogsPage() {
   return (
     <AppShell>
       <PageLayout
-        title="Visit Logs"
-        description="Record doctor visits, summaries, and follow-up actions."
+        title="Visit &amp; Call Logs"
+        description="Record doctor visits, calls, summaries, and follow-up actions."
         action={isAdmin ? <Button onClick={openAdd}>+ Add</Button> : undefined}
       >
         <Card>
           <CardContent className="p-0">
+            <TypeFilterPills options={VISIT_TYPES} active={typeFilter} onToggle={toggleType} />
             <RecordTable
-              rows={rows}
+              rows={rows.filter((r) => typeFilter.has(r.visit_type))}
               loading={loading}
               isAdmin={isAdmin}
               getRowId={(r) => r.id}
@@ -173,10 +188,12 @@ export default function VisitLogsPage() {
                 { header: "Date", sortKey: "visit_date", render: (r) => r.visit_date ? formatDateWithTime(r.visit_date, r.visit_time) : "", className: "px-4 py-3 font-medium text-foreground" },
                 { header: "Doctor", sortKey: "doctor_other", render: (r) => resolveDoctorName(r.doctor_id, r.doctor_other) },
                 { header: "Reason", sortKey: "reason", render: (r) => r.reason ?? "" },
+                { header: "Type", sortKey: "visit_type", render: (r) => <Badge variant={r.visit_type === "in_person" ? "secondary" : "outline"}>{VISIT_TYPE_LABELS[r.visit_type] ?? r.visit_type}</Badge> },
               ]}
               detailTitle={(r) => r.visit_date ? formatDateWithTime(r.visit_date, r.visit_time) : "Visit"}
               detailFields={(r) => [
                 { label: "Date", value: r.visit_date ? formatDateWithTime(r.visit_date, r.visit_time) : null },
+                { label: "Type", value: VISIT_TYPE_LABELS[r.visit_type] ?? r.visit_type },
                 { label: "Doctor", value: resolveDoctorName(r.doctor_id, r.doctor_other) || null },
                 { label: "Reason", value: r.reason },
                 { label: "Blood Pressure", value: (r.bp_systolic != null && r.bp_diastolic != null) ? `${r.bp_systolic}/${r.bp_diastolic} mmHg` : null },
@@ -234,6 +251,18 @@ export default function VisitLogsPage() {
             </FormField>
 
             {/* Reason */}
+            <FormField label="Visit Type" htmlFor="vl-visit-type">
+              <Select
+                id="vl-visit-type"
+                value={form.visit_type ?? "in_person"}
+                onChange={(e) => setForm((s) => ({ ...s, visit_type: e.target.value }))}
+              >
+                {VISIT_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </Select>
+            </FormField>
+
             <FormField label="Reason" htmlFor="vl-reason">
               <Input
                 id="vl-reason"

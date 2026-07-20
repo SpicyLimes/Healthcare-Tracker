@@ -62,7 +62,7 @@ export default function App() {
             <Route path="/vision-history" element={<ProtectedRoute><VisionHistoryPage /></ProtectedRoute>} />
             <Route path="/dental-history" element={<ProtectedRoute><DentalHistoryPage /></ProtectedRoute>} />
             <Route path="/vaccinations" element={<ProtectedRoute><VaccinationsPage /></ProtectedRoute>} />
-            <Route path="/visit-logs" element={<ProtectedRoute><VisitLogsPage /></ProtectedRoute>} />
+            <Route path="/doc-logs" element={<ProtectedRoute><VisitLogsPage /></ProtectedRoute>} />
             <Route path="/vitals" element={<ProtectedRoute><VitalsPage /></ProtectedRoute>} />
             <Route path="/appointments" element={<Navigate to="/calendar" replace />} />
             <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />

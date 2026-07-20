@@ -1,7 +1,19 @@
 import { createRecordClient } from "./records";
 
+export const VISIT_TYPES = [
+  { value: "in_person", label: "In-Person" },
+  { value: "phone_call", label: "Phone Call" },
+  { value: "telehealth", label: "Telehealth" },
+  { value: "other", label: "Other" },
+] as const;
+
+export const VISIT_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  VISIT_TYPES.map((t) => [t.value, t.label])
+);
+
 export interface VisitLog {
   id: string;
+  visit_type: string;
   visit_date: string | null;
   visit_time: string | null;
   doctor_id: string | null;
@@ -24,6 +36,7 @@ export interface VisitLog {
 }
 
 export interface VisitLogInput {
+  visit_type?: string;
   visit_date?: string | null;
   visit_time?: string | null;
   doctor_id?: string | null;

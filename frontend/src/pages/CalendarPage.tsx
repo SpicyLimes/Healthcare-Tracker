@@ -28,7 +28,7 @@ import { localToUtcIso, formatInTimezone, toLocalInputValue } from "@/lib/dateti
 // ─── Event routing ───────────────────────────────────────────────────────────
 
 const EVENT_ROUTES: Partial<Record<CalendarEventType, string>> = {
-  visit_log: "/visit-logs",
+  visit_log: "/doc-logs",
   surgery: "/surgeries",
   hospitalization: "/hospitalizations",
   vaccination: "/vaccinations",
