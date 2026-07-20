@@ -42,7 +42,7 @@ const navGroups = [
     label: "History",
     items: [
       { to: "/family-history", label: "Family History", icon: Users },
-      { to: "/surgeries", label: "Surgeries", icon: Scissors },
+      { to: "/procedures", label: "Procedures", icon: Scissors },
       { to: "/hospitalizations", label: "Hospitalizations", icon: Hospital },
       { to: "/vision-history", label: "Vision History", icon: Eye },
       { to: "/dental-history", label: "Dental History", icon: Smile },

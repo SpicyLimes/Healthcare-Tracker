@@ -16,8 +16,13 @@ import { FormField, Select, Input } from "@/components/ui/form-field";
 import { RecordTable } from "@/components/RecordTable";
 import { formatDatetime } from "@/lib/format";
 
+const SECTION_LABEL_OVERRIDES: Record<string, string> = {
+  surgeries: "Procedures",
+  visit_logs: "Visit & Call Logs",
+};
+
 function sectionLabel(s: string) {
-  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return SECTION_LABEL_OVERRIDES[s] ?? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function capitalize(s: string) {

@@ -57,7 +57,7 @@ export default function App() {
             <Route path="/insurance" element={<ProtectedRoute><InsurancePage /></ProtectedRoute>} />
             <Route path="/pharmacies" element={<ProtectedRoute><PharmaciesPage /></ProtectedRoute>} />
             <Route path="/family-history" element={<ProtectedRoute><FamilyHistoryPage /></ProtectedRoute>} />
-            <Route path="/surgeries" element={<ProtectedRoute><SurgeriesPage /></ProtectedRoute>} />
+            <Route path="/procedures" element={<ProtectedRoute><SurgeriesPage /></ProtectedRoute>} />
             <Route path="/hospitalizations" element={<ProtectedRoute><HospitalizationsPage /></ProtectedRoute>} />
             <Route path="/vision-history" element={<ProtectedRoute><VisionHistoryPage /></ProtectedRoute>} />
             <Route path="/dental-history" element={<ProtectedRoute><DentalHistoryPage /></ProtectedRoute>} />

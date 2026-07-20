@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { surgeriesApi, type Surgery, type SurgeryInput } from "../api/surgeries";
+import { surgeriesApi, PROCEDURE_TYPES, PROCEDURE_TYPE_LABELS, type Surgery, type SurgeryInput } from "../api/surgeries";
 import { amendMySubmission, getMySubmission } from "../api/submissions";
 import { doctorsApi, type Doctor } from "../api/doctors";
 import DoctorPicker from "../components/DoctorPicker";
@@ -11,12 +11,15 @@ import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FormField, Input, Textarea } from "@/components/ui/form-field";
+import { FormField, Input, Select, Textarea } from "@/components/ui/form-field";
+import { Badge } from "@/components/ui/badge";
+import { TypeFilterPills } from "@/components/TypeFilterPills";
 import { RecordTable } from "@/components/RecordTable";
 import { RecordFormModal } from "@/components/RecordFormModal";
 
 const EMPTY: SurgeryInput = {
   procedure: "",
+  procedure_type: "surgery",
   surgery_date: null,
   surgeon_id: null,
   surgeon_other: null,
@@ -42,6 +45,16 @@ export default function SurgeriesPage() {
   const [modalMode, setModalMode] = useState<"add" | "edit" | null>(null);
   const [editingRow, setEditingRow] = useState<Surgery | null>(null);
   const [form, setForm] = useState<SurgeryInput>(EMPTY);
+  const [typeFilter, setTypeFilter] = useState<Set<string>>(() => new Set(PROCEDURE_TYPES.map((t) => t.value)));
+
+  function toggleType(v: string) {
+    setTypeFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(v)) next.delete(v);
+      else next.add(v);
+      return next;
+    });
+  }
   const [modalError, setModalError] = useState("");
   const [editingSubmissionId, setEditingSubmissionId] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -88,7 +101,7 @@ export default function SurgeriesPage() {
 
   function openEdit(r: Surgery) {
     setEditingRow(r);
-    setForm({ procedure: r.procedure, surgery_date: r.surgery_date, surgeon_id: r.surgeon_id, surgeon_other: r.surgeon_other, hospital: r.hospital, outcome: r.outcome, notes: r.notes });
+    setForm({ procedure: r.procedure, procedure_type: r.procedure_type, surgery_date: r.surgery_date, surgeon_id: r.surgeon_id, surgeon_other: r.surgeon_other, hospital: r.hospital, outcome: r.outcome, notes: r.notes });
     setModalError("");
     setModalMode("edit");
   }
@@ -144,14 +157,15 @@ export default function SurgeriesPage() {
   return (
     <AppShell>
       <PageLayout
-        title="Surgery Records"
-        description="Surgical procedures and outcomes."
+        title="Procedures"
+        description="Surgeries, out-patient, and clinic procedures with outcomes."
         action={canWrite ? <Button onClick={openAdd}>+ Add</Button> : undefined}
       >
         <Card>
           <CardContent className="p-0">
+            <TypeFilterPills options={PROCEDURE_TYPES} active={typeFilter} onToggle={toggleType} />
             <RecordTable
-              rows={rows}
+              rows={rows.filter((r) => typeFilter.has(r.procedure_type))}
               loading={loading}
               isAdmin={canWrite}
               getRowId={(r) => r.id}
@@ -161,10 +175,12 @@ export default function SurgeriesPage() {
                 { header: "Date", sortKey: "surgery_date", render: (r) => r.surgery_date ?? "", className: "px-4 py-3 font-medium text-foreground" },
                 { header: "Procedure", sortKey: "procedure", render: (r) => r.procedure },
                 { header: "Surgeon", sortKey: "surgeon_other", render: (r) => resolveDoctorName(r.surgeon_id, r.surgeon_other) },
+                { header: "Type", sortKey: "procedure_type", render: (r) => <Badge variant={r.procedure_type === "surgery" ? "secondary" : "outline"}>{PROCEDURE_TYPE_LABELS[r.procedure_type] ?? r.procedure_type}</Badge> },
               ]}
               detailTitle={(r) => r.procedure}
               detailFields={(r) => [
                 { label: "Date", value: r.surgery_date },
+                { label: "Type", value: PROCEDURE_TYPE_LABELS[r.procedure_type] ?? r.procedure_type },
                 { label: "Surgeon", value: resolveDoctorName(r.surgeon_id, r.surgeon_other) || null },
                 { label: "Hospital", value: r.hospital },
                 { label: "Outcome", value: r.outcome },
@@ -187,7 +203,7 @@ export default function SurgeriesPage() {
       </PageLayout>
       {modalMode && (
         <RecordFormModal
-          title={modalMode === "edit" ? "Edit Surgery" : "Add Surgery"}
+          title={modalMode === "edit" ? "Edit Procedure" : "Add Procedure"}
           submitLabel={submitLabel}
           error={modalError || null}
           onClose={closeModal}
@@ -209,7 +225,18 @@ export default function SurgeriesPage() {
                 />
               </FormField>
             </div>
-            <FormField label="Surgery Date" htmlFor="surg-date">
+            <FormField label="Procedure Type" htmlFor="surg-procedure-type">
+              <Select
+                id="surg-procedure-type"
+                value={form.procedure_type ?? "surgery"}
+                onChange={(e) => setForm((s) => ({ ...s, procedure_type: e.target.value }))}
+              >
+                {PROCEDURE_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label="Date" htmlFor="surg-date">
               <Input
                 id="surg-date"
                 type="date"

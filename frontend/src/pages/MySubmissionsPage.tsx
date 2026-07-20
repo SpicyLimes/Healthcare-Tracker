@@ -24,7 +24,7 @@ const SECTION_PATHS: Record<string, string> = {
   insurances: "insurance",
   pharmacies: "pharmacies",
   family_history: "family-history",
-  surgeries: "surgeries",
+  surgeries: "procedures",
   hospitalizations: "hospitalizations",
   vision_history: "vision-history",
   dental_history: "dental-history",
@@ -32,8 +32,13 @@ const SECTION_PATHS: Record<string, string> = {
   vitals: "vitals",
 };
 
+const SECTION_LABEL_OVERRIDES: Record<string, string> = {
+  surgeries: "Procedures",
+  visit_logs: "Visit & Call Logs",
+};
+
 function sectionLabel(s: string) {
-  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return SECTION_LABEL_OVERRIDES[s] ?? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function capitalize(s: string) {

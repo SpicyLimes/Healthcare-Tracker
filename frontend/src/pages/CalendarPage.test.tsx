@@ -248,7 +248,7 @@ describe("CalendarPage", () => {
 
   it("pills expose pressed state", async () => {
     await renderAgenda(ALL_EVENTS);
-    const pill = screen.getAllByRole("button", { name: "Surgery" })[0];
+    const pill = screen.getAllByRole("button", { name: "Procedure" })[0];
     expect(pill).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(pill);
     expect(pill).toHaveAttribute("aria-pressed", "false");

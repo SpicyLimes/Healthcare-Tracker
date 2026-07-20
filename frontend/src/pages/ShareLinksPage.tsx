@@ -22,8 +22,13 @@ const ALL_SECTIONS = [
   "nutrition_plan",
 ];
 
+const SECTION_LABEL_OVERRIDES: Record<string, string> = {
+  surgeries: "Procedures",
+  visit_logs: "Visit & Call Logs",
+};
+
 function formatSection(s: string): string {
-  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return SECTION_LABEL_OVERRIDES[s] ?? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function addDays(days: number): string {

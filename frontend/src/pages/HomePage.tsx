@@ -447,8 +447,8 @@ export default function HomePage() {
                   </div>
                   <div className="border-t border-border pt-3">
                     <div className="flex items-center justify-between mb-1">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Surgery</p>
-                      <Link to="/surgeries" className="text-xs text-muted-foreground hover:text-foreground transition-colors">View →</Link>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Procedures</p>
+                      <Link to="/procedures" className="text-xs text-muted-foreground hover:text-foreground transition-colors">View →</Link>
                     </div>
                     {latestSurgery ? (
                       <div className="flex flex-col gap-0.5">

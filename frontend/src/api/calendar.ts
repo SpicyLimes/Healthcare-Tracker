@@ -33,7 +33,7 @@ export const EVENT_TYPE_LABELS: Record<CalendarEventType, string> = {
   appointment: "Appointment",
   visit_log: "Visit Log",
   vaccination: "Vaccination",
-  surgery: "Surgery",
+  surgery: "Procedure",
   hospitalization: "Hospitalization",
   medication: "Medication",
 };

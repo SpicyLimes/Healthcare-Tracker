@@ -10,8 +10,8 @@ import {
 
 const SECTION_LABELS: Record<string, string> = {
   doctors: "Doctors", medications: "Medications", ailments: "Ailment History",
-  surgeries: "Surgeries", hospitalizations: "Hospitalizations", vision_history: "Vision History",
-  dental_history: "Dental History", visit_logs: "Visit Logs", vitals: "Vitals", appointments: "Appointments",
+  surgeries: "Procedures", hospitalizations: "Hospitalizations", vision_history: "Vision History",
+  dental_history: "Dental History", visit_logs: "Visit & Call Logs", vitals: "Vitals", appointments: "Appointments",
   vaccinations: "Vaccinations", insurances: "Insurance", pharmacies: "Pharmacies",
   family_history: "Family History", nutrition_plan: "Nutrition Plan", profile: "Profile",
 };
