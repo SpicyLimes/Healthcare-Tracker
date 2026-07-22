@@ -145,7 +145,7 @@ function DayCell({ dateStr, events, isToday, isCurrentMonth, onEventClick }: Day
   return (
     <div
       className={cn(
-        "relative min-h-[80px] border-b border-r border-border p-1 text-xs",
+        "relative min-h-20 border-b border-r border-border p-1 text-xs",
         !isCurrentMonth && "bg-muted/30"
       )}
       ref={ref}
@@ -245,7 +245,7 @@ function MonthGrid({ events, year, month, onEventClick }: MonthGridProps) {
               onEventClick={onEventClick}
             />
           ) : (
-            <div key={`blank-${i}`} className="min-h-[80px] border-b border-r border-border bg-muted/30" />
+            <div key={`blank-${i}`} className="min-h-20 border-b border-r border-border bg-muted/30" />
           )
         )}
       </div>
@@ -799,7 +799,7 @@ export default function CalendarPage() {
                     filtered={agendaFiltered}
                     onClear={clearAgendaFilters}
                   />
-                  <div className="max-h-[420px] overflow-y-auto">
+                  <div className="max-h-105 overflow-y-auto">
                     <AgendaList events={agendaEvents} sortDir={agendaSortDir} filtered={agendaFiltered} onEventClick={handleEventClick} />
                   </div>
                 </CardContent>

@@ -48,7 +48,7 @@ function SectionCard({ title, to, icon: Icon, children }: { title: string; to: s
         <div className="mb-3">
           <div className="flex items-center justify-between">
             <h2 className="font-heading text-base font-semibold text-foreground flex items-center gap-2">
-              <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Icon className="size-4 text-muted-foreground shrink-0" />
               {title}
             </h2>
             <Link to={to} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -66,7 +66,7 @@ function SectionCard({ title, to, icon: Icon, children }: { title: string; to: s
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex gap-2 text-sm py-0.5">
-      <span className="min-w-[120px] shrink-0 text-muted-foreground">{label}</span>
+      <span className="min-w-30 shrink-0 text-muted-foreground">{label}</span>
       <span className="text-foreground">{value || "—"}</span>
     </div>
   );
@@ -287,7 +287,7 @@ export default function HomePage() {
         {/* Contributor role notice */}
         {user?.role === "contributor" && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-400 bg-amber-50 px-4 py-3 dark:bg-amber-950/30">
-            <FilePlus className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <FilePlus className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
             <div>
               <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
                 You're signed in as a Contributor
@@ -313,7 +313,7 @@ export default function HomePage() {
         {/* Viewer role notice */}
         {user?.role === "viewer" && (
           <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-400 bg-amber-50 px-4 py-3 dark:bg-amber-950/30">
-            <Eye className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <Eye className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
             <div>
               <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
                 You're signed in as a Viewer
@@ -424,7 +424,7 @@ export default function HomePage() {
             <CardContent className="p-4">
               <div className="mb-3">
                 <h2 className="font-heading text-base font-semibold text-foreground flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <Activity className="size-4 text-muted-foreground shrink-0" />
                   Recent Activity
                 </h2>
                 <div className="mt-2 border-t border-border" />
@@ -529,7 +529,7 @@ export default function HomePage() {
                     <div className="flex items-center gap-1.5 font-medium text-foreground">
                       {c.is_poa && (
                         <span
-                          className="inline-block h-2 w-2 shrink-0 rounded-full bg-primary"
+                          className="inline-block size-2 shrink-0 rounded-full bg-primary"
                           aria-label="Power of Attorney"
                         />
                       )}
