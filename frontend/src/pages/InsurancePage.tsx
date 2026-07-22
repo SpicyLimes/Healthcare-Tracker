@@ -10,6 +10,8 @@ import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField, Input, Textarea } from "@/components/ui/form-field";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RecordTable } from "@/components/RecordTable";
 import { RecordFormModal } from "@/components/RecordFormModal";
 
@@ -19,6 +21,7 @@ const EMPTY: InsuranceInput = {
   group_number: null,
   contact_phone: null,
   notes: null,
+  is_active: true,
 };
 
 export default function InsurancePage() {
@@ -80,6 +83,7 @@ export default function InsurancePage() {
       group_number: r.group_number ?? null,
       contact_phone: r.contact_phone ?? null,
       notes: r.notes ?? null,
+      is_active: r.is_active,
     });
     setModalError("");
     setModalMode("edit");
@@ -153,6 +157,11 @@ export default function InsurancePage() {
                 { header: "Insurer", sortKey: "insurer_name", render: (r) => r.insurer_name, className: "px-4 py-3 font-medium text-foreground" },
                 { header: "Policy #", sortKey: "policy_number", render: (r) => r.policy_number ?? "" },
                 { header: "Phone", sortKey: "contact_phone", render: (r) => r.contact_phone ?? "" },
+                { header: "Status", sortKey: "is_active", render: (r) => (
+                    <Badge variant={r.is_active ? "secondary" : "outline"}>
+                      {r.is_active ? "Active" : "Inactive"}
+                    </Badge>
+                  ) },
               ]}
               detailTitle={(r) => r.insurer_name}
               detailFields={(r) => [
@@ -234,6 +243,15 @@ export default function InsurancePage() {
                   placeholder="Additional notes..."
                 />
               </FormField>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <Checkbox
+                  checked={form.is_active ?? true}
+                  onChange={() => setForm((s) => ({ ...s, is_active: !(s.is_active ?? true) }))}
+                />
+                Active
+              </label>
             </div>
           </div>
         </RecordFormModal>

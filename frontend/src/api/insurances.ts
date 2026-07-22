@@ -8,6 +8,7 @@ export interface Insurance {
   contact_phone: string | null;
   contact_address: string | null;
   notes: string | null;
+  is_active: boolean;
 }
 
 export interface InsuranceInput {
@@ -17,6 +18,7 @@ export interface InsuranceInput {
   contact_phone?: string | null;
   contact_address?: string | null;
   notes?: string | null;
+  is_active?: boolean;
 }
 
 export const insurancesApi = createRecordClient<Insurance, InsuranceInput, InsuranceInput>("/api/insurances");
