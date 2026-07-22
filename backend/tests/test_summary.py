@@ -274,6 +274,108 @@ def test_guest_summary_empty_link_grants_all_sections(client, db_session):
     assert "AllAccessMed" in r.text
 
 
+def test_gather_visit_logs_with_linked_vitals_validates(client, db_session):
+    """Regression: a Visit Log linked to a Vitals row must gather without error.
+
+    VisitLogResponse declares all nine vitals fields (bp/pulse/height/weight/temp/
+    resp/spo2/glucose). gather_section_rows must attach ALL of them from the linked
+    Vitals row before model_validate — attaching only bp/pulse left the other six as
+    missing attributes, so model_validate raised and the whole summary 500'd
+    ("Could not generate the summary").
+    """
+    csrf = _login_admin(client, db_session, email="visitvitals@example.com")
+    r = client.post(
+        "/api/visit-logs",
+        headers={"X-CSRF-Token": csrf},
+        json={
+            "visit_type": "in_person",
+            "reason": "Checkup",
+            "bp_systolic": 120,
+            "bp_diastolic": 80,
+            "pulse_bpm": 72,
+            "weight_lb": 150.0,
+            "temperature_f": 98.6,
+        },
+    )
+    assert r.status_code == 201, r.text
+
+    rows = summary_service.gather_section_rows(db_session, "visit_logs", date_from=None, date_to=None)
+    assert len(rows) == 1
+    assert rows[0]["bp_systolic"] == 120
+    assert rows[0]["weight_lb"] == 150.0
+
+
+def test_gather_visit_logs_without_linked_vitals_validates(client, db_session):
+    """A Visit Log with no linked Vitals must still gather (all vitals fields None)."""
+    csrf = _login_admin(client, db_session, email="visitnovitals@example.com")
+    r = client.post(
+        "/api/visit-logs",
+        headers={"X-CSRF-Token": csrf},
+        json={"visit_type": "phone_call", "reason": "Phone follow-up"},
+    )
+    assert r.status_code == 201, r.text
+
+    rows = summary_service.gather_section_rows(db_session, "visit_logs", date_from=None, date_to=None)
+    assert len(rows) == 1
+    assert rows[0]["bp_systolic"] is None
+    assert rows[0]["weight_lb"] is None
+
+
+def test_admin_summary_all_sections_renders(client, db_session):
+    """Selecting every section (as 'All Records' does) must render, not 500.
+
+    Guards against any section whose response schema references attributes the
+    gather step doesn't populate — the class of bug that made visit_logs fail.
+    """
+    csrf = _login_admin(client, db_session, email="allsections@example.com")
+    section_map = summary_service.get_section_map()
+    all_sections = list(section_map.keys())
+    r = client.post(
+        "/api/summary",
+        headers={"X-CSRF-Token": csrf},
+        json={"sections": all_sections},
+    )
+    assert r.status_code == 200, r.text
+    assert "text/html" in r.headers["content-type"]
+
+
+def test_summary_uses_current_section_titles():
+    """Renamed features must print their current names, not the old ones."""
+    req = SummaryRequest(sections=["surgeries", "visit_logs"], include_patient_header=False)
+    html = summary_service.render_summary(
+        req, {"surgeries": [], "visit_logs": []}, patient=None
+    )
+    assert "Procedures" in html
+    assert ">Surgeries<" not in html
+    assert "Visit &amp; Call Logs" in html or "Visit & Call Logs" in html
+
+
+def test_summary_renders_friendly_enum_labels(client, db_session):
+    """visit_type / procedure_type print app-style labels, not raw stored keys."""
+    csrf = _login_admin(client, db_session, email="enumlabels@example.com")
+    client.post(
+        "/api/visit-logs",
+        headers={"X-CSRF-Token": csrf},
+        json={"visit_type": "phone_call", "reason": "Call"},
+    )
+    client.post(
+        "/api/surgeries",
+        headers={"X-CSRF-Token": csrf},
+        json={"procedure": "Scope", "procedure_type": "outpatient"},
+    )
+    r = client.post(
+        "/api/summary",
+        headers={"X-CSRF-Token": csrf},
+        json={"sections": ["visit_logs", "surgeries"]},
+    )
+    assert r.status_code == 200, r.text
+    assert "Phone Call" in r.text
+    assert "Out-Patient" in r.text
+    # raw keys must not appear as cell values
+    assert ">phone_call<" not in r.text
+    assert ">outpatient<" not in r.text
+
+
 def test_summary_medications_show_pharmacy_and_resolved_doctor(client, db_session):
     from app.models.doctor import Doctor
     from app.models.extended_records import Pharmacy

@@ -37,14 +37,13 @@ def gather_section_rows(
     model, schema = section_map[section]
     rows = list(db.scalars(select(model)).all())
 
-    # visit_logs: attach BP fields from linked Vitals row
+    # visit_logs: attach ALL vitals fields from the linked Vitals row.
+    # Reuse the visit_logs router's helper so every field VisitLogResponse
+    # declares is populated — attaching only bp/pulse left height/weight/temp/
+    # resp/spo2/glucose missing and model_validate raised (500 on the summary).
     if section == "visit_logs":
-        from app.models.extended_records import Vitals
-        for row in rows:
-            linked = db.get(Vitals, row.linked_vitals_id) if row.linked_vitals_id else None
-            row.bp_systolic = linked.bp_systolic if linked else None
-            row.bp_diastolic = linked.bp_diastolic if linked else None
-            row.pulse_bpm = linked.pulse_bpm if linked else None
+        from app.routers.visit_logs import _attach_vitals_batch
+        _attach_vitals_batch(rows, db)
 
     result = []
     for row in rows:
@@ -65,11 +64,11 @@ SECTION_TITLES: dict[str, str] = {
     "doctors": "Doctors",
     "ailments": "Ailment History",
     "profile": "Profile",
-    "surgeries": "Surgeries",
+    "surgeries": "Procedures",
     "hospitalizations": "Hospitalizations",
     "vision_history": "Vision History",
     "dental_history": "Dental History",
-    "visit_logs": "Visit Logs",
+    "visit_logs": "Visit & Call Logs",
     "vitals": "Vitals",
     "appointments": "Appointments",
     "vaccinations": "Vaccinations",
@@ -96,6 +95,30 @@ def _humanize(key: str) -> str:
     return key.replace("_", " ").title()
 
 
+# Friendly labels for enum-valued fields, mirroring the app's dropdowns so the
+# printout reads "In-Person"/"Out-Patient" rather than the raw stored keys.
+_VALUE_LABELS: dict[str, dict[str, str]] = {
+    "visit_type": {
+        "in_person": "In-Person",
+        "phone_call": "Phone Call",
+        "telehealth": "Telehealth",
+        "other": "Other",
+    },
+    "procedure_type": {
+        "surgery": "Surgery",
+        "outpatient": "Out-Patient",
+        "clinic": "Clinic",
+    },
+}
+
+
+def _display_value(key: str, value: object) -> object:
+    labels = _VALUE_LABELS.get(key)
+    if labels and isinstance(value, str):
+        return labels.get(value, value)
+    return value
+
+
 def _render_section(section: str, rows: list[dict]) -> str:
     title = SECTION_TITLES.get(section, _humanize(section))
     if not rows:
@@ -104,7 +127,7 @@ def _render_section(section: str, rows: list[dict]) -> str:
     head = "".join(f"<th>{_esc(_humanize(c))}</th>" for c in columns)
     body = ""
     for row in rows:
-        cells = "".join(f"<td>{_esc(row.get(c))}</td>" for c in columns)
+        cells = "".join(f"<td>{_esc(_display_value(c, row.get(c)))}</td>" for c in columns)
         body += f"<tr>{cells}</tr>"
     return (
         f"<section><h2>{_esc(title)}</h2>"

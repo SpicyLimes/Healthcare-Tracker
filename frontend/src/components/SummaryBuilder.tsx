@@ -112,7 +112,7 @@ export default function SummaryBuilder({ mode, availableSections, token, descrip
 
         <label className="mt-4 flex items-center gap-2 text-sm text-foreground">
           <Checkbox checked={includeHeader} onChange={() => setIncludeHeader((v) => !v)} />
-          Patient Profile
+          Show name &amp; DOB in header
         </label>
 
         <input
