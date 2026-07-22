@@ -160,6 +160,7 @@ export default function UsersPage() {
   }
 
   async function onDelete(u: ManagedUser) {
+    if (!window.confirm(`Delete user ${u.email}? This cannot be undone.`)) return;
     setError("");
     try {
       await deleteUser(u.id);

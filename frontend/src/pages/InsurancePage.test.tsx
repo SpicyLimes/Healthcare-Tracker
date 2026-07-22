@@ -62,4 +62,21 @@ describe("InsurancePage — active/inactive", () => {
     const activeBox = await screen.findByLabelText(/active/i);
     expect(activeBox).toBeChecked();
   });
+
+  it("preserves contact_address when editing (no clobber)", async () => {
+    const row = { ...BASE, id: "9", insurer_name: "Aetna", contact_address: "1 Elm St", is_active: true };
+    list.mockResolvedValue([row]);
+    update.mockResolvedValue(undefined);
+    renderPage();
+    await waitFor(() => expect(list).toHaveBeenCalled());
+    // open the row's edit modal via its per-row Edit button
+    fireEvent.click(await screen.findByRole("button", { name: /edit aetna/i }));
+    // the address input is pre-populated from the record
+    const addrInput = await screen.findByLabelText(/contact address/i);
+    expect(addrInput).toHaveValue("1 Elm St");
+    // save without touching it
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    await waitFor(() => expect(update).toHaveBeenCalled());
+    expect(update.mock.calls[0][1]).toMatchObject({ contact_address: "1 Elm St" });
+  });
 });

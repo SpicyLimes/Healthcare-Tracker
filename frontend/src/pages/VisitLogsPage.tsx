@@ -158,6 +158,7 @@ export default function VisitLogsPage() {
   }
 
   async function onDelete(id: string) {
+    if (!window.confirm("Delete this visit/call log?")) return;
     try { await visitLogsApi.remove(id); await reload(); }
     catch { setError("Could not delete record"); }
   }

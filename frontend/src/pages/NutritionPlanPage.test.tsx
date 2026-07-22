@@ -1,11 +1,13 @@
 // frontend/src/pages/NutritionPlanPage.test.tsx
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import NutritionPlanPage from "./NutritionPlanPage";
 import * as nutritionModule from "../api/nutritionPlan";
 import * as documentsModule from "../api/documents";
 import * as useAuthModule from "../auth/useAuth";
 
+// Delete buttons now go through window.confirm; auto-accept in tests.
+beforeEach(() => vi.spyOn(window, "confirm").mockReturnValue(true));
 afterEach(() => vi.restoreAllMocks());
 
 const MEAL: nutritionModule.NutritionMeal = {

@@ -475,6 +475,7 @@ function AppointmentsSection({ tz, isAdmin, onRegisterOpenById, onRegisterOpenAd
   }
 
   async function onDelete(id: string) {
+    if (!window.confirm("Delete this appointment?")) return;
     try { await appointmentsApi.remove(id); await reload(); }
     catch { setError("Could not delete record"); }
   }

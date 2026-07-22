@@ -99,8 +99,9 @@ export default function NutritionPlanPage() {
 
   // Card 1: delete — also clear the corresponding acceptable-food flag so the checkbox stays in sync
   async function handleCard1Delete(id: string) {
+    const meal = meals.find((m) => m.id === id);
+    if (!window.confirm(`Remove ${meal?.food_name ?? "this meal"} from the plan?`)) return;
     try {
-      const meal = meals.find((m) => m.id === id);
       await mealsApi.remove(id);
       if (meal) {
         const flag = MEAL_FLAG[meal.meal_type];
@@ -167,6 +168,8 @@ export default function NutritionPlanPage() {
 
   // Card 2: delete acceptable food
   async function handleAcceptableDelete(id: string) {
+    const food = acceptableFoods.find((f) => f.id === id);
+    if (!window.confirm(`Remove ${food?.food_name ?? "this food"} from acceptable foods?`)) return;
     try {
       await acceptableFoodsApi.remove(id);
       await reload();
@@ -202,6 +205,8 @@ export default function NutritionPlanPage() {
 
   // Card 3: delete unacceptable food
   async function handleUnacceptableDelete(id: string) {
+    const food = unacceptableFoods.find((f) => f.id === id);
+    if (!window.confirm(`Remove ${food?.food_name ?? "this food"} from unacceptable foods?`)) return;
     try {
       await unacceptableFoodsApi.remove(id);
       await reload();
@@ -229,6 +234,7 @@ export default function NutritionPlanPage() {
 
   // Card 4: delete document
   async function handleDocDelete(id: number) {
+    if (!window.confirm("Delete this document?")) return;
     try {
       await deleteDocument(id);
       await reload();

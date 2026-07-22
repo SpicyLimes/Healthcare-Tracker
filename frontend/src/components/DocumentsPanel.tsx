@@ -98,6 +98,7 @@ export default function DocumentsPanel({ section, recordId, isAdmin }: Props) {
   }
 
   async function handleDelete(docId: number) {
+    if (!window.confirm("Delete this document?")) return;
     try {
       await deleteDocument(docId);
       setDocs((prev) => {

@@ -80,6 +80,7 @@ export default function NotesPage() {
   }
 
   async function onDelete(id: string) {
+    if (!window.confirm("Delete this note?")) return;
     try {
       await notesApi.remove(id);
       await reload();

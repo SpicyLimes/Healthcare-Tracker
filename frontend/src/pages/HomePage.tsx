@@ -130,14 +130,16 @@ function buildPrintHtml(opts: {
   <meta charset="UTF-8" />
   <title>${escapeHtml(pageTitle)}</title>
   <style>
-    body { font-family: Georgia, serif; max-width: 800px; margin: 40px auto; color: #111; font-size: 14px; line-height: 1.6; }
-    h1 { font-size: 22px; margin-bottom: 4px; }
-    h2 { font-size: 15px; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-top: 24px; text-transform: uppercase; letter-spacing: 0.05em; }
-    .meta { color: #555; font-size: 13px; margin-bottom: 16px; }
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 24px auto; color: #111; font-size: 13px; line-height: 1.5; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    h2 { font-size: 14px; border-bottom: 1px solid #ccc; padding-bottom: 2px; margin: 18px 0 6px; }
+    .meta { color: #333; font-size: 13px; margin-bottom: 16px; }
     ul { margin: 4px 0 0 20px; padding: 0; }
     li { margin-bottom: 2px; }
     .item { margin-bottom: 6px; }
     p { margin: 4px 0; }
+    .empty { color: #888; font-size: 12px; }
+    @media print { body { margin: 0; } }
   </style>
   <script>window.onload = function() { window.print(); }</script>
 </head>

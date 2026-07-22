@@ -20,6 +20,7 @@ const EMPTY: InsuranceInput = {
   policy_number: null,
   group_number: null,
   contact_phone: null,
+  contact_address: null,
   notes: null,
   is_active: true,
 };
@@ -82,6 +83,7 @@ export default function InsurancePage() {
       policy_number: r.policy_number ?? null,
       group_number: r.group_number ?? null,
       contact_phone: r.contact_phone ?? null,
+      contact_address: r.contact_address ?? null,
       notes: r.notes ?? null,
       is_active: r.is_active,
     });
@@ -234,6 +236,17 @@ export default function InsurancePage() {
                 placeholder="e.g. +1 800-555-0100"
               />
             </FormField>
+            <div className="sm:col-span-2">
+              <FormField label="Contact address" htmlFor="ins-contact-address">
+                <Input
+                  id="ins-contact-address"
+                  type="text"
+                  value={form.contact_address ?? ""}
+                  onChange={(e) => setForm((s) => ({ ...s, contact_address: e.target.value || null }))}
+                  placeholder="e.g. 123 Main St, City, ST 00000"
+                />
+              </FormField>
+            </div>
             <div className="sm:col-span-2">
               <FormField label="Notes" htmlFor="ins-notes">
                 <Textarea
