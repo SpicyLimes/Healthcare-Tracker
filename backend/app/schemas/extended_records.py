@@ -19,6 +19,7 @@ class InsuranceCreate(BaseModel):
     contact_phone: str | None = None
     contact_address: str | None = None
     notes: str | None = None
+    is_active: bool = True
 
 class InsuranceUpdate(BaseModel):
     insurer_name: str | None = None
@@ -27,6 +28,7 @@ class InsuranceUpdate(BaseModel):
     contact_phone: str | None = None
     contact_address: str | None = None
     notes: str | None = None
+    is_active: bool | None = None
 
 class InsuranceResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -37,6 +39,7 @@ class InsuranceResponse(BaseModel):
     contact_phone: str | None
     contact_address: str | None
     notes: str | None
+    is_active: bool
     created_at: datetime
     updated_at: datetime
 

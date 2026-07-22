@@ -78,6 +78,26 @@ def test_insurances_crud(client, db_session):
     _crud_suite(client, db_session, "/api/insurances",
                 {"insurer_name": "BlueCross"}, {"policy_number": "X123"}, "policy_number", "X123")
 
+def test_insurance_is_active_round_trips(client, db_session):
+    csrf = _admin(client, db_session)
+    h = {"X-CSRF-Token": csrf}
+
+    # Defaults to active
+    created = client.post("/api/insurances", headers=h, json={"insurer_name": "Test Insurer"})
+    assert created.status_code == 201, created.text
+    assert created.json()["is_active"] is True
+    ins_id = created.json()["id"]
+
+    # Can set inactive via update
+    updated = client.put(f"/api/insurances/{ins_id}", headers=h, json={"is_active": False})
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["is_active"] is False
+
+    # Can create explicitly inactive
+    created2 = client.post("/api/insurances", headers=h, json={"insurer_name": "Inactive Co", "is_active": False})
+    assert created2.json()["is_active"] is False
+
+
 def test_insurances_auth(client, db_session):
     _auth_suite(client, db_session, "/api/insurances", {"insurer_name": "BlueCross"})
 
