@@ -212,6 +212,9 @@ def list_guest_records(
         rows = _attach_vitals_batch(vl_rows, db)
     else:
         rows = list(db.scalars(select(model)).all())
+        # inactive insurance is hidden from guests, matching the summary
+        if section == "insurances":
+            rows = [r for r in rows if getattr(r, "is_active", True)]
     log_event(
         db,
         action=AuditAction.share_link_access,

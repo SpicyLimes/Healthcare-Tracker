@@ -43,6 +43,21 @@ def test_guest_can_list_sections(client, db_session):
     assert len(r.json()) == 16  # unscoped = all sections
 
 
+def test_guest_insurance_list_excludes_inactive(client, db_session):
+    csrf = _admin(client, db_session)
+    h = {"X-CSRF-Token": csrf}
+    client.post("/api/insurances", headers=h, json={"insurer_name": "GuestActive"})
+    client.post("/api/insurances", headers=h, json={"insurer_name": "GuestInactive", "is_active": False})
+    token = _create_link(client, csrf, sections=["insurances"])
+    client.post("/api/auth/logout", headers=h)
+
+    r = client.get(f"/api/guest/insurances?token={token}")
+    assert r.status_code == 200, r.text
+    names = [row["insurer_name"] for row in r.json()]
+    assert "GuestActive" in names
+    assert "GuestInactive" not in names
+
+
 def test_scoped_token_only_returns_allowed_sections(client, db_session):
     csrf = _admin(client, db_session)
     token = _create_link(client, csrf, sections=["medications", "vaccinations"])
