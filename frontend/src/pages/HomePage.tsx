@@ -242,7 +242,7 @@ export default function HomePage() {
         setLatestVaccination(sorted[0] ?? null);
       }).catch(() => {}),
 
-      insurancesApi.list().then(setInsurances).catch(() => {}),
+      insurancesApi.list().then((rows) => setInsurances(rows.filter((i) => i.is_active))).catch(() => {}),
       pharmaciesApi.list().then(setPharmacies).catch(() => {}),
     ];
 

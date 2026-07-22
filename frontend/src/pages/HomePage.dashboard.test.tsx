@@ -179,11 +179,25 @@ describe("Dashboard sections", () => {
     mockAllApis();
     vi.spyOn(insurancesApiModule.insurancesApi, "list").mockResolvedValue([
       { id: "i1", insurer_name: "BlueCross", policy_number: "POL123",
-        group_number: null, contact_phone: null, contact_address: null, notes: null },
+        group_number: null, contact_phone: null, contact_address: null, notes: null, is_active: true },
     ]);
     render(<MemoryRouter><HomePage /></MemoryRouter>);
     await waitFor(() => expect(screen.getByText(/BlueCross/)).toBeInTheDocument());
     expect(screen.getByText(/POL123/)).toBeInTheDocument();
+  });
+
+  it("omits inactive insurance from the dashboard card", async () => {
+    mockAuth();
+    mockAllApis();
+    vi.spyOn(insurancesApiModule.insurancesApi, "list").mockResolvedValue([
+      { id: "i1", insurer_name: "ActiveIns", policy_number: null,
+        group_number: null, contact_phone: null, contact_address: null, notes: null, is_active: true },
+      { id: "i2", insurer_name: "HiddenIns", policy_number: null,
+        group_number: null, contact_phone: null, contact_address: null, notes: null, is_active: false },
+    ]);
+    render(<MemoryRouter><HomePage /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByText("ActiveIns")).toBeInTheDocument());
+    expect(screen.queryByText("HiddenIns")).not.toBeInTheDocument();
   });
 
   it("shows empty states when no data", async () => {
