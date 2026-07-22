@@ -376,6 +376,18 @@ def test_summary_renders_friendly_enum_labels(client, db_session):
     assert ">outpatient<" not in r.text
 
 
+def test_summary_excludes_inactive_insurance(client, db_session):
+    csrf = _login_admin(client, db_session, email="inssummary@example.com")
+    h = {"X-CSRF-Token": csrf}
+    client.post("/api/insurances", headers=h, json={"insurer_name": "ActiveIns"})
+    client.post("/api/insurances", headers=h, json={"insurer_name": "InactiveIns", "is_active": False})
+
+    r = client.post("/api/summary", headers=h, json={"sections": ["insurances"]})
+    assert r.status_code == 200, r.text
+    assert "ActiveIns" in r.text
+    assert "InactiveIns" not in r.text
+
+
 def test_summary_medications_show_pharmacy_and_resolved_doctor(client, db_session):
     from app.models.doctor import Doctor
     from app.models.extended_records import Pharmacy

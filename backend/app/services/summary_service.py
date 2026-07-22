@@ -45,6 +45,10 @@ def gather_section_rows(
         from app.routers.visit_logs import _attach_vitals_batch
         _attach_vitals_batch(rows, db)
 
+    # insurances: inactive policies are excluded from summaries by design.
+    if section == "insurances":
+        rows = [r for r in rows if getattr(r, "is_active", True)]
+
     result = []
     for row in rows:
         created = getattr(row, "created_at", None)
