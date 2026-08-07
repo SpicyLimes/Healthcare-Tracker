@@ -37,6 +37,12 @@ class ProfileResponse(BaseModel):
     phone: str | None
     notes: str | None
     main_doctor_id: uuid.UUID | None
+    # Resolved server-side. No free-text twin exists for the primary doctor,
+    # so this is linked-or-None.
+    main_doctor: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("main_doctor_display", "main_doctor"),
+    )
     created_at: datetime
     updated_at: datetime
 
@@ -162,7 +168,12 @@ class AilmentResponse(BaseModel):
     condition: str
     onset_date: date | None
     status: AilmentStatus
-    treating_doctor: str | None
+    # Resolved server-side: linked doctor name, else the free-text value.
+    # Reuses the existing field name, so the API shape is unchanged.
+    treating_doctor: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("treating_doctor_display", "treating_doctor"),
+    )
     treating_doctor_id: uuid.UUID | None
     notes: str | None
     created_at: datetime

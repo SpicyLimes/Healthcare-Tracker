@@ -6,7 +6,7 @@ from typing import Optional
 
 from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, Time, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
@@ -86,6 +86,16 @@ class Surgery(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
+    surgeon_link: Mapped[Optional["Doctor"]] = relationship(
+        "Doctor", lazy="selectin", foreign_keys=[surgeon_id]
+    )
+
+    @property
+    def surgeon_display(self) -> Optional[str]:
+        # Surgeon: linked doctor wins; free text is the fallback.
+        if self.surgeon_link is not None:
+            return self.surgeon_link.name
+        return self.surgeon_other
 
 class Hospitalization(Base):
     __tablename__ = "hospitalizations"
@@ -102,6 +112,16 @@ class Hospitalization(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
+    attending_physician_link: Mapped[Optional["Doctor"]] = relationship(
+        "Doctor", lazy="selectin", foreign_keys=[attending_physician_id]
+    )
+
+    @property
+    def attending_physician_display(self) -> Optional[str]:
+        # Attending physician: linked doctor wins; free text is the fallback.
+        if self.attending_physician_link is not None:
+            return self.attending_physician_link.name
+        return self.attending_physician_other
 
 class VisionHistory(Base):
     __tablename__ = "vision_history"
@@ -116,6 +136,16 @@ class VisionHistory(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
+    provider_link: Mapped[Optional["Doctor"]] = relationship(
+        "Doctor", lazy="selectin", foreign_keys=[provider_id]
+    )
+
+    @property
+    def provider_display(self) -> Optional[str]:
+        # Provider: linked doctor wins; free text is the fallback.
+        if self.provider_link is not None:
+            return self.provider_link.name
+        return self.provider_other
 
 class DentalHistory(Base):
     __tablename__ = "dental_history"
@@ -129,6 +159,16 @@ class DentalHistory(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
+    provider_link: Mapped[Optional["Doctor"]] = relationship(
+        "Doctor", lazy="selectin", foreign_keys=[provider_id]
+    )
+
+    @property
+    def provider_display(self) -> Optional[str]:
+        # Provider: linked doctor wins; free text is the fallback.
+        if self.provider_link is not None:
+            return self.provider_link.name
+        return self.provider_other
 
 class Vaccination(Base):
     __tablename__ = "vaccinations"
@@ -167,6 +207,16 @@ class VisitLog(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
+    doctor_link: Mapped[Optional["Doctor"]] = relationship(
+        "Doctor", lazy="selectin", foreign_keys=[doctor_id]
+    )
+
+    @property
+    def doctor_display(self) -> Optional[str]:
+        # Doctor: linked doctor wins; free text is the fallback.
+        if self.doctor_link is not None:
+            return self.doctor_link.name
+        return self.doctor_other
 
 class Appointment(Base):
     __tablename__ = "appointments"
@@ -195,6 +245,16 @@ class Appointment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
+    doctor_link: Mapped[Optional["Doctor"]] = relationship(
+        "Doctor", lazy="selectin", foreign_keys=[doctor_id]
+    )
+
+    @property
+    def doctor_display(self) -> Optional[str]:
+        # Doctor: linked doctor wins; free text is the fallback.
+        if self.doctor_link is not None:
+            return self.doctor_link.name
+        return self.doctor_other
 
 class Vitals(Base):
     __tablename__ = "vitals"

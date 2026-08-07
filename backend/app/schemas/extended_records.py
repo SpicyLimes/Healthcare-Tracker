@@ -3,7 +3,7 @@ import uuid
 from datetime import date, datetime, time
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, computed_field
 
 from app.models.extended_records import AppointmentStatus, AppointmentType
 
@@ -124,6 +124,11 @@ class SurgeryResponse(BaseModel):
     surgery_date: date | None
     surgeon_id: uuid.UUID | None
     surgeon_other: str | None
+    # Resolved server-side: linked doctor name, else the free-text value.
+    surgeon: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("surgeon_display", "surgeon_other"),
+    )
     hospital: str | None
     outcome: str | None
     notes: str | None
@@ -161,6 +166,11 @@ class HospitalizationResponse(BaseModel):
     reason: str | None
     attending_physician_id: uuid.UUID | None
     attending_physician_other: str | None
+    # Resolved server-side: linked doctor name, else the free-text value.
+    attending_physician: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("attending_physician_display", "attending_physician_other"),
+    )
     outcome: str | None
     notes: str | None
     created_at: datetime
@@ -190,6 +200,11 @@ class VisionHistoryResponse(BaseModel):
     visit_date: date | None
     provider_id: uuid.UUID | None
     provider_other: str | None
+    # Resolved server-side: linked doctor name, else the free-text value.
+    provider: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("provider_display", "provider_other"),
+    )
     rx_od: str | None
     rx_os: str | None
     notes: str | None
@@ -218,6 +233,11 @@ class DentalHistoryResponse(BaseModel):
     visit_date: date | None
     provider_id: uuid.UUID | None
     provider_other: str | None
+    # Resolved server-side: linked doctor name, else the free-text value.
+    provider: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("provider_display", "provider_other"),
+    )
     procedure: str | None
     notes: str | None
     created_at: datetime
@@ -308,6 +328,11 @@ class VisitLogResponse(BaseModel):
     visit_time: time | None
     doctor_id: uuid.UUID | None
     doctor_other: str | None
+    # Resolved server-side: linked doctor name, else the free-text value.
+    doctor: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("doctor_display", "doctor_other"),
+    )
     reason: str | None
     summary: str | None
     follow_up: str | None
@@ -354,6 +379,11 @@ class AppointmentResponse(BaseModel):
     appointment_datetime: datetime
     doctor_id: uuid.UUID | None
     doctor_other: str | None
+    # Resolved server-side: linked doctor name, else the free-text value.
+    doctor: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("doctor_display", "doctor_other"),
+    )
     appointment_type: AppointmentType | None
     location: str | None
     reason: str | None

@@ -5,7 +5,7 @@ from typing import Optional
 
 from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
@@ -40,3 +40,14 @@ class Ailment(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
+
+    treating_doctor_link: Mapped[Optional["Doctor"]] = relationship(
+        "Doctor", lazy="selectin", foreign_keys=[treating_doctor_id]
+    )
+
+    @property
+    def treating_doctor_display(self) -> Optional[str]:
+        # Treating doctor: linked doctor wins; free text is the fallback.
+        if self.treating_doctor_link is not None:
+            return self.treating_doctor_link.name
+        return self.treating_doctor

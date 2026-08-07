@@ -84,9 +84,20 @@ SECTION_TITLES: dict[str, str] = {
 
 _HIDDEN_KEYS = {"id", "created_at", "updated_at"}
 
+# Free-text doctor columns. Each is now resolved into a role-labelled field
+# (surgeon, attending_physician, provider, doctor, treating_doctor) that falls
+# back to this same value, so printing both would duplicate the name and show
+# a raw "… Other" header on the doctor-facing sheet.
+_REDUNDANT_FREETEXT_KEYS = {
+    "surgeon_other",
+    "attending_physician_other",
+    "provider_other",
+    "doctor_other",
+}
+
 
 def _is_hidden(key: str) -> bool:
-    return key in _HIDDEN_KEYS or key.endswith("_id")
+    return key in _HIDDEN_KEYS or key in _REDUNDANT_FREETEXT_KEYS or key.endswith("_id")
 
 
 def _esc(value: object) -> str:

@@ -4,7 +4,7 @@ from typing import Optional
 
 from sqlalchemy import Date, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
@@ -35,3 +35,13 @@ class Profile(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
+
+    main_doctor_link: Mapped[Optional["Doctor"]] = relationship(
+        "Doctor", lazy="selectin", foreign_keys=[main_doctor_id]
+    )
+
+    @property
+    def main_doctor_display(self) -> Optional[str]:
+        # Primary doctor. Unlike the other records this has no free-text twin,
+        # so the contract is linked-or-None — there is nothing to fall back to.
+        return self.main_doctor_link.name if self.main_doctor_link is not None else None
