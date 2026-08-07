@@ -69,8 +69,11 @@ def _sync_vitals(db: Session, record: VisitLog, vitals_data: dict, created_by: u
         record.linked_vitals_id = v.id
         db.flush()
     elif linked is not None:
+        # Only the fields actually sent. vitals_data is sparse on the update
+        # path, so a partial write leaves untouched vitals alone.
         for f in _VITALS_FIELDS:
-            setattr(linked, f, vitals_data.get(f))
+            if f in vitals_data:
+                setattr(linked, f, vitals_data[f])
         linked.measured_at = _measured_at_from_visit(record, tz)
         # Keep both sides of the circular FK in sync: Vitals.visit_log_id must
         # point back to this VisitLog, otherwise the two pointers have drifted.
@@ -167,7 +170,11 @@ def update_record(
     data = payload.model_dump(exclude_unset=True)
     vitals_provided = any(f in data for f in _VITALS_FIELDS)
     datetime_changed = "visit_date" in data or "visit_time" in data
-    vitals_data = {f: data.pop(f, None) for f in _VITALS_FIELDS}
+    # Sparse, not dense: only the vitals keys actually sent. A dense dict made
+    # every absent field arrive as None and _sync_vitals setattr'd all nine,
+    # so a one-key PUT nulled the other eight. (create_record's dense dict is
+    # correct — it model_dumps without exclude_unset, so all nine are real.)
+    vitals_data = {f: data.pop(f) for f in _VITALS_FIELDS if f in data}
     try:
         record = service.update(db, record_id, {k: v for k, v in data.items() if k in _VISIT_LOG_COLUMNS})
     except NotFoundError:

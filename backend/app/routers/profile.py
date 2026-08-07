@@ -32,7 +32,13 @@ def put_profile(
     db: Session = Depends(get_db),
     current: User = Depends(require_admin),
 ):
-    return profile_service.upsert_profile(db, payload.model_dump(), created_by=current.id)
+    # exclude_unset: a partial PUT must not null the columns it omitted.
+    # ProfileWrite defaults 10 of 11 fields to None, and upsert_profile
+    # blind-setattrs whatever it receives — so sending only full_name would
+    # wipe allergies and emergency_contacts. Matches the 12 generic routers.
+    return profile_service.upsert_profile(
+        db, payload.model_dump(exclude_unset=True), created_by=current.id
+    )
 
 
 # Profile has a UUID primary key; attach document upload/list routes keyed by that id.

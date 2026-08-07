@@ -57,3 +57,30 @@ def test_put_requires_csrf(client, db_session):
 
 def test_get_requires_auth(client, db_session):
     assert client.get("/api/profile").status_code == 401
+
+
+def test_put_does_not_null_fields_it_was_not_sent(client, db_session):
+    """A partial PUT must leave unsent columns alone.
+
+    Regression: put_profile called model_dump() with no exclude_unset, so
+    ProfileWrite's None defaults overwrote every omitted column — including
+    allergies, the most safety-critical field on the record.
+    """
+    csrf = _admin_login(client, db_session)
+    h = {"X-CSRF-Token": csrf}
+    client.put("/api/profile", headers=h, json={
+        "full_name": "Jane Doe",
+        "allergies": '[{"medication": "Penicillin", "reaction": "Anaphylaxis"}]',
+        "blood_type": "O+",
+        "phone": "555-0100",
+    })
+
+    # Rename only — nothing else is sent.
+    res = client.put("/api/profile", headers=h, json={"full_name": "Jane A. Doe"})
+    assert res.status_code == 200
+
+    got = client.get("/api/profile").json()
+    assert got["full_name"] == "Jane A. Doe"
+    assert got["allergies"] == '[{"medication": "Penicillin", "reaction": "Anaphylaxis"}]'
+    assert got["blood_type"] == "O+"
+    assert got["phone"] == "555-0100"

@@ -190,3 +190,33 @@ def test_vitals_circular_fk_both_sides_consistent(client, db_session):
     assert vl["linked_vitals_id"] == v["id"]
     # Vitals.visit_log_id → VisitLog.id
     assert v["visit_log_id"] == vl["id"]
+
+
+def test_partial_vitals_update_preserves_untouched_fields(client, db_session):
+    """A PUT touching one vitals field must not null the other eight.
+
+    Regression: update_record built a DENSE dict over _VITALS_FIELDS
+    ({f: data.pop(f, None)}), so absent keys arrived as None and _sync_vitals
+    setattr'd all nine unconditionally.
+    """
+    csrf = _admin(client, db_session); h = {"X-CSRF-Token": csrf}
+    vid = client.post("/api/visit-logs", headers=h, json=_visit(
+        bp_systolic=120, bp_diastolic=80, pulse_bpm=72,
+        height_in=66, weight_lb=150, temperature_f=98.6,
+        respiratory_rate=16, spo2=98, blood_glucose=95,
+    )).json()["id"]
+
+    # Touch systolic only.
+    assert client.put(f"/api/visit-logs/{vid}", headers=h,
+                      json={"bp_systolic": 125}).status_code == 200
+
+    v = client.get("/api/vitals").json()[0]
+    assert v["bp_systolic"] == 125
+    assert v["bp_diastolic"] == 80
+    assert v["pulse_bpm"] == 72
+    assert v["height_in"] == 66
+    assert v["weight_lb"] == 150
+    assert v["temperature_f"] == 98.6
+    assert v["respiratory_rate"] == 16
+    assert v["spo2"] == 98
+    assert v["blood_glucose"] == 95
