@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { SECTION_LABELS, ALL_SECTIONS, sectionLabel } from "./section-labels";
+import {
+  SECTION_LABELS, ALL_SECTIONS, sectionLabel,
+  CLINICAL_ORDER, sortByClinicalOrder, landingSection,
+} from "./section-labels";
 
 /**
  * These labels must match SECTION_TITLES in
@@ -49,5 +52,39 @@ describe("section labels", () => {
 
   it("falls back gracefully for an unknown section", () => {
     expect(sectionLabel("some_new_thing")).toBe("Some New Thing");
+  });
+});
+
+describe("clinical ordering", () => {
+  it("lands a guest on the highest-value section they can see", () => {
+    // Previously sections[0] — whichever checkbox the sender clicked first.
+    expect(landingSection(["vision_history", "medications"])).toBe("medications");
+    expect(landingSection(["nutrition_plan", "pharmacies", "profile"])).toBe("profile");
+    expect(landingSection(["vitals"])).toBe("vitals");
+  });
+
+  it("returns undefined when nothing was shared", () => {
+    expect(landingSection([])).toBeUndefined();
+  });
+
+  it("orders sections consistently regardless of input order", () => {
+    const a = sortByClinicalOrder(["vaccinations", "medications", "profile"]);
+    const b = sortByClinicalOrder(["profile", "vaccinations", "medications"]);
+    expect(a).toEqual(b);
+    expect(a).toEqual(["profile", "medications", "vaccinations"]);
+  });
+
+  it("puts unknown sections last instead of dropping them", () => {
+    const out = sortByClinicalOrder(["mystery", "medications"]);
+    expect(out).toEqual(["medications", "mystery"]);
+  });
+
+  it("agrees with the backend CANONICAL_ORDER", () => {
+    // Mirrors CANONICAL_ORDER in summary_service.py.
+    expect(CLINICAL_ORDER).toEqual([
+      "profile", "medications", "ailments", "vitals", "visit_logs", "appointments",
+      "surgeries", "hospitalizations", "vaccinations", "doctors", "vision_history",
+      "dental_history", "insurances", "pharmacies", "family_history", "nutrition_plan",
+    ]);
   });
 });

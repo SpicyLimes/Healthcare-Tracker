@@ -409,3 +409,46 @@ def test_summary_medications_show_pharmacy_and_resolved_doctor(client, db_sessio
     assert "Dr. Summary" in html
     # Raw UUIDs must stay hidden
     assert str(p.id) not in html
+
+
+def test_sections_render_in_canonical_order_not_click_order(client, db_session):
+    """Two summaries of the same content must be identical regardless of
+    checkbox click order — a doctor scans top-down, so position matters."""
+    from app.services.summary_service import sort_sections
+
+    assert sort_sections(["vaccinations", "medications", "profile"]) == [
+        "profile", "medications", "vaccinations",
+    ]
+    # Same set, opposite input order -> same output.
+    a = sort_sections(["visit_logs", "ailments", "medications"])
+    b = sort_sections(["medications", "ailments", "visit_logs"])
+    assert a == b == ["medications", "ailments", "visit_logs"]
+    # Unknown sections sort to the end rather than raising.
+    assert sort_sections(["what_is_this", "medications"])[0] == "medications"
+
+
+def test_allergies_and_contacts_print_readable_not_json(client, db_session):
+    """The two most safety-critical fields must not reach a clinician as
+    bracket-and-quote soup."""
+    from app.services.summary_service import _display_value
+
+    allergies = '[{"medication": "Penicillin", "reaction": "Anaphylaxis", "age_of_onset": "12"}]'
+    out = _display_value("allergies", allergies)
+    assert out == "Penicillin — Anaphylaxis"
+    assert "{" not in out and '"' not in out
+
+    contacts = '[{"name": "Jane Doe", "relationship": "Daughter", "phone": "555-0100", "is_poa": true}]'
+    out = _display_value("emergency_contacts", contacts)
+    assert out == "Jane Doe · Daughter · 555-0100 (POA)"
+
+    # Legacy free text and malformed JSON survive untouched.
+    assert _display_value("allergies", "penicillin") == "penicillin"
+    assert _display_value("allergies", "{not json") == "{not json"
+
+
+def test_inactive_medication_reads_stopped_not_false(client, db_session):
+    """A bare 'False' in an 'Is Active' column is not a signal a clinician reads."""
+    from app.services.summary_service import _display_value
+
+    assert _display_value("is_active", False) == "Stopped"
+    assert _display_value("is_active", True) == "Active"

@@ -6,7 +6,7 @@ import SummaryBuilder from "./SummaryBuilder";
 import { applyAccent } from "./accent-picker";
 import { getGuestPatientName } from "../api/guest";
 
-import { SECTION_LABELS } from "@/lib/section-labels";
+import { SECTION_LABELS, ALL_SECTIONS, sortByClinicalOrder } from "@/lib/section-labels";
 
 interface Props {
   children: ReactNode;
@@ -61,6 +61,15 @@ export default function GuestLayout({ children, expired }: Props) {
             {patientName ?? "Healthcare Records"}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">Read-Only Access</p>
+          {allowedSections.length > 0 && allowedSections.length < ALL_SECTIONS.length && (
+            // Without this, a missing section is indistinguishable from an
+            // empty one: a clinician scanning for allergies sees no Profile
+            // button and reasonably concludes there are none.
+            <p className="mt-1 text-sm font-medium text-foreground">
+              Partial record — you were shared {allowedSections.length} of{" "}
+              {ALL_SECTIONS.length} sections.
+            </p>
+          )}
           {expiresAt && (
             <p className="mt-1 text-sm text-muted-foreground">
               This link expires on {new Date(expiresAt).toLocaleDateString()}
@@ -78,7 +87,7 @@ export default function GuestLayout({ children, expired }: Props) {
         )}
       </header>
       <nav className="flex flex-wrap gap-2 mb-6">
-        {allowedSections.map((s) => (
+        {sortByClinicalOrder(allowedSections).map((s) => (
           <Button key={s} size="sm" asChild className="shadow-[0_8px_24px_-2px_rgba(0,0,0,0.14),0_1px_2px_0_rgba(0,0,0,0.10)]">
             <Link to={`/guest/sections/${s}`}>
               {SECTION_LABELS[s] ?? s}

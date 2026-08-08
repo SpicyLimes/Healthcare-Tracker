@@ -1,5 +1,6 @@
 # backend/app/services/summary_service.py
 import html as _html
+import json as _json
 from datetime import date, datetime, timezone
 from typing import Any, Optional
 
@@ -82,6 +83,39 @@ SECTION_TITLES: dict[str, str] = {
     "nutrition_plan": "Nutrition Plan",
 }
 
+# Clinical reading order for the printed summary. A doctor scans top-down, so
+# the order must not depend on which checkboxes were ticked first — two
+# printouts of identical content used to differ. Allergies live on the profile
+# and medications drive interaction checks; HL7 C-CDA, ISO 27269 IPS and AHRQ
+# all put those first. Mirrors CLINICAL_ORDER in frontend/src/lib/section-labels.ts.
+CANONICAL_ORDER: list[str] = [
+    "profile",
+    "medications",
+    "ailments",
+    "vitals",
+    "visit_logs",
+    "appointments",
+    "surgeries",
+    "hospitalizations",
+    "vaccinations",
+    "doctors",
+    "vision_history",
+    "dental_history",
+    "insurances",
+    "pharmacies",
+    "family_history",
+    "nutrition_plan",
+]
+
+
+def sort_sections(sections: list[str]) -> list[str]:
+    """Canonical reading order; unknown sections keep their relative place at the end."""
+    return sorted(
+        sections,
+        key=lambda s: CANONICAL_ORDER.index(s) if s in CANONICAL_ORDER else len(CANONICAL_ORDER),
+    )
+
+
 _HIDDEN_KEYS = {"id", "created_at", "updated_at"}
 
 # Free-text doctor columns. Each is now resolved into a role-labelled field
@@ -127,7 +161,58 @@ _VALUE_LABELS: dict[str, dict[str, str]] = {
 }
 
 
+def _format_allergies(raw: str) -> str:
+    """"Penicillin — Anaphylaxis; Sulfa — Rash" from the stored JSON."""
+    try:
+        items = _json.loads(raw)
+    except (ValueError, TypeError):
+        return raw
+    if not isinstance(items, list):
+        return raw
+    parts = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        bits = [str(item.get(k, "")).strip() for k in ("medication", "reaction")]
+        joined = " — ".join(b for b in bits if b)
+        if joined:
+            parts.append(joined)
+    return "; ".join(parts) if parts else raw
+
+
+def _format_contacts(raw: str) -> str:
+    """"Jane Doe · Daughter · 555-0100 (POA)" from the stored JSON."""
+    try:
+        items = _json.loads(raw)
+    except (ValueError, TypeError):
+        return raw
+    if not isinstance(items, list):
+        return raw
+    parts = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        bits = [str(item.get(k, "")).strip() for k in ("name", "relationship", "phone")]
+        joined = " · ".join(b for b in bits if b)
+        if joined:
+            parts.append(joined + (" (POA)" if item.get("is_poa") else ""))
+    return "; ".join(parts) if parts else raw
+
+
+# JSON-encoded columns. Without this the two most safety-critical fields on the
+# sheet reach a clinician as bracket-and-quote soup, and may simply be skipped.
+_JSON_FORMATTERS = {
+    "allergies": _format_allergies,
+    "emergency_contacts": _format_contacts,
+}
+
+
 def _display_value(key: str, value: object) -> object:
+    formatter = _JSON_FORMATTERS.get(key)
+    if formatter and isinstance(value, str) and value.strip():
+        return formatter(value)
+    if key == "is_active" and isinstance(value, bool):
+        return "Active" if value else "Stopped"
     labels = _VALUE_LABELS.get(key)
     if labels and isinstance(value, str):
         return labels.get(value, value)
@@ -167,7 +252,7 @@ def render_summary(req: "SummaryRequest", section_data: dict[str, list[dict]], p
         patient_block += "</div>"
 
     sections_html = "".join(
-        _render_section(s, section_data.get(s, [])) for s in req.sections
+        _render_section(s, section_data.get(s, [])) for s in sort_sections(req.sections)
     )
 
     return f"""<!DOCTYPE html>

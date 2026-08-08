@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { getGuestSections } from "../api/guest";
 import { useGuest } from "../auth/GuestContext";
 import GuestLayout from "../components/GuestLayout";
+import { landingSection } from "@/lib/section-labels";
 
 export default function GuestEntryPage() {
   const [searchParams] = useSearchParams();
@@ -23,8 +24,11 @@ export default function GuestEntryPage() {
           expiresAt = new Date(payload.exp * 1000).toISOString();
         } catch { /* ignore */ }
         setGuest(token, sections, expiresAt);
+        // Land on the highest-value section available, not sections[0] —
+        // which was whichever checkbox the sender happened to click first.
+        const landing = landingSection(sections) ?? sections[0];
         // Navigate WITHOUT token in URL — token lives in context state only
-        navigate(`/guest/sections/${sections[0]}`, { replace: true });
+        navigate(`/guest/sections/${landing}`, { replace: true });
       })
       .catch(() => setExpired(true));
   }, [token]);

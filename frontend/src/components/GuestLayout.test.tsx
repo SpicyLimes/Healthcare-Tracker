@@ -5,6 +5,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import GuestLayout from "./GuestLayout";
 import { GuestProvider, useGuest } from "../auth/GuestContext";
+import { ALL_SECTIONS } from "@/lib/section-labels";
 
 vi.mock("../api/summary", () => ({
   generateSummary: vi.fn(),
@@ -69,5 +70,48 @@ describe("GuestLayout", () => {
   it("shows the privacy footer on an active guest page", () => {
     renderWithGuest(<GuestLayout><p>content</p></GuestLayout>);
     expect(screen.getByText(/this link isn't saved in your browser/i)).toBeInTheDocument();
+  });
+
+  it("discloses that a scoped link is partial", () => {
+    // Absence of a section button otherwise reads as absence of a condition:
+    // a clinician scanning for allergies sees no Profile tab and concludes
+    // there are none, when they exist and simply weren't shared.
+    render(
+      <GuestProvider>
+        <MemoryRouter>
+          <SeedGuest sections={["medications", "vitals"]} />
+          <GuestLayout><p>content</p></GuestLayout>
+        </MemoryRouter>
+      </GuestProvider>
+    );
+    expect(screen.getByText(/partial record/i)).toBeInTheDocument();
+    expect(screen.getByText(/2 of 16 sections/i)).toBeInTheDocument();
+  });
+
+  it("does not claim partial when every section was shared", () => {
+    render(
+      <GuestProvider>
+        <MemoryRouter>
+          <SeedGuest sections={ALL_SECTIONS} />
+          <GuestLayout><p>content</p></GuestLayout>
+        </MemoryRouter>
+      </GuestProvider>
+    );
+    expect(screen.queryByText(/partial record/i)).not.toBeInTheDocument();
+  });
+
+  it("orders section buttons by clinical value, not share order", () => {
+    render(
+      <GuestProvider>
+        <MemoryRouter>
+          <SeedGuest sections={["nutrition_plan", "medications", "profile"]} />
+          <GuestLayout><p>content</p></GuestLayout>
+        </MemoryRouter>
+      </GuestProvider>
+    );
+    const links = screen.getAllByRole("link").map((a) => a.textContent);
+    const idx = (t: string) => links.findIndex((l) => l === t);
+    expect(idx("Profile")).toBeLessThan(idx("Medications"));
+    expect(idx("Medications")).toBeLessThan(idx("Nutrition Plan"));
   });
 });
