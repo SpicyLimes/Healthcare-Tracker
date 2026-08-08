@@ -5,6 +5,7 @@ import { amendMySubmission, getMySubmission } from "../api/submissions";
 import { useAuth } from "../auth/useAuth";
 import { useToast } from "../components/toast";
 import DocumentsPanel from "../components/DocumentsPanel";
+import DoctorRelatedPanel from "../components/DoctorRelatedPanel";
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +19,7 @@ const EMPTY: DoctorInput = {
   specialty: null,
   practice: null,
   phone: null,
+  fax: null,
   address: null,
   patient_portal_url: null,
   notes: null,
@@ -77,7 +79,7 @@ export default function DoctorsPage() {
 
   function openEdit(r: Doctor) {
     setEditingRow(r);
-    setForm({ name: r.name, specialty: r.specialty, practice: r.practice, phone: r.phone, address: r.address, patient_portal_url: r.patient_portal_url, notes: r.notes });
+    setForm({ name: r.name, specialty: r.specialty, practice: r.practice, phone: r.phone, fax: r.fax, address: r.address, patient_portal_url: r.patient_portal_url, notes: r.notes });
     setModalError("");
     setModalMode("edit");
   }
@@ -160,7 +162,12 @@ export default function DoctorsPage() {
                 { label: "Portal URL", value: r.patient_portal_url },
                 { label: "Notes", value: r.notes },
               ]}
-              renderDetailExtra={(r) => <DocumentsPanel section="doctors" recordId={r.id} isAdmin={isAdmin} />}
+              renderDetailExtra={(r) => (
+                <div className="flex flex-col gap-4">
+                  <DoctorRelatedPanel doctorId={r.id} />
+                  <DocumentsPanel section="doctors" recordId={r.id} isAdmin={isAdmin} />
+                </div>
+              )}
               getHeadline={(r) => r.name}
               getSubtitle={(r) => r.specialty ?? null}
               onEdit={(r) => openEdit(r)}
@@ -212,6 +219,13 @@ export default function DoctorsPage() {
               <Input id="doc-phone" type="tel" placeholder="(555) 000-0000"
                 value={form.phone ?? ""}
                 onChange={(e) => setForm((s) => ({ ...s, phone: e.target.value || null }))} />
+            </FormField>
+            {/* Fax was shown in the detail view but had no input: the AI could
+                write it, the UI could not. Doctors' offices still fax. */}
+            <FormField label="Fax" htmlFor="doc-fax">
+              <Input id="doc-fax" type="tel" placeholder="(555) 000-0000"
+                value={form.fax ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, fax: e.target.value || null }))} />
             </FormField>
             <FormField label="Patient Portal URL" htmlFor="doc-portal">
               <Input id="doc-portal" type="url" placeholder="https://portal.example.com"

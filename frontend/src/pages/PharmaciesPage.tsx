@@ -208,6 +208,18 @@ export default function PharmaciesPage() {
               />
             </FormField>
 
+            {/* Fax was displayed and seeded into the edit form, but had no
+                input — so it round-tripped invisibly and could never be set. */}
+            <FormField label="Fax" htmlFor="fax">
+              <Input
+                id="fax"
+                type="tel"
+                value={form.fax ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, fax: e.target.value || null }))}
+                placeholder="e.g. +1 555-555-0101"
+              />
+            </FormField>
+
             <div className="sm:col-span-2">
               <FormField label="Address" htmlFor="address">
                 <Textarea

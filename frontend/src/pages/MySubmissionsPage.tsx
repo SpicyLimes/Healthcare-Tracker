@@ -15,23 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RecordTable } from "@/components/RecordTable";
 import { formatDatetime } from "@/lib/format";
-import { sectionLabel } from "@/lib/section-labels";
-
-// Section key -> URL path for the edit deep-link.
-const SECTION_PATHS: Record<string, string> = {
-  medications: "medications",
-  doctors: "doctors",
-  ailments: "ailments",
-  insurances: "insurance",
-  pharmacies: "pharmacies",
-  family_history: "family-history",
-  surgeries: "procedures",
-  hospitalizations: "hospitalizations",
-  vision_history: "vision-history",
-  dental_history: "dental-history",
-  vaccinations: "vaccinations",
-  vitals: "vitals",
-};
+import { sectionLabel, sectionRoute } from "@/lib/section-labels";
 
 function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -66,9 +50,9 @@ export default function MySubmissionsPage() {
   useEffect(() => { reload(); }, [reload]);
 
   function handleEdit(r: Submission) {
-    const path = SECTION_PATHS[r.section];
-    if (!path) return;
-    navigate(`/${path}?editSubmission=${r.id}`);
+    const route = sectionRoute(r.section);
+    if (!route) return;
+    navigate(`${route}?editSubmission=${r.id}`);
   }
 
   async function handleWithdraw(id: string) {

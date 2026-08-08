@@ -69,3 +69,32 @@ export function sectionLabel(section: string): string {
     section.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
   );
 }
+
+/**
+ * Route for a section key. Several keys do NOT match their URL — `surgeries`
+ * lives at /procedures, `visit_logs` at /doc-logs — which is exactly why this
+ * belongs next to the labels instead of being retyped per page.
+ */
+export const SECTION_ROUTES: Record<string, string> = {
+  profile: "/profile",
+  medications: "/medications",
+  doctors: "/doctors",
+  ailments: "/ailments",
+  insurances: "/insurance",
+  pharmacies: "/pharmacies",
+  family_history: "/family-history",
+  surgeries: "/procedures",
+  hospitalizations: "/hospitalizations",
+  vision_history: "/vision-history",
+  dental_history: "/dental-history",
+  vaccinations: "/vaccinations",
+  vitals: "/vitals",
+  visit_logs: "/doc-logs",
+  appointments: "/calendar",
+  nutrition_plan: "/nutrition-plan",
+};
+
+/** Route for a section key, or undefined when the section has no page. */
+export function sectionRoute(section: string): string | undefined {
+  return SECTION_ROUTES[section];
+}

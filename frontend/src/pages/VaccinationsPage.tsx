@@ -17,6 +17,7 @@ import { RecordFormModal } from "@/components/RecordFormModal";
 const EMPTY: VaccinationInput = {
   vaccine: "",
   manufacturer: null,
+  lot_number: null,
   administered_date: null,
   administrator: null,
   next_due_date: null,
@@ -86,7 +87,7 @@ export default function VaccinationsPage() {
 
   function openEdit(r: Vaccination) {
     setEditingRow(r);
-    setForm({ vaccine: r.vaccine, manufacturer: r.manufacturer, administered_date: r.administered_date, administrator: r.administrator, next_due_date: r.next_due_date, notes: r.notes });
+    setForm({ vaccine: r.vaccine, manufacturer: r.manufacturer, lot_number: r.lot_number, administered_date: r.administered_date, administrator: r.administrator, next_due_date: r.next_due_date, notes: r.notes });
     setModalError("");
     setModalMode("edit");
   }
@@ -208,6 +209,16 @@ export default function VaccinationsPage() {
                 placeholder="e.g. Pfizer, Moderna"
                 value={form.manufacturer ?? ""}
                 onChange={(e) => setForm((s) => ({ ...s, manufacturer: e.target.value || null }))}
+              />
+            </FormField>
+            {/* Displayed in the detail view with no way to enter it. Lot numbers
+                matter for recall notices. */}
+            <FormField label="Lot Number" htmlFor="vac-lot-number">
+              <Input
+                id="vac-lot-number"
+                placeholder="e.g. FF1234"
+                value={form.lot_number ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, lot_number: e.target.value || null }))}
               />
             </FormField>
             <FormField label="Administrator" htmlFor="vac-administrator">

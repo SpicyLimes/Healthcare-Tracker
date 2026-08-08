@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   SECTION_LABELS, ALL_SECTIONS, sectionLabel,
-  CLINICAL_ORDER, sortByClinicalOrder, landingSection,
+  CLINICAL_ORDER, sortByClinicalOrder, landingSection, sectionRoute,
 } from "./section-labels";
 
 /**
@@ -86,5 +86,28 @@ describe("clinical ordering", () => {
       "surgeries", "hospitalizations", "vaccinations", "doctors", "vision_history",
       "dental_history", "insurances", "pharmacies", "family_history", "nutrition_plan",
     ]);
+  });
+});
+
+describe("sectionRoute", () => {
+  it("maps keys whose URL differs from the key", () => {
+    // These two are why a per-page copy of this map kept going wrong.
+    expect(sectionRoute("surgeries")).toBe("/procedures");
+    expect(sectionRoute("visit_logs")).toBe("/doc-logs");
+    expect(sectionRoute("insurances")).toBe("/insurance");
+  });
+
+  it("sends appointments to the calendar, which absorbed that page", () => {
+    expect(sectionRoute("appointments")).toBe("/calendar");
+  });
+
+  it("returns undefined for a section with no page", () => {
+    expect(sectionRoute("not_a_section")).toBeUndefined();
+  });
+
+  it("has a route for every labelled section", () => {
+    for (const key of Object.keys(SECTION_LABELS)) {
+      expect(sectionRoute(key), `no route for ${key}`).toBeDefined();
+    }
   });
 });

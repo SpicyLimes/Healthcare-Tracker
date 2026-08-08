@@ -5,6 +5,8 @@ import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { calendarApi, EVENT_COLORS, type CalendarEvent, type CalendarEventType, EVENT_TYPE_LABELS } from "../api/calendar";
 import {
   appointmentsApi,
+  APPOINTMENT_TYPES,
+  appointmentTypeLabel,
   type Appointment,
   type AppointmentInput,
   type AppointmentStatus,
@@ -50,17 +52,6 @@ const STATUS_VARIANT: Record<AppointmentStatus, "default" | "secondary" | "destr
   cancelled: "destructive",
   rescheduled: "outline",
 };
-
-const APPOINTMENT_TYPES: { value: AppointmentType; label: string }[] = [
-  { value: "annual_checkup", label: "Annual Checkup" },
-  { value: "follow_up", label: "Follow-up" },
-  { value: "specialist", label: "Specialist" },
-  { value: "lab", label: "Lab/Blood Work" },
-  { value: "imaging", label: "Imaging" },
-  { value: "dental", label: "Dental" },
-  { value: "vision", label: "Vision" },
-  { value: "other", label: "Other" },
-];
 
 const EMPTY: AppointmentInput = {
   appointment_datetime: "",
@@ -427,10 +418,6 @@ function AppointmentsSection({ tz, isAdmin, onRegisterOpenById, onRegisterOpenAd
     reload().catch(() => setError("Failed to load appointments")).finally(() => setLoading(false));
     doctorsApi.list().then(setDoctors).catch(() => {});
   }, []);
-
-  function appointmentTypeLabel(t: AppointmentType | null): string {
-    return APPOINTMENT_TYPES.find((x) => x.value === t)?.label ?? "";
-  }
 
   function resolveDoctorName(id: string | null, other: string | null): string {
     if (id) return doctors.find((d) => d.id === id)?.name ?? other ?? "";

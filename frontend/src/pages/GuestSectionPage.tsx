@@ -8,6 +8,7 @@ import { formatInTimezone } from "@/lib/datetime";
 import { sectionLabel } from "@/lib/section-labels";
 import { guestColumns, fieldLabel } from "@/lib/guest-columns";
 import { parseAllergies, parseContacts } from "@/lib/profile-parsers";
+import { appointmentTypeLabel } from "../api/appointments";
 
 type FoodRow = { id: string; type: "Acceptable" | "Unacceptable"; food_name: string };
 
@@ -118,18 +119,6 @@ export default function GuestSectionPage() {
     insurances: "start_date",
   };
 
-  // Appointment type label map (mirrors AppointmentsPage)
-  const APPOINTMENT_TYPE_LABELS: Record<string, string> = {
-    annual_checkup: "Annual Checkup",
-    follow_up: "Follow-up",
-    specialist: "Specialist",
-    lab: "Lab/Blood Work",
-    imaging: "Imaging",
-    dental: "Dental",
-    vision: "Vision",
-    other: "Other",
-  };
-
   // Medication kind label map (mirrors MedicationsPage)
   const MEDICATION_KIND_LABELS: Record<string, string> = {
     medication: "Medication",
@@ -163,7 +152,9 @@ export default function GuestSectionPage() {
       return value ? "Active" : "Stopped";
     }
     if (key === "appointment_type" && typeof value === "string") {
-      return APPOINTMENT_TYPE_LABELS[value] ?? value;
+      // Fall back to the raw value, not "": a guest seeing an unlabelled type
+      // is better than a doctor seeing a blank cell.
+      return appointmentTypeLabel(value) || value;
     }
     if (key === "kind" && typeof value === "string") {
       return MEDICATION_KIND_LABELS[value] ?? value;
