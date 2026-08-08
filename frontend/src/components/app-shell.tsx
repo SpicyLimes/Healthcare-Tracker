@@ -11,12 +11,7 @@ import { AuthContext } from "@/auth/AuthContext"
 import SummaryBuilder from "@/components/SummaryBuilder"
 import AiChatPanel from "@/components/AiChatPanel"
 
-const ALL_SECTIONS = [
-  "doctors", "appointments", "medications", "ailments", "surgeries",
-  "hospitalizations", "vaccinations", "vision_history", "dental_history",
-  "visit_logs", "vitals", "insurances", "pharmacies", "family_history",
-  "nutrition_plan", "profile",
-]
+import { ALL_SECTIONS } from "@/lib/section-labels"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { theme, toggleTheme } = useTheme()

@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RecordTable } from "@/components/RecordTable";
 import { formatDatetime } from "@/lib/format";
+import { sectionLabel } from "@/lib/section-labels";
 
 // Section key -> URL path for the edit deep-link.
 const SECTION_PATHS: Record<string, string> = {
@@ -31,15 +32,6 @@ const SECTION_PATHS: Record<string, string> = {
   vaccinations: "vaccinations",
   vitals: "vitals",
 };
-
-const SECTION_LABEL_OVERRIDES: Record<string, string> = {
-  surgeries: "Procedures",
-  visit_logs: "Visit & Call Logs",
-};
-
-function sectionLabel(s: string) {
-  return SECTION_LABEL_OVERRIDES[s] ?? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);

@@ -6,24 +6,7 @@ import SummaryBuilder from "./SummaryBuilder";
 import { applyAccent } from "./accent-picker";
 import { getGuestPatientName } from "../api/guest";
 
-const SECTION_LABELS: Record<string, string> = {
-  surgeries: "Procedures",
-  hospitalizations: "Hospitalizations",
-  vision_history: "Vision History",
-  dental_history: "Dental History",
-  visit_logs: "Visit & Call Logs",
-  vitals: "Vitals",
-  appointments: "Appointments",
-  medications: "Medications",
-  vaccinations: "Vaccinations",
-  insurances: "Insurance",
-  ailments: "Ailment History",
-  doctors: "Doctors",
-  pharmacies: "Pharmacies",
-  family_history: "Family History",
-  nutrition_plan: "Nutrition Plan",
-  profile: "Profile",
-};
+import { SECTION_LABELS } from "@/lib/section-labels";
 
 interface Props {
   children: ReactNode;

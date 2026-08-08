@@ -14,22 +14,9 @@ import { formatDate } from "@/lib/format";
 import { dateToLocalInputValue, formatInTimezone } from "@/lib/datetime";
 import { useAuth } from "../auth/useAuth";
 import { RecordTable } from "@/components/RecordTable";
+import { ALL_SECTIONS, sectionLabel } from "@/lib/section-labels";
 
-const ALL_SECTIONS = [
-  "surgeries", "hospitalizations", "vision_history", "dental_history",
-  "visit_logs", "vitals", "appointments", "medications", "vaccinations",
-  "insurances", "ailments", "doctors", "pharmacies", "family_history", "profile",
-  "nutrition_plan",
-];
-
-const SECTION_LABEL_OVERRIDES: Record<string, string> = {
-  surgeries: "Procedures",
-  visit_logs: "Visit & Call Logs",
-};
-
-function formatSection(s: string): string {
-  return SECTION_LABEL_OVERRIDES[s] ?? s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
+const formatSection = sectionLabel;
 
 function addDays(days: number): string {
   const d = new Date();
