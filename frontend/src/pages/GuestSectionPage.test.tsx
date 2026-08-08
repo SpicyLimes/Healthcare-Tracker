@@ -29,10 +29,15 @@ describe("GuestSectionPage", () => {
     expect(await screen.findByText("View Record")).toBeInTheDocument();
   });
 
-  it("shows empty state when no records", async () => {
+  it("shows an assertive empty state naming the section", async () => {
+    // Reaching this page means the section WAS shared, so the message says
+    // "none added" rather than the ambiguous "no records found" — which a
+    // clinician could read as "this wasn't shared with me".
     vi.spyOn(guestApi, "listGuestRecords").mockResolvedValue([]);
     renderSection();
-    expect(await screen.findByText(/no records found/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/no vaccinations records have been added/i),
+    ).toBeInTheDocument();
   });
 
   it("shows no add or delete buttons", async () => {

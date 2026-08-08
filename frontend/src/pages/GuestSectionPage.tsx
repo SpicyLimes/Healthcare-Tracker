@@ -5,6 +5,9 @@ import { listGuestRecords } from "../api/guest";
 import { useGuest } from "../auth/GuestContext";
 import GuestLayout from "../components/GuestLayout";
 import { formatInTimezone } from "@/lib/datetime";
+import { sectionLabel } from "@/lib/section-labels";
+import { guestColumns, fieldLabel } from "@/lib/guest-columns";
+import { parseAllergies, parseContacts } from "@/lib/profile-parsers";
 
 type FoodRow = { id: string; type: "Acceptable" | "Unacceptable"; food_name: string };
 
@@ -136,6 +139,29 @@ export default function GuestSectionPage() {
 
   function formatCellValue(key: string, value: unknown): string {
     if (value === null || value === undefined) return "—";
+    // Allergies and emergency contacts are JSON-encoded columns. Without this
+    // the highest-value cell on the doctor-facing page rendered as
+    // [{"medication":"Penicillin","reaction":"Anaphylaxis",...}].
+    if (key === "allergies" && typeof value === "string") {
+      const parsed = parseAllergies(value);
+      if (parsed.length === 0) return value || "—";
+      return parsed
+        .map((a) => [a.medication, a.reaction].filter(Boolean).join(" — "))
+        .join("; ");
+    }
+    if (key === "emergency_contacts" && typeof value === "string") {
+      const parsed = parseContacts(value);
+      if (parsed.length === 0) return value || "—";
+      return parsed
+        .map((c) =>
+          [c.name, c.relationship, c.phone].filter(Boolean).join(" · ") +
+          (c.is_poa ? " (POA)" : ""),
+        )
+        .join("; ");
+    }
+    if (key === "is_active" && typeof value === "boolean") {
+      return value ? "Active" : "Stopped";
+    }
     if (key === "appointment_type" && typeof value === "string") {
       return APPOINTMENT_TYPE_LABELS[value] ?? value;
     }
@@ -212,28 +238,36 @@ export default function GuestSectionPage() {
     );
   }
 
-  const visibleKeys = sortedRecords.length > 0
-    ? Object.keys(sortedRecords[0] as Record<string, unknown>)
-        .filter((k) => k !== "id" && !k.endsWith("_id"))
-        .slice(0, 4)
-    : [];
+  // Per-section clinical columns, not Pydantic key order. See lib/guest-columns.
+  const visibleKeys = guestColumns(
+    section,
+    sortedRecords[0] as Record<string, unknown> | undefined,
+  );
 
   return (
     <GuestLayout>
-      <h1 className="text-2xl font-semibold mb-4">
-        {section.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-      </h1>
+      <h1 className="text-2xl font-semibold mb-4">{sectionLabel(section)}</h1>
       {error && <p role="alert" className="text-destructive mb-4">{error}</p>}
-      {sortedRecords.length === 0 ? (
-        <p className="text-muted-foreground">No records found.</p>
+      {loading ? (
+        // Never assert a clinical negative that hasn't been verified — saying
+        // "no records" mid-fetch reads to a clinician as "none exist".
+        <p className="text-muted-foreground">Loading…</p>
+      ) : sortedRecords.length === 0 ? (
+        // Reaching this page means the section WAS shared, so be assertive:
+        // "none added" is different from "not shared with you".
+        <p className="text-muted-foreground">
+          No {sectionLabel(section)} records have been added.
+        </p>
       ) : (
         <>
           {/* Mobile card list */}
           <div className="md:hidden space-y-2">
             {sortedRecords.map((row) => {
-              const visibleEntries = Object.entries(row)
-                .filter(([k]) => k !== "id" && !k.endsWith("_id"))
-                .slice(0, 4);
+              // Same columns as the desktop table — previously each branch
+              // sliced independently and could show different fields.
+              const visibleEntries = visibleKeys.map(
+                (k) => [k, (row as Record<string, unknown>)[k]] as [string, unknown],
+              );
               const headline = visibleEntries[0];
               const rest = visibleEntries.slice(1);
               return (
@@ -259,7 +293,7 @@ export default function GuestSectionPage() {
                     <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
                       {rest.map(([k, v]) => (
                         <div key={k}>
-                          <dt className="text-xs text-muted-foreground capitalize">{k.replace(/_/g, " ")}</dt>
+                          <dt className="text-xs text-muted-foreground">{fieldLabel(k)}</dt>
                           <dd className="text-sm text-foreground truncate">
                             {formatCellValue(k, v)}
                           </dd>
@@ -277,22 +311,28 @@ export default function GuestSectionPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/40">
-                  {hasDetail && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
                   {visibleKeys.map((k) => (
                     <th
                       key={k}
-                      className="px-4 py-3 text-left font-medium text-muted-foreground capitalize cursor-pointer select-none hover:text-foreground"
+                      className="px-4 py-3 text-left font-medium text-muted-foreground cursor-pointer select-none hover:text-foreground"
                       onClick={() => handleSort(k)}
                     >
-                      {k.replace(/_/g, " ")}
+                      {fieldLabel(k)}
                       {sortKey === k ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
                     </th>
                   ))}
+                  {/* Actions last: the data identifies the record first. */}
+                  {hasDetail && <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>}
                 </tr>
               </thead>
               <tbody>
                 {sortedRecords.map((row) => (
                   <tr key={String(row.id)} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                    {visibleKeys.map((k) => (
+                      <td key={k} className="px-4 py-3 text-foreground">
+                        {formatCellValue(k, row[k])}
+                      </td>
+                    ))}
                     {hasDetail && (
                       <td className="px-4 py-3">
                         <Link
@@ -303,11 +343,6 @@ export default function GuestSectionPage() {
                         </Link>
                       </td>
                     )}
-                    {visibleKeys.map((k) => (
-                      <td key={k} className="px-4 py-3 text-foreground">
-                        {formatCellValue(k, row[k])}
-                      </td>
-                    ))}
                   </tr>
                 ))}
               </tbody>
