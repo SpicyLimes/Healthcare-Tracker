@@ -82,6 +82,33 @@ def test_notes_viewer_cannot_delete(client, db_session):
     assert r.status_code == 403
 
 
+def test_notes_viewer_can_delete_own(client, db_session):
+    """Delete follows the same author-or-admin rule as patch.
+
+    It was require_admin, so a viewer could create and edit a note but never
+    remove it — their own note was undeletable by them.
+    """
+    viewer_csrf = _login_viewer(client, db_session)
+    nid = client.post(
+        "/api/notes", headers={"X-CSRF-Token": viewer_csrf}, json={"title": "My own note"}
+    ).json()["id"]
+
+    r = client.delete(f"/api/notes/{nid}", headers={"X-CSRF-Token": viewer_csrf})
+    assert r.status_code == 204
+    assert all(n["id"] != nid for n in client.get("/api/notes").json())
+
+
+def test_notes_admin_can_delete_someone_elses(client, db_session):
+    viewer_csrf = _login_viewer(client, db_session)
+    nid = client.post(
+        "/api/notes", headers={"X-CSRF-Token": viewer_csrf}, json={"title": "Viewer note"}
+    ).json()["id"]
+    client.post("/api/auth/logout", headers={"X-CSRF-Token": viewer_csrf})
+
+    admin_csrf = _login_admin(client, db_session)
+    assert client.delete(f"/api/notes/{nid}", headers={"X-CSRF-Token": admin_csrf}).status_code == 204
+
+
 def test_notes_sort_order(client, db_session):
     csrf = _login_admin(client, db_session)
     client.post("/api/notes", headers={"X-CSRF-Token": csrf}, json={"title": "Unpinned"})

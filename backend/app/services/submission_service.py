@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import inspect as sa_inspect, select
 from sqlalchemy.orm import Session
 
 from app.models.submission import Submission, SubmissionAction, SubmissionStatus
@@ -336,6 +336,39 @@ def _user_label(db: Session, user_id: uuid.UUID | None) -> str:
     return user.email if user else f"deleted user ({user_id})"
 
 
+def _current_values(db: Session, sub: Submission) -> dict | None:
+    """The target record's values as they stand right now.
+
+    Approving used to be blind: the queue rendered only the proposed payload, so
+    "frequency: Three times daily" gave no hint that it is currently "Twice
+    daily" — a clinical decision made without the comparison. A pending delete
+    was worse: its payload is {} and it rendered as "(no fields)", so approving
+    permanently removed a record whose name was never shown.
+
+    Resolved server-side because the section→model registry already lives here;
+    doing it in the browser would mean a fetch against 12 different API modules.
+    Returns None for creates (nothing exists yet) and for records deleted out
+    from under a still-pending submission.
+    """
+    if sub.action == SubmissionAction.create or not sub.record_id:
+        return None
+    try:
+        model = _get_model(sub.section)
+    except UnknownSectionError:
+        return None
+    try:
+        record_uuid = uuid.UUID(sub.record_id)
+    except (ValueError, AttributeError):
+        return None
+    record = db.get(model, record_uuid)
+    if record is None:
+        return None
+    return {
+        c.key: getattr(record, c.key)
+        for c in sa_inspect(model).mapper.column_attrs
+    }
+
+
 def to_read(db: Session, sub: Submission) -> dict:
     """Convert a Submission ORM row to a SubmissionRead-compatible dict."""
     return {
@@ -346,6 +379,7 @@ def to_read(db: Session, sub: Submission) -> dict:
         "action": sub.action,
         "record_id": sub.record_id,
         "payload": sub.payload,
+        "current_values": _current_values(db, sub),
         "status": sub.status,
         "reviewed_by": sub.reviewed_by,
         "reviewed_by_label": _user_label(db, sub.reviewed_by) if sub.reviewed_by else None,

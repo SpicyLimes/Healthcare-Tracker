@@ -138,29 +138,48 @@ export default function MySubmissionsPage() {
                 {
                   header: "Actions",
                   sortKey: "status",
-                  render: (r) =>
-                    r.status === "pending" ? (
-                      <span className="flex gap-2">
-                        {r.action !== "delete" && (
+                  render: (r) => {
+                    if (r.status === "pending") {
+                      return (
+                        <span className="flex gap-2">
+                          {r.action !== "delete" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => { e.stopPropagation(); handleEdit(r); }}
+                              aria-label="Edit submission"
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={(e) => { e.stopPropagation(); handleEdit(r); }}
-                            aria-label="Edit submission"
+                            onClick={(e) => { e.stopPropagation(); handleWithdraw(r.id); }}
+                            aria-label="Withdraw submission"
                           >
-                            <Pencil className="size-4" />
+                            <Trash2 className="size-4 text-destructive" />
                           </Button>
-                        )}
+                        </span>
+                      );
+                    }
+                    // Rejection was a dead end: the only way to act on the feedback
+                    // was retyping every field from scratch. Reopens the form
+                    // prefilled; saving files a new proposal.
+                    if (r.status === "rejected" && r.action !== "delete") {
+                      return (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={(e) => { e.stopPropagation(); handleWithdraw(r.id); }}
-                          aria-label="Withdraw submission"
+                          onClick={(e) => { e.stopPropagation(); handleEdit(r); }}
+                          aria-label="Resubmit submission"
                         >
-                          <Trash2 className="size-4 text-destructive" />
+                          Resubmit
                         </Button>
-                      </span>
-                    ) : null,
+                      );
+                    }
+                    return null;
+                  },
                 },
               ]}
               detailTitle={(r) => `${sectionLabel(r.section)} — ${r.action}`}

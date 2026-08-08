@@ -204,7 +204,7 @@ export default function NotesPage() {
                               </Button>
                             </>
                           )}
-                          {isAdmin && (
+                          {canEditNote(note) && (
                             <Button variant="destructive" size="sm" type="button" onClick={() => onDelete(note.id)}>
                               Delete
                             </Button>

@@ -7,6 +7,7 @@ import {
 import { listAllDocuments, deleteDocument, getDownloadUrl, type DocumentRecord } from "../api/documents";
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
+import { useAuth } from "../auth/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/form-field";
@@ -35,6 +36,13 @@ function formatBytes(bytes: number): string {
 }
 
 export default function NutritionPlanPage() {
+  // Every backend write here is require_admin. Without this the page handed
+  // viewers and contributors live Add/Edit/Delete controls that 403, and the
+  // failure surfaced as "Could not add meal" — indistinguishable from a broken
+  // app. Contributors are misled further: every other record page offers them a
+  // propose→approve path that this one does not have.
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [meals, setMeals] = useState<NutritionMeal[]>([]);
   const [acceptableFoods, setAcceptableFoods] = useState<NutritionAcceptableFood[]>([]);
   const [unacceptableFoods, setUnacceptableFoods] = useState<NutritionUnacceptableFood[]>([]);
@@ -250,8 +258,22 @@ export default function NutritionPlanPage() {
 
   return (
     <AppShell>
-      <PageLayout title="Nutrition Plan" description="Manage meals, acceptable foods, and dietary restrictions.">
+      <PageLayout
+        title="Nutrition Plan"
+        description={
+          isAdmin
+            ? "Manage meals, acceptable foods, and dietary restrictions."
+            : "Meals, acceptable foods, and dietary restrictions."
+        }
+      >
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+
+        {!isAdmin && (
+          <p className="rounded-md border border-info/40 bg-info/15 px-3 py-2 text-sm text-info-foreground">
+            You have read-only access to the nutrition plan. Only an Admin can change
+            meals, foods, or documents here.
+          </p>
+        )}
 
         {/* Card 1 — Meals */}
         <Card>
@@ -270,29 +292,33 @@ export default function NutritionPlanPage() {
                         {entries.map((meal) => (
                           <li key={meal.id} className="flex items-center justify-between gap-1 rounded-md border border-border bg-muted/20 px-2 py-1 text-sm">
                             <span className="text-foreground truncate">{meal.food_name}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-1 text-destructive hover:text-destructive shrink-0"
-                              onClick={() => handleCard1Delete(meal.id)}
-                              aria-label={`Delete ${meal.food_name}`}
-                            >
-                              ✕
-                            </Button>
+                            {isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-1 text-destructive hover:text-destructive shrink-0"
+                                onClick={() => handleCard1Delete(meal.id)}
+                                aria-label={`Delete ${meal.food_name}`}
+                              >
+                                ✕
+                              </Button>
+                            )}
                           </li>
                         ))}
                       </ul>
                     )}
-                    <form onSubmit={(e) => handleCard1Add(e, mealType)} className="flex gap-1 mt-1">
-                      <Input
-                        placeholder="Add item…"
-                        value={card1Inputs[mealType]}
-                        onChange={(e) => setCard1Inputs((s) => ({ ...s, [mealType]: e.target.value }))}
-                        className="h-7 text-xs"
-                        aria-label={`Add ${mealType} item`}
-                      />
-                      <Button type="submit" size="sm" className="h-7 px-2 text-xs shrink-0">Add</Button>
-                    </form>
+                    {isAdmin && (
+                      <form onSubmit={(e) => handleCard1Add(e, mealType)} className="flex gap-1 mt-1">
+                        <Input
+                          placeholder="Add item…"
+                          value={card1Inputs[mealType]}
+                          onChange={(e) => setCard1Inputs((s) => ({ ...s, [mealType]: e.target.value }))}
+                          className="h-7 text-xs"
+                          aria-label={`Add ${mealType} item`}
+                        />
+                        <Button type="submit" size="sm" className="h-7 px-2 text-xs shrink-0">Add</Button>
+                      </form>
+                    )}
                   </div>
                 );
               })}
@@ -337,34 +363,37 @@ export default function NutritionPlanPage() {
                         <>
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-sm text-foreground truncate">{food.food_name}</span>
-                            <div className="flex shrink-0 gap-1">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 px-2 text-xs"
-                                onClick={() => { setEditingAcceptableId(food.id); setEditingAcceptableValue(food.food_name); }}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-                                onClick={() => handleAcceptableDelete(food.id)}
-                              >
-                                Delete
-                              </Button>
-                            </div>
+                            {isAdmin && (
+                              <div className="flex shrink-0 gap-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => { setEditingAcceptableId(food.id); setEditingAcceptableValue(food.food_name); }}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                                  onClick={() => handleAcceptableDelete(food.id)}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            )}
                           </div>
                           <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
                             {MEAL_TYPES.map((mt) => (
-                              <label key={mt} className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer">
+                              <label key={mt} className={`flex items-center gap-1 text-xs text-muted-foreground ${isAdmin ? "cursor-pointer" : ""}`}>
                                 <input
                                   type="checkbox"
                                   checked={food[MEAL_FLAG[mt]] as boolean}
                                   onChange={() => handleCheckbox(food, mt)}
+                                  disabled={!isAdmin}
                                   aria-label={`${food.food_name} for ${mt}`}
-                                  className="rounded border-border"
+                                  className="rounded border-border disabled:opacity-100"
                                 />
                                 {MEAL_LABELS[mt]}
                               </label>
@@ -375,15 +404,17 @@ export default function NutritionPlanPage() {
                     </div>
                   ))}
                 </div>
-                <form onSubmit={handleCard2Add} className="mt-3 flex gap-2">
-                  <Input
-                    placeholder="Add acceptable food…"
-                    value={card2Input}
-                    onChange={(e) => setCard2Input(e.target.value)}
-                    aria-label="Add acceptable food"
-                  />
-                  <Button type="submit" size="sm" className="shrink-0">Add</Button>
-                </form>
+                {isAdmin && (
+                  <form onSubmit={handleCard2Add} className="mt-3 flex gap-2">
+                    <Input
+                      placeholder="Add acceptable food…"
+                      value={card2Input}
+                      onChange={(e) => setCard2Input(e.target.value)}
+                      aria-label="Add acceptable food"
+                    />
+                    <Button type="submit" size="sm" className="shrink-0">Add</Button>
+                  </form>
+                )}
               </>
             )}
           </CardContent>
@@ -425,39 +456,45 @@ export default function NutritionPlanPage() {
                       ) : (
                         <>
                           <span className="flex-1 text-foreground truncate">{food.food_name}</span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 text-xs shrink-0"
-                            onClick={() => {
-                              setEditingUnacceptableId(food.id);
-                              setEditingUnacceptableValue(food.food_name);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs text-destructive hover:text-destructive shrink-0"
-                            onClick={() => handleUnacceptableDelete(food.id)}
-                          >
-                            Delete
-                          </Button>
+                          {isAdmin && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 text-xs shrink-0"
+                                onClick={() => {
+                                  setEditingUnacceptableId(food.id);
+                                  setEditingUnacceptableValue(food.food_name);
+                                }}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs text-destructive hover:text-destructive shrink-0"
+                                onClick={() => handleUnacceptableDelete(food.id)}
+                              >
+                                Delete
+                              </Button>
+                            </>
+                          )}
                         </>
                       )}
                     </div>
                   ))}
                 </div>
-                <form onSubmit={handleCard3Add} className="mt-3 flex gap-2">
-                  <Input
-                    placeholder="Add unacceptable food…"
-                    value={card3Input}
-                    onChange={(e) => setCard3Input(e.target.value)}
-                    aria-label="Add unacceptable food"
-                  />
-                  <Button type="submit" size="sm" className="shrink-0">Add</Button>
-                </form>
+                {isAdmin && (
+                  <form onSubmit={handleCard3Add} className="mt-3 flex gap-2">
+                    <Input
+                      placeholder="Add unacceptable food…"
+                      value={card3Input}
+                      onChange={(e) => setCard3Input(e.target.value)}
+                      aria-label="Add unacceptable food"
+                    />
+                    <Button type="submit" size="sm" className="shrink-0">Add</Button>
+                  </form>
+                )}
               </>
             )}
           </CardContent>
@@ -468,24 +505,26 @@ export default function NutritionPlanPage() {
           <CardContent className="py-6">
             <div className="mb-4 flex items-center justify-between gap-4">
               <h2 className="text-base font-semibold text-foreground">Documents</h2>
-              <div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="hidden"
-                  accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.txt,.csv"
-                  onChange={handleDocUpload}
-                  aria-label="Upload nutrition plan document"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                >
-                  {uploading ? "Uploading…" : "Upload Document"}
-                </Button>
-              </div>
+              {isAdmin && (
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.txt,.csv"
+                    onChange={handleDocUpload}
+                    aria-label="Upload nutrition plan document"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? "Uploading…" : "Upload Document"}
+                  </Button>
+                </div>
+              )}
             </div>
             {docs.length === 0 ? (
               <p className="text-xs text-muted-foreground">No documents uploaded yet.</p>
@@ -505,14 +544,16 @@ export default function NutritionPlanPage() {
                         <Button variant="outline" size="sm" asChild>
                           <a href={getDownloadUrl(doc.id)} target="_blank" rel="noopener noreferrer">Open</a>
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => handleDocDelete(doc.id)}
-                        >
-                          Delete
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleDocDelete(doc.id)}
+                          >
+                            Delete
+                          </Button>
+                        )}
                       </div>
                     )}
                     emptyMessage="No documents uploaded yet."
@@ -541,14 +582,16 @@ export default function NutritionPlanPage() {
                                   Open
                                 </a>
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => handleDocDelete(doc.id)}
-                              >
-                                Delete
-                              </Button>
+                              {isAdmin && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => handleDocDelete(doc.id)}
+                                >
+                                  Delete
+                                </Button>
+                              )}
                             </div>
                           </td>
                         </tr>

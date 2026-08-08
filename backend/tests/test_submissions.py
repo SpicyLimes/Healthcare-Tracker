@@ -475,3 +475,111 @@ def test_get_one_mine_404_for_others(client, db_session):
     sid = client.get("/api/submissions/mine").json()[0]["id"]
     _contrib_login(client, db_session)  # switch to a different contributor
     assert client.get(f"/api/submissions/{sid}").status_code == 404
+
+
+# --- current_values: approving used to be blind -------------------------------
+# The queue rendered only the proposed payload, so an admin approved a dose
+# change without seeing the dose it replaced, and approved a delete whose
+# payload is {} and rendered as "(no fields)".
+
+def _seed_medication(db, admin, **over):
+    from app.models.medication import Medication
+    med = Medication(
+        created_by=admin.id,
+        name=over.get("name", "Metformin"),
+        dose=over.get("dose", "500mg"),
+        frequency=over.get("frequency", "Twice daily"),
+    )
+    db.add(med)
+    db.flush()
+    return med
+
+
+def test_update_submission_exposes_the_values_it_would_replace(db_session):
+    admin = _make_admin(db_session)
+    contrib = _make_contributor(db_session)
+    med = _seed_medication(db_session, admin)
+
+    sub = create_submission(
+        db_session,
+        submitted_by_id=contrib.id,
+        section="medications",
+        action=SubmissionAction.update,
+        record_id=str(med.id),
+        payload={"frequency": "Three times daily"},
+    )
+    from app.services.submission_service import to_read
+    read = to_read(db_session, sub)
+
+    assert read["current_values"] is not None
+    assert read["current_values"]["frequency"] == "Twice daily"
+    assert read["current_values"]["name"] == "Metformin"
+    assert read["payload"]["frequency"] == "Three times daily"
+
+
+def test_delete_submission_exposes_the_record_being_removed(db_session):
+    """A delete payload is {}; without current_values the admin approves blind."""
+    admin = _make_admin(db_session)
+    contrib = _make_contributor(db_session)
+    med = _seed_medication(db_session, admin, name="Warfarin")
+
+    sub = create_submission(
+        db_session,
+        submitted_by_id=contrib.id,
+        section="medications",
+        action=SubmissionAction.delete,
+        record_id=str(med.id),
+        payload={},
+    )
+    from app.services.submission_service import to_read
+    read = to_read(db_session, sub)
+
+    assert read["payload"] == {}, "precondition: deletes carry no payload"
+    assert read["current_values"]["name"] == "Warfarin"
+
+
+def test_create_submission_has_no_current_values(db_session):
+    contrib = _make_contributor(db_session)
+    sub = create_submission(
+        db_session,
+        submitted_by_id=contrib.id,
+        section="doctors",
+        action=SubmissionAction.create,
+        payload={"name": "Dr. Jane"},
+    )
+    from app.services.submission_service import to_read
+    assert to_read(db_session, sub)["current_values"] is None
+
+
+def test_current_values_is_none_when_the_target_was_deleted(db_session):
+    """A record can vanish while a submission is still pending; must not 500."""
+    admin = _make_admin(db_session)
+    contrib = _make_contributor(db_session)
+    med = _seed_medication(db_session, admin)
+    sub = create_submission(
+        db_session,
+        submitted_by_id=contrib.id,
+        section="medications",
+        action=SubmissionAction.update,
+        record_id=str(med.id),
+        payload={"dose": "1000mg"},
+    )
+    db_session.delete(med)
+    db_session.flush()
+
+    from app.services.submission_service import to_read
+    assert to_read(db_session, sub)["current_values"] is None
+
+
+def test_current_values_survives_a_malformed_record_id(db_session):
+    contrib = _make_contributor(db_session)
+    sub = create_submission(
+        db_session,
+        submitted_by_id=contrib.id,
+        section="medications",
+        action=SubmissionAction.update,
+        record_id="not-a-uuid",
+        payload={"dose": "1000mg"},
+    )
+    from app.services.submission_service import to_read
+    assert to_read(db_session, sub)["current_values"] is None

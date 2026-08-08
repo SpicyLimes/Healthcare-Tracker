@@ -9,7 +9,7 @@ from app.database import get_db
 from app.models.notes import Note
 from app.models.user import Role, User
 from app.schemas.notes import NoteCreate, NotePatch, NoteResponse
-from app.security.dependencies import get_current_user, require_admin, verify_csrf
+from app.security.dependencies import get_current_user, verify_csrf
 
 router = APIRouter(prefix="/api/notes", tags=["notes"])
 
@@ -79,10 +79,15 @@ def patch_note(
 def delete_note(
     note_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current: User = Depends(require_admin),
+    current: User = Depends(get_current_user),
 ):
     note = db.get(Note, note_id)
     if note is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    # Same author-or-admin rule as patch_note. This was require_admin, which let
+    # a viewer create and edit a note but never remove it — their own note became
+    # undeletable by them, and the UI offered no delete control to explain why.
+    if note.author_user_id != current.id and current.role != Role.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
     db.delete(note)
     db.commit()

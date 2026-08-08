@@ -118,7 +118,9 @@ export default function VitalsPage() {
         measured_at: p.measured_at ? toLocalInputValue(p.measured_at as string, tz) : "",
       });
       setEditingRow(null);
-      setEditingSubmissionId(sid);
+      // Amend only while it is still pending. A rejected submission is
+      // reopened as a FRESH proposal — the backend 409s any edit to it.
+      setEditingSubmissionId(sub.status === "pending" ? sid : null);
       setModalError("");
       setModalMode(sub.action === "create" ? "add" : "edit");
       setSearchParams({}, { replace: true });

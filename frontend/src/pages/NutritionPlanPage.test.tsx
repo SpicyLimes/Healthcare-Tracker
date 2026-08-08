@@ -50,9 +50,9 @@ const DOC: documentsModule.DocumentRecord = {
   uploaded_by: null,
 };
 
-function mockAuth() {
+function mockAuth(role: "admin" | "viewer" | "contributor" = "admin") {
   vi.spyOn(useAuthModule, "useAuth").mockReturnValue({
-    user: { id: "u1", email: "a@b.c", role: "admin" },
+    user: { id: "u1", email: "a@b.c", role },
     login: vi.fn(),
     logout: vi.fn(),
     loading: false,
@@ -210,5 +210,55 @@ describe("NutritionPlanPage", () => {
     const deleteBtn = screen.getByRole("button", { name: /delete/i });
     fireEvent.click(deleteBtn);
     await waitFor(() => expect(removeSpy).toHaveBeenCalledWith("uf-1"));
+  });
+
+  // --- Role gating -----------------------------------------------------------
+  // This page had ZERO role checks: every backend write is require_admin, so a
+  // viewer/contributor got live Add/Edit/Delete controls that 403'd, surfacing
+  // as "Could not add meal" — indistinguishable from the app being broken.
+
+  it("viewer sees no write controls and is told why", async () => {
+    mockAuth("viewer");
+    mockApis({ meals: [MEAL], acceptable: [ACCEPTABLE], docs: [] });
+    render(<NutritionPlanPage />);
+    await screen.findByText("Oatmeal");
+
+    expect(screen.getByText(/read-only access/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /upload document/i })).toBeNull();
+    expect(screen.queryByLabelText(/add breakfast item/i)).toBeNull();
+    expect(screen.queryByRole("button", { name: /delete oatmeal/i })).toBeNull();
+  });
+
+  it("contributor gets the same read-only treatment", async () => {
+    // No propose->approve path exists for nutrition, unlike every record page.
+    mockAuth("contributor");
+    mockApis({ meals: [MEAL] });
+    render(<NutritionPlanPage />);
+    await screen.findByText("Oatmeal");
+    expect(screen.getByText(/read-only access/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/add breakfast item/i)).toBeNull();
+  });
+
+  it("viewer can still READ meal-type assignments", async () => {
+    // Checkboxes are disabled, not hidden: which meals a food belongs to is
+    // clinically useful information on its own.
+    mockAuth("viewer");
+    mockApis({ acceptable: [{ ...ACCEPTABLE, for_breakfast: true }] });
+    render(<NutritionPlanPage />);
+    fireEvent.click(await screen.findByText("Acceptable Foods"));
+    await screen.findAllByText("Banana");
+    const cb = screen.getByLabelText(/banana for breakfast/i) as HTMLInputElement;
+    expect(cb.checked).toBe(true);
+    expect(cb.disabled).toBe(true);
+  });
+
+  it("admin keeps every write control", async () => {
+    mockAuth("admin");
+    mockApis({ meals: [MEAL] });
+    render(<NutritionPlanPage />);
+    await screen.findByText("Oatmeal");
+    expect(screen.queryByText(/read-only access/i)).toBeNull();
+    expect(screen.getByRole("button", { name: /upload document/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/add breakfast item/i)).toBeInTheDocument();
   });
 });

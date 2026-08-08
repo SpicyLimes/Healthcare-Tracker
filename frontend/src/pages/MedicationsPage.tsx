@@ -79,7 +79,9 @@ export default function MedicationsPage() {
     getMySubmission(sid).then((sub) => {
       setForm({ ...EMPTY, ...(sub.payload as Partial<MedicationInput>) });
       setEditingRow(null);
-      setEditingSubmissionId(sid);
+      // Amend only while it is still pending. A rejected submission is
+      // reopened as a FRESH proposal — the backend 409s any edit to it.
+      setEditingSubmissionId(sub.status === "pending" ? sid : null);
       setModalError("");
       setModalMode(sub.action === "create" ? "add" : "edit");
       setSearchParams({}, { replace: true });

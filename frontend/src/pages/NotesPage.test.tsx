@@ -40,12 +40,32 @@ describe("NotesPage", () => {
     expect(await screen.findByRole("button", { name: /add note/i })).toBeInTheDocument();
   });
 
-  it("viewer sees no delete button", async () => {
-    mockAuth("viewer");
+  it("viewer can delete their OWN note", async () => {
+    // Was asserting the opposite. The viewer here (u1) is the note's author, so
+    // the old expectation encoded the bug: they could create and edit a note but
+    // never remove it. Delete now follows the same author-or-admin rule as edit,
+    // in the router as well as here.
+    mockAuth("viewer", "u1");
+    vi.spyOn(notesModule.notesApi, "list").mockResolvedValue([BASE_NOTE]);
+    render(<NotesPage />);
+    await screen.findByText("Buy aspirin");
+    expect(screen.getByRole("button", { name: /delete/i })).toBeInTheDocument();
+  });
+
+  it("viewer sees no delete button on SOMEONE ELSE'S note", async () => {
+    mockAuth("viewer", "u2");
     vi.spyOn(notesModule.notesApi, "list").mockResolvedValue([BASE_NOTE]);
     render(<NotesPage />);
     await screen.findByText("Buy aspirin");
     expect(screen.queryByRole("button", { name: /delete/i })).not.toBeInTheDocument();
+  });
+
+  it("admin can delete a note they did not write", async () => {
+    mockAuth("admin", "u2");
+    vi.spyOn(notesModule.notesApi, "list").mockResolvedValue([BASE_NOTE]);
+    render(<NotesPage />);
+    await screen.findByText("Buy aspirin");
+    expect(screen.getByRole("button", { name: /delete/i })).toBeInTheDocument();
   });
 
   it("admin sees delete button", async () => {

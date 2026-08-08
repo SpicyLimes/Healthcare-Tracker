@@ -16,9 +16,86 @@ import { FormField, Select, Input } from "@/components/ui/form-field";
 import { RecordTable } from "@/components/RecordTable";
 import { formatDatetime } from "@/lib/format";
 import { sectionLabel } from "@/lib/section-labels";
+import { fieldLabel } from "@/lib/guest-columns";
 
 function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** Keys that are bookkeeping, not clinical content — never worth an admin's attention. */
+const HIDDEN_KEYS = new Set([
+  "id", "created_by", "created_at", "updated_at",
+  // Discriminator columns the UI already conveys through the section itself.
+  "kind",
+]);
+
+function displayValue(key: string, v: unknown): string {
+  if (v === null || v === undefined || v === "") return "—";
+  // is_active is labeled "Status", so a bare "Yes" reads as nonsense. Matches
+  // the wording the summary already uses.
+  if (key === "is_active") return v ? "Active" : "Stopped";
+  if (typeof v === "boolean") return v ? "Yes" : "No";
+  return String(v);
+}
+
+/**
+ * What approving this submission would actually change.
+ *
+ * Previously the page rendered the raw payload alone, so "frequency: Three times
+ * daily" gave no hint of what it replaced, and a delete (payload {}) rendered as
+ * "(no fields)" — approving removed a record whose name was never shown.
+ */
+function changeSummary(sub: Submission): { label: string; from: string; to: string }[] {
+  const current = sub.current_values ?? {};
+
+  if (sub.action === "delete") {
+    // Nothing is proposed; the record itself is what's at stake, so show it.
+    return Object.entries(current)
+      .filter(([k, v]) => !HIDDEN_KEYS.has(k) && v !== null && v !== "")
+      .map(([k, v]) => ({ label: fieldLabel(k), from: displayValue(k, v), to: "Deleted" }));
+  }
+
+  return Object.entries(sub.payload)
+    .filter(([k]) => !HIDDEN_KEYS.has(k))
+    .map(([k, v]) => ({
+      label: fieldLabel(k),
+      from: sub.action === "create" ? "—" : displayValue(k, current[k]),
+      to: displayValue(k, v),
+    }))
+    // On an update, an unchanged field is noise that hides the real edit.
+    .filter((row) => sub.action === "create" || row.from !== row.to);
+}
+
+function ChangeTable({ sub }: { sub: Submission }) {
+  const rows = changeSummary(sub);
+  if (rows.length === 0) {
+    return <p className="text-sm text-muted-foreground">No field changes.</p>;
+  }
+  const isDelete = sub.action === "delete";
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left text-xs text-muted-foreground">
+            <th className="py-1 pr-4 font-medium">Field</th>
+            <th className="py-1 pr-4 font-medium">{isDelete ? "Current" : "From"}</th>
+            <th className="py-1 font-medium">{isDelete ? "After Approval" : "To"}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.label} className="border-t border-border">
+              <td className="py-1 pr-4 text-muted-foreground">{r.label}</td>
+              <td className="py-1 pr-4 text-foreground">{r.from}</td>
+              <td className={`py-1 font-medium ${isDelete ? "text-destructive" : "text-foreground"}`}>
+                {r.to}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 function statusVariant(s: SubmissionStatus): "default" | "secondary" | "destructive" | "outline" {
@@ -176,15 +253,32 @@ export default function SubmissionsPage() {
                 { label: "Reviewed By", value: r.reviewed_by_label ?? null },
                 { label: "Reviewed At", value: r.reviewed_at ? formatDatetime(r.reviewed_at) : null },
                 { label: "Reject Reason", value: r.reject_reason ?? null },
-                {
-                  label: "Proposed Values",
-                  value: Object.entries(r.payload)
-                    .filter(([, v]) => v !== null && v !== undefined && v !== "")
-                    .map(([k, v]) => `${k}: ${String(v)}`)
-                    .join(" · ") || "(no fields)",
-                },
               ]}
-              getHeadline={(r) => `${r.action} · ${sectionLabel(r.section)}`}
+              renderDetailExtra={(r) => (
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm font-medium text-foreground">
+                    {r.action === "delete"
+                      ? "This record will be permanently deleted"
+                      : r.action === "create"
+                        ? "New record"
+                        : "Proposed changes"}
+                  </p>
+                  {r.action !== "create" && r.current_values === null && (
+                    <p role="alert" className="text-sm text-destructive">
+                      The target record no longer exists — it was deleted after this was
+                      submitted. Approving will fail.
+                    </p>
+                  )}
+                  <ChangeTable sub={r} />
+                </div>
+              )}
+              getHeadline={(r) => {
+                // Name the target when we can. "delete · Medications" plus a bare
+                // UUID never said WHICH medication was about to be removed.
+                const name = r.current_values?.name ?? r.payload?.name;
+                const subject = typeof name === "string" && name ? ` — ${name}` : "";
+                return `${capitalize(r.action)} · ${sectionLabel(r.section)}${subject}`;
+              }}
               getSubtitle={(r) => `${formatDatetime(r.created_at)} · ${r.submitted_by_label}`}
               getBadge={(r) => ({ label: r.status, variant: statusVariant(r.status) })}
               emptyMessage="No submissions found."

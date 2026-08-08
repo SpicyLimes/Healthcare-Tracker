@@ -12,6 +12,8 @@ export interface Submission {
   action: SubmissionAction;
   record_id: string | null;
   payload: Record<string, unknown>;
+  /** The target record as it stands now. Null for creates and deleted targets. */
+  current_values: Record<string, unknown> | null;
   status: SubmissionStatus;
   reviewed_by: string | null;
   reviewed_by_label: string | null;

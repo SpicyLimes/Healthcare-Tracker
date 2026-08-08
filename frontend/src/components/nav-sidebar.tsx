@@ -6,7 +6,7 @@ import {
   FolderOpen, KeyRound, Share2, ScrollText, UserCog, LogOut, DatabaseBackup,
   LayoutDashboard, Calendar, CheckCircle2, Database, StickyNote, Salad, Bot, Inbox,
 } from "lucide-react";
-import { pendingSubmissionCount } from "@/api/submissions";
+import { pendingSubmissionCount, myPendingCount } from "@/api/submissions";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -93,14 +93,18 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
     fetchHealth().then(setHealth).catch(() => setHealth(null));
   }, []);
 
+  // Admins see how many submissions await review; contributors see how many of
+  // their own are still waiting. myPendingCount() was built for this and had
+  // zero production callers, so a contributor had no way to tell whether a
+  // proposal from Tuesday had been acted on.
   useEffect(() => {
-    if (!isAdmin) return;
-    pendingSubmissionCount().then(setPendingCount).catch(() => setPendingCount(0));
-    const interval = setInterval(() => {
-      pendingSubmissionCount().then(setPendingCount).catch(() => setPendingCount(0));
-    }, 30_000);
+    if (!isAdmin && !isContributor) return;
+    const fetchCount = isAdmin ? pendingSubmissionCount : myPendingCount;
+    const load = () => fetchCount().then(setPendingCount).catch(() => setPendingCount(0));
+    load();
+    const interval = setInterval(load, 30_000);
     return () => clearInterval(interval);
-  }, [isAdmin]);
+  }, [isAdmin, isContributor]);
 
   const navLink = (
     to: string,
@@ -130,6 +134,33 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
         <TooltipTrigger asChild>{inner}</TooltipTrigger>
         <TooltipContent side="right">{label}</TooltipContent>
       </Tooltip>
+    );
+  };
+
+  // Same nav link with a pending-count badge. Shared so the admin queue and the
+  // contributor's own queue cannot drift apart visually.
+  const navLinkWithCount = (
+    to: string,
+    label: string,
+    Icon: React.ElementType,
+    active: boolean,
+    count: number
+  ) => {
+    if (count <= 0) return navLink(to, label, Icon, active);
+    return (
+      <div className="relative">
+        {navLink(to, label, Icon, active)}
+        <span
+          className={cn(
+            "absolute rounded-full bg-primary font-bold text-primary-foreground text-[0.6rem]",
+            collapsed
+              ? "-right-1 -top-1 px-1"
+              : "right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5"
+          )}
+        >
+          {count}
+        </span>
+      </div>
     );
   };
 
@@ -205,7 +236,12 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
                   <li key={item.to}>{navLink(item.to, item.label, item.icon, pathname === item.to)}</li>
                 ))}
                 {group.label === "Account" && isContributor && (
-                  <li>{navLink("/my-submissions", "My Submissions", Inbox, pathname === "/my-submissions")}</li>
+                  <li>
+                    {navLinkWithCount(
+                      "/my-submissions", "My Submissions", Inbox,
+                      pathname === "/my-submissions", pendingCount
+                    )}
+                  </li>
                 )}
               </ul>
             </div>
@@ -222,23 +258,9 @@ export function NavSidebar({ collapsed = false, onNavigate }: NavSidebarProps) {
               <ul className={cn("list-none flex flex-col gap-0.5", collapsed && "items-center")}>
                 {adminItems.map((item) => (
                   <li key={item.to}>
-                    {item.to === "/submissions" && pendingCount > 0 ? (
-                      <div className="relative">
-                        {navLink(item.to, item.label, item.icon, pathname === item.to)}
-                        {!collapsed && (
-                          <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-primary px-1.5 py-0.5 text-[0.6rem] font-bold text-primary-foreground">
-                            {pendingCount}
-                          </span>
-                        )}
-                        {collapsed && (
-                          <span className="absolute -right-1 -top-1 rounded-full bg-primary px-1 text-[0.6rem] font-bold text-primary-foreground">
-                            {pendingCount}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      navLink(item.to, item.label, item.icon, pathname === item.to)
-                    )}
+                    {item.to === "/submissions"
+                      ? navLinkWithCount(item.to, item.label, item.icon, pathname === item.to, pendingCount)
+                      : navLink(item.to, item.label, item.icon, pathname === item.to)}
                   </li>
                 ))}
               </ul>

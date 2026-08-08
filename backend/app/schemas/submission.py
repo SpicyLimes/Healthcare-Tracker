@@ -17,6 +17,9 @@ class SubmissionRead(BaseModel):
     action: SubmissionAction
     record_id: str | None
     payload: dict[str, Any]
+    # The target record as it stands now, so an admin can compare before
+    # approving. None for creates and for records already deleted.
+    current_values: dict[str, Any] | None = None
     status: SubmissionStatus
     reviewed_by: uuid.UUID | None
     reviewed_by_label: str | None
