@@ -13,9 +13,10 @@
 
 ## Features
 
-- **15 record sections:** Profile, Insurance, Pharmacies, Doctors & Specialists, Family Health History, Procedures, Hospitalizations, Vision History, Dental History, Vaccinations, Medications / Vitamins / Supplements, Ailment History, Visit & Call Logs, Appointments, Documents
+- **15 record sections:** Profile, Insurance, Pharmacies, Doctors & Specialists, Family Health History, Procedures, Hospitalizations, Vision History, Dental History, Vaccinations, Medications / Vitamins / Supplements, Ailment History, Visit & Call Logs, Vitals, Documents. Appointments are managed on the Calendar rather than as a separate page.
 - **Typed visits and procedures:** Visit & Call Logs cover in-person visits, phone calls, and telehealth (phone/telehealth entries show as "Call:" on the calendar); Procedures cover surgeries, out-patient procedures, and clinic visits — both with a type badge on every row and one-click filter pills
 - **Linked records:** Medications link to their prescribing doctor and the pharmacy that fills them — names resolve automatically everywhere they're shown, including the dashboard, share links, and printed summaries
+- **Per-doctor view:** Opening a doctor shows every record that points back at them, grouped by the role they played — "Prescriber (4)", "Surgeon (1)", "Attending (2)" — so the standard pre-appointment question ("what has this doctor prescribed, treated, and operated on?") is answered on one screen instead of across eight pages
 - **Nutrition Plan:** Meal planner (by breakfast/lunch/dinner/snacks), acceptable and unacceptable foods lists with meal-type checkboxes, and section-level document uploads
 - **Notes / To-Do's:** Personal notes with pin-to-top and done/completed toggles; any user can create and edit their own notes
 - **Document uploads:** PDFs, images, and Office files attached to any section or record; preview in-browser
@@ -24,7 +25,7 @@
 - **Daily Reminders (admin-only):** Build a large-print, one-page medication reminder sheet for a caregiver or patient — the kind you stick on the fridge. Cards are grouped by time of day (morning / midday / evening / as-needed), each with an emoji, a plain-language description, and an optional warning badge, plus an optional sidebar of daily reminders and a red "do not take / avoid" bar. **Seed it from your own data:** import active medications from the Medications section and foods to avoid from the Nutrition Plan, then reword them into plain language ("Allergy medicine" rather than a drug name and dosage) — imports append and flag possible duplicates, so your edits are never overwritten. Cards can be reordered, added, removed, hidden, and recoloured (four presets plus custom colours), and the whole sheet saves server-side. **Print Daily Reminders** opens the finished 8.5×11" page in a new tab for browser print → save as PDF
 - **AI assistant (optional):** A built-in chat that answers questions about the patient's records by querying the database through read-only tools — answers are grounded in real data, never invented. Available to any signed-in user (Admin, Contributor, or Viewer); write actions are role-gated, so Viewers get a read-only assistant. For Admins it can also **help manage records and notes conversationally**: describe an event in plain language ("follow-up with the cardiologist last Tuesday, prescribed a new medication") and the assistant drafts the corresponding records across the relevant sections for you to confirm, and it can likewise add, edit, or delete notes and to-dos on request. **Creating, editing, and deleting are deliberately gated** — the assistant reads its proposed change back to you and only writes after you confirm; edits and deletes require a one-time, server-side confirmation that the model cannot bypass, and every write goes through the same validation and audit log as a manual change. On phones the assistant opens as a dedicated full-screen page; on desktop it slides in as a resizable panel (Standard / Medium / Large, remembered across sessions) with an active model indicator and privacy note. Bring your own self-hosted, OpenAI-compatible endpoint (e.g. LM Studio or Ollama); the model URL and name are set in-app and the assistant is disabled by default. Record creation and document reading require a model that supports tool use (and vision, for documents). No record data is sent anywhere unless you configure and enable it.
 - **Role-based access:** Admin (full access), Contributor (propose changes for admin approval), Viewer (read-only), Guest (time-limited share links)
-- **Contributor submissions:** Contributors propose record changes that queue for admin review; admins approve or reject from a Submissions page, and contributors track their own pending items under "My Submissions"
+- **Contributor submissions:** Contributors propose record changes that queue for admin review; admins approve or reject from a Submissions page, and contributors track their own pending items under "My Submissions". Every pending change is shown as a **before → after comparison** against the record's current values, so approving a dose change or a deletion is never a blind decision — a pending delete lists exactly what would be removed. Rejected proposals can be **resubmitted** prefilled, rather than retyped from scratch.
 - **Share links:** Admin generates signed, expiring URLs scoped to specific sections for doctors; one-time token display, revocable; **email delivery built in** — send a link (with an optional message) straight from the app via your own SMTP server, with only a masked recipient stored in the audit log
 - **Audit log:** Every write, authentication event (login, logout, failed login, password change/reset), user-management action, and share link access logged with a specific action label, actor, timestamp, and detail; filterable in-app
 - **Backups:** Nightly automated PostgreSQL dump + uploads archive with 7-day retention, plus an admin **Backups page** — create a backup on demand, download or upload backup archives, and do a full guarded restore, all from the browser
@@ -94,7 +95,7 @@ docker compose -f docker-compose.prod.yml up -d
 That's it. The app handles the rest:
 - Database schema is created and migrated automatically on startup
 - Your first admin account is created from `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD`
-- Nightly backups start writing to `BACKUP_HOST_PATH` (default: `./backups`) automatically
+- Nightly backups start writing to `BACKUP_HOST_PATH` (default: `./backups`) automatically — set `TZ` if you want 2:00 AM to mean 2:00 AM where you live (see [Backups](#backups))
 - Change your admin password after first login
 
 The app is available on **port 1337**. How you expose it — reverse proxy, VPN, Cloudflare Tunnel, or LAN-only — is entirely up to you.
@@ -113,7 +114,13 @@ Three account roles: **Admin** (full access and user management), **Contributor*
 
 ### Backups
 
-The `backup` container runs nightly at 2:00 AM. The 7 most recent daily backups are kept automatically.
+The `backup` container runs nightly at 2:00 AM **in whatever timezone `TZ` is set to**. Leave `TZ` unset and the container runs UTC, so the job fires at 02:00 UTC — 9:00 PM the previous evening in US Central. Set it in your `.env` to the zone you actually live in:
+
+```bash
+TZ=America/Chicago      # any IANA zone name
+```
+
+The 7 most recent daily backups are kept automatically.
 
 **In-app (recommended):** Admins manage everything from the **Backups** page — create a backup on demand, download any backup as a single archive, upload a previously downloaded archive, restore (guarded by a typed confirmation, with an automatic safety backup taken first), and delete. Uploaded backups are never auto-pruned.
 
