@@ -58,12 +58,48 @@ def _type_of(name: str) -> str:
     return "nightly"
 
 
+CREATED_AT_FILE = "created_at"
+
+
+def _created_at(d: Path) -> datetime:
+    """When the backup run STARTED, in UTC.
+
+    backup.sh writes a `created_at` sidecar as its first act. Prefer it: the
+    directory mtime advances as files are written, so it reports when the last
+    byte of the uploads tarball landed — minutes off on a large archive — and
+    moves again whenever anything touches the directory.
+
+    App-created dirs (manual-/safety-/uploaded-) carry a full UTC stamp in the
+    name, so parse that. Nightly dirs are named YYYY-MM-DD with no time at all,
+    which is why the sidecar exists. mtime is the last resort for backups made
+    before the sidecar shipped.
+    """
+    stamp = d / CREATED_AT_FILE
+    if stamp.is_file():
+        try:
+            parsed = datetime.fromisoformat(stamp.read_text().strip())
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+
+    name = d.name
+    if not _NIGHTLY_RE.match(name):
+        try:
+            return datetime.strptime(
+                name.split("-", 1)[1], "%Y-%m-%dT%H%M%S"
+            ).replace(tzinfo=timezone.utc)
+        except (ValueError, IndexError):
+            pass
+
+    return datetime.fromtimestamp(d.stat().st_mtime, tz=timezone.utc)
+
+
 def _info(d: Path) -> BackupInfo:
     files = [d / DB_FILE, d / UPLOADS_FILE]
     return BackupInfo(
         id=d.name,
         type=_type_of(d.name),
-        created_at=datetime.fromtimestamp(d.stat().st_mtime, tz=timezone.utc),
+        created_at=_created_at(d),
         size_bytes=sum(f.stat().st_size for f in files if f.is_file()),
         complete=all(f.is_file() for f in files),
     )
@@ -141,6 +177,10 @@ def create_backup(kind: str, *, dump_runner=None) -> BackupInfo:
         raise RuntimeError("A backup with this timestamp already exists; retry in a second")
     dest.mkdir(parents=True)
     try:
+        # Written first, same as backup.sh, so "Created" is the start of the run.
+        (dest / CREATED_AT_FILE).write_text(
+            datetime.now(timezone.utc).isoformat(timespec="seconds")
+        )
         dump_runner(_libpq_url(), dest / DB_FILE)
         with tarfile.open(dest / UPLOADS_FILE, "w:gz") as tar:
             tar.add(settings.uploads_root, arcname="uploads")

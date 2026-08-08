@@ -65,6 +65,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_DB: ${POSTGRES_DB}
+      TZ: ${TZ:-UTC}
     depends_on:
       db:
         condition: service_healthy

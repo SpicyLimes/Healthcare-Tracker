@@ -5,7 +5,14 @@ DATE=$(date +%Y-%m-%d)
 DEST="/backups/${DATE}"
 mkdir -p "${DEST}"
 
-echo "[backup] $(date -u +%FT%TZ) — starting backup for ${DATE}"
+# Record when this run actually STARTED, in UTC. The directory's mtime is not a
+# usable substitute: it advances as each file is written, so it reports when the
+# last byte of the uploads tarball landed (minutes later on a large archive) and
+# shifts again whenever anything touches the directory.
+STARTED_AT=$(date -u +%FT%TZ)
+echo "${STARTED_AT}" > "${DEST}/created_at"
+
+echo "[backup] ${STARTED_AT} — starting backup for ${DATE}"
 
 # Strip SQLAlchemy driver prefix so pg_dump gets a valid libpq URL
 LIBPQ_URL=$(echo "${DATABASE_URL}" | sed 's|postgresql+[^:]*://|postgresql://|')

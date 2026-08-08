@@ -62,6 +62,59 @@ class TestList:
         assert svc.list_backups() == []
 
 
+class TestCreatedAt:
+    """The Backups page's "Created" column.
+
+    It read the directory's st_mtime, which is when the LAST file finished
+    writing, not when the run started — minutes off on a big uploads tarball,
+    and it moved again whenever anything touched the directory. Nightly dirs are
+    named YYYY-MM-DD with no time in them, so backup.sh now writes a `created_at`
+    sidecar as its first act.
+    """
+
+    def test_prefers_the_sidecar_over_mtime(self, tmp_backups_dir):
+        d = _mk(tmp_backups_dir, "2026-07-12")
+        (d / svc.CREATED_AT_FILE).write_text("2026-07-12T07:00:00Z")
+        # mtime is "now"; the sidecar must win regardless.
+        assert svc._created_at(d) == datetime(2026, 7, 12, 7, 0, tzinfo=timezone.utc)
+
+    def test_naive_sidecar_is_read_as_utc(self, tmp_backups_dir):
+        d = _mk(tmp_backups_dir, "2026-07-12")
+        (d / svc.CREATED_AT_FILE).write_text("2026-07-12T07:00:00")
+        assert svc._created_at(d).tzinfo is not None
+        assert svc._created_at(d) == datetime(2026, 7, 12, 7, 0, tzinfo=timezone.utc)
+
+    def test_app_created_backups_use_the_timestamp_in_the_name(self, tmp_backups_dir):
+        d = _mk(tmp_backups_dir, "manual-2026-07-13T143000")
+        assert svc._created_at(d) == datetime(2026, 7, 13, 14, 30, tzinfo=timezone.utc)
+
+    def test_falls_back_to_mtime_for_pre_sidecar_backups(self, tmp_backups_dir):
+        d = _mk(tmp_backups_dir, "2026-07-12")
+        os.utime(d, (1_752_000_000, 1_752_000_000))
+        assert svc._created_at(d) == datetime.fromtimestamp(1_752_000_000, tz=timezone.utc)
+
+    def test_malformed_sidecar_falls_back_instead_of_crashing(self, tmp_backups_dir):
+        d = _mk(tmp_backups_dir, "2026-07-12")
+        (d / svc.CREATED_AT_FILE).write_text("not a timestamp")
+        os.utime(d, (1_752_000_000, 1_752_000_000))
+        assert svc._created_at(d) == datetime.fromtimestamp(1_752_000_000, tz=timezone.utc)
+
+    def test_sidecar_does_not_count_toward_size_or_completeness(self, tmp_backups_dir):
+        d = _mk(tmp_backups_dir, "2026-07-12", db=b"abc", uploads=b"de")
+        (d / svc.CREATED_AT_FILE).write_text("2026-07-12T07:00:00Z")
+        info = svc._info(d)
+        assert info.size_bytes == 5, "sidecar must not inflate the reported size"
+        assert info.complete is True
+
+    def test_create_backup_writes_the_sidecar(self, tmp_backups_dir, monkeypatch):
+        monkeypatch.setattr(svc, "run_pg_dump", _fake_dump)
+        info = svc.create_backup("manual")
+        d = tmp_backups_dir / info.id
+        assert (d / svc.CREATED_AT_FILE).is_file()
+        # Sidecar and the name-derived stamp must agree to the second.
+        assert abs((svc._created_at(d) - info.created_at).total_seconds()) < 1
+
+
 class TestPrune:
     def test_keeps_newest_seven_nightlies(self, tmp_backups_dir):
         for i in range(1, 10):

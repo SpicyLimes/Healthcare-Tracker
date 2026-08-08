@@ -65,6 +65,9 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_DB: ${POSTGRES_DB}
+      # Nightly cron fires at 2:00 AM in THIS zone. Left unset it is UTC,
+      # which lands at 9:00 PM the previous evening in US Central.
+      TZ: ${TZ:-UTC}
     depends_on:
       db:
         condition: service_healthy
