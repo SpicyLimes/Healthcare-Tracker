@@ -114,10 +114,10 @@ export default function FamilyHistoryPage() {
     }
   }
 
-  async function onDelete(id: string) {
+  async function onDelete(id: string, label?: string) {
     const msg = isContributor
-      ? "Submit a deletion request for this family history record? An Admin must approve before it is removed."
-      : "Delete this family history record?";
+      ? `Submit a deletion request for ${label ?? "this family history record"}? An Admin must approve before it is removed.`
+      : `Delete ${label ?? "this family history record"}?`;
     if (!window.confirm(msg)) return;
     setError("");
     try {
@@ -161,7 +161,7 @@ export default function FamilyHistoryPage() {
               getHeadline={(r) => `${r.relative} — ${r.condition}`}
               getSubtitle={(r) => r.condition ?? null}
               onEdit={(r) => openEdit(r)}
-              onDelete={(r) => onDelete(r.id)}
+              onDelete={(r) => onDelete(r.id, `${r.relative} — ${r.condition}`)}
               emptyMessage="No family history records yet."
             />
           </CardContent>

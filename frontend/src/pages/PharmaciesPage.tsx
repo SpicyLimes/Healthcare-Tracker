@@ -116,10 +116,10 @@ export default function PharmaciesPage() {
     }
   }
 
-  async function onDelete(id: string) {
+  async function onDelete(id: string, label?: string) {
     const msg = isContributor
-      ? "Submit a deletion request for this pharmacy? An Admin must approve before it is removed."
-      : "Delete this pharmacy?";
+      ? `Submit a deletion request for ${label ?? "this pharmacy"}? An Admin must approve before it is removed.`
+      : `Delete ${label ?? "this pharmacy"}?`;
     if (!window.confirm(msg)) return;
     setError("");
     try {
@@ -163,7 +163,7 @@ export default function PharmaciesPage() {
               getHeadline={(r) => r.name}
               getSubtitle={(r) => r.phone ?? null}
               onEdit={(r) => openEdit(r)}
-              onDelete={(r) => onDelete(r.id)}
+              onDelete={(r) => onDelete(r.id, r.name)}
               emptyMessage="No pharmacy records yet."
             />
           </CardContent>

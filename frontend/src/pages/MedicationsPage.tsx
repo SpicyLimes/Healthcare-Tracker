@@ -142,10 +142,10 @@ export default function MedicationsPage() {
     }
   }
 
-  async function onDelete(id: string) {
+  async function onDelete(id: string, label?: string) {
     const msg = isContributor
-      ? "Submit a deletion request for this medication? An Admin must approve before it is removed."
-      : "Delete this medication?";
+      ? `Submit a deletion request for ${label ?? "this medication"}? An Admin must approve before it is removed.`
+      : `Delete ${label ?? "this medication"}?`;
     if (!window.confirm(msg)) return;
     try {
       await medicationsApi.remove(id);
@@ -196,7 +196,7 @@ export default function MedicationsPage() {
               getSubtitle={(r) => [r.dose, r.route, r.frequency].filter(Boolean).join(" · ") || null}
               getBadge={(r) => ({ label: r.is_active ? "Active" : "Inactive", variant: r.is_active ? "default" : "secondary" })}
               onEdit={(r) => openEdit(r)}
-              onDelete={(r) => onDelete(r.id)}
+              onDelete={(r) => onDelete(r.id, r.name)}
               emptyMessage="No medication records yet."
             />
           </CardContent>

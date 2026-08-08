@@ -116,10 +116,10 @@ export default function AilmentsPage() {
     }
   }
 
-  async function onDelete(id: string) {
+  async function onDelete(id: string, label?: string) {
     const msg = isContributor
-      ? "Submit a deletion request for this ailment? An Admin must approve before it is removed."
-      : "Delete this ailment?";
+      ? `Submit a deletion request for ${label ?? "this ailment"}? An Admin must approve before it is removed.`
+      : `Delete ${label ?? "this ailment"}?`;
     if (!window.confirm(msg)) return;
     try {
       await ailmentsApi.remove(id);
@@ -169,7 +169,7 @@ export default function AilmentsPage() {
               getSubtitle={(r) => r.onset_date ?? null}
               getBadge={(r) => ({ label: r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : "", variant: r.status === "active" ? "default" : "secondary" })}
               onEdit={(r) => openEdit(r)}
-              onDelete={(r) => onDelete(r.id)}
+              onDelete={(r) => onDelete(r.id, r.condition)}
               emptyMessage="No ailment records yet."
             />
           </CardContent>

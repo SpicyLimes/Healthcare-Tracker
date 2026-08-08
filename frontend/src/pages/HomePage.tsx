@@ -268,8 +268,11 @@ export default function HomePage() {
       <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Welcome header */}
         <div className="mb-8 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="font-heading text-2xl font-semibold text-foreground text-balance">
+          {/* min-w-0 lets this column shrink; without it the long greeting
+              pushed Print Summary off-screen on a phone (measured 403px left
+              edge in a 375px viewport). */}
+          <div className="min-w-0">
+            <h1 className="font-heading text-2xl font-semibold text-foreground text-balance break-words">
               {getGreeting(tz)}, {user?.full_name || user?.email}
             </h1>
             <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">

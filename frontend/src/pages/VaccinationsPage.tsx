@@ -121,10 +121,10 @@ export default function VaccinationsPage() {
     }
   }
 
-  async function onDelete(id: string) {
+  async function onDelete(id: string, label?: string) {
     const msg = isContributor
-      ? "Submit a deletion request for this vaccination record? An Admin must approve before it is removed."
-      : "Delete this vaccination record?";
+      ? `Submit a deletion request for ${label ?? "this vaccination record"}? An Admin must approve before it is removed.`
+      : `Delete ${label ?? "this vaccination record"}?`;
     if (!window.confirm(msg)) return;
     try { await vaccinationsApi.remove(id); await reload(); isContributor
         ? showAck("Deletion submitted for approval.")
@@ -166,7 +166,7 @@ export default function VaccinationsPage() {
               getHeadline={(r) => r.vaccine}
               getSubtitle={(r) => r.administered_date ? formatDate(r.administered_date) : null}
               onEdit={(r) => openEdit(r)}
-              onDelete={(r) => onDelete(r.id)}
+              onDelete={(r) => onDelete(r.id, r.vaccine)}
               emptyMessage="No vaccination records yet."
             />
           </CardContent>

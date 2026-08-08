@@ -45,6 +45,7 @@ describe("ShareLinksPage", () => {
   });
 
   it("revoke button calls revokeShareLink", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     vi.spyOn(api, "listShareLinks").mockResolvedValue([LINK]);
     const revokeSpy = vi.spyOn(api, "revokeShareLink").mockResolvedValue();
     render(<ShareLinksPage />);
@@ -53,6 +54,21 @@ describe("ShareLinksPage", () => {
     fireEvent.click(screen.getAllByRole("button", { name: /more/i })[0]);
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /revoke/i }));
     await waitFor(() => expect(revokeSpy).toHaveBeenCalledWith("abc-123"));
+  });
+
+  it("does not revoke when the confirmation is declined", async () => {
+    // Revoking is irreversible and kills a link a doctor may be reading now.
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    vi.spyOn(api, "listShareLinks").mockResolvedValue([LINK]);
+    const revokeSpy = vi.spyOn(api, "revokeShareLink").mockResolvedValue();
+    render(<ShareLinksPage />);
+    await screen.findAllByText("Dr. Smith");
+    fireEvent.click(screen.getAllByRole("button", { name: /more/i })[0]);
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /revoke/i }));
+    expect(confirmSpy).toHaveBeenCalled();
+    // The link label must appear in the prompt so a mis-click is catchable.
+    expect(confirmSpy.mock.calls[0][0]).toContain("Dr. Smith");
+    expect(revokeSpy).not.toHaveBeenCalled();
   });
 
   it("email action opens the form and sends to the recipient", async () => {

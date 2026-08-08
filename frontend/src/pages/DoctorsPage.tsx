@@ -112,10 +112,10 @@ export default function DoctorsPage() {
     }
   }
 
-  async function onDelete(id: string) {
+  async function onDelete(id: string, label?: string) {
     const msg = isContributor
-      ? "Submit a deletion request for this doctor? An Admin must approve before it is removed."
-      : "Delete this doctor?";
+      ? `Submit a deletion request for ${label ?? "this doctor"}? An Admin must approve before it is removed.`
+      : `Delete ${label ?? "this doctor"}?`;
     if (!window.confirm(msg)) return;
     try {
       await doctorsApi.remove(id);
@@ -162,7 +162,7 @@ export default function DoctorsPage() {
               getHeadline={(r) => r.name}
               getSubtitle={(r) => r.specialty ?? null}
               onEdit={(r) => openEdit(r)}
-              onDelete={(r) => onDelete(r.id)}
+              onDelete={(r) => onDelete(r.id, r.name)}
               emptyMessage="No doctor records yet."
             />
           </CardContent>

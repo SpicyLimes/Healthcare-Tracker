@@ -117,10 +117,10 @@ export default function DentalHistoryPage() {
     }
   }
 
-  async function onDelete(id: string) {
+  async function onDelete(id: string, label?: string) {
     const msg = isContributor
-      ? "Submit a deletion request for this dental history record? An Admin must approve before it is removed."
-      : "Delete this dental history record?";
+      ? `Submit a deletion request for ${label ?? "this dental history record"}? An Admin must approve before it is removed.`
+      : `Delete ${label ?? "this dental history record"}?`;
     if (!window.confirm(msg)) return;
     try { await dentalHistoryApi.remove(id); await reload(); isContributor
         ? showAck("Deletion submitted for approval.")
@@ -160,7 +160,7 @@ export default function DentalHistoryPage() {
               getHeadline={(r) => r.procedure ?? r.visit_date ?? "Dental Visit"}
               getSubtitle={(r) => r.visit_date ?? null}
               onEdit={(r) => openEdit(r)}
-              onDelete={(r) => onDelete(r.id)}
+              onDelete={(r) => onDelete(r.id, r.procedure ?? r.visit_date ?? "Dental Visit")}
               emptyMessage="No dental history records yet."
             />
           </CardContent>

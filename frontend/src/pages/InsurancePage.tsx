@@ -123,10 +123,10 @@ export default function InsurancePage() {
     }
   }
 
-  async function onDelete(id: string) {
+  async function onDelete(id: string, label?: string) {
     const msg = isContributor
-      ? "Submit a deletion request for this insurance record? An Admin must approve before it is removed."
-      : "Delete this insurance record?";
+      ? `Submit a deletion request for ${label ?? "this insurance record"}? An Admin must approve before it is removed.`
+      : `Delete ${label ?? "this insurance record"}?`;
     if (!window.confirm(msg)) return;
     setError("");
     try {
@@ -177,7 +177,7 @@ export default function InsurancePage() {
               getHeadline={(r) => r.insurer_name}
               getSubtitle={(r) => r.policy_number ?? null}
               onEdit={(r) => openEdit(r)}
-              onDelete={(r) => onDelete(r.id)}
+              onDelete={(r) => onDelete(r.id, r.insurer_name)}
               emptyMessage="No insurance records yet."
             />
           </CardContent>

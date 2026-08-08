@@ -20,6 +20,10 @@ interface MobileRecordListProps<T extends { id: string | number }> {
   getBadge?: (record: T) => MobileBadgeConfig | null
   getFields: (record: T) => MobileFieldConfig[]
   expandedContent?: (record: T) => React.ReactNode
+  /** Row-level actions (Copy Link, Download…). Forwarded from RecordTable so
+   *  mobile keeps the constructive actions desktop has — previously only the
+   *  desktop branch received this, leaving phones with Delete but no Copy. */
+  renderRowActions?: (record: T) => React.ReactNode
   isAdmin?: boolean
   onEdit?: (record: T) => void
   onDelete?: (record: T) => void
@@ -33,6 +37,7 @@ export function MobileRecordList<T extends { id: string | number }>({
   getBadge,
   getFields,
   expandedContent,
+  renderRowActions,
   isAdmin,
   onEdit,
   onDelete,
@@ -105,6 +110,11 @@ export function MobileRecordList<T extends { id: string | number }>({
                 </dl>
                 {expandedContent && (
                   <div className="mt-3">{expandedContent(record)}</div>
+                )}
+                {renderRowActions && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {renderRowActions(record)}
+                  </div>
                 )}
                 {(onEdit || onDelete) && isAdmin && (
                   <div className="mt-3 flex gap-2">

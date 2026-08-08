@@ -33,10 +33,15 @@ interface ToastState {
 
 const ToastContext = createContext<ToastState | undefined>(undefined);
 
+// Tokenised so each theme supplies its own foreground. These previously used
+// dark-theme text shades (text-emerald-100 etc.) with no `dark:` variant, so in
+// the light theme the text sat at ~1.1:1 against its own background — toasts
+// are the only transient confirmation on 13 record pages, and a light-theme
+// user could not tell a successful save from a silent failure.
 const VARIANT_STYLES: Record<ToastVariant, string> = {
-  success: "border-emerald-500/40 bg-emerald-500/15 text-emerald-100",
-  info: "border-sky-500/40 bg-sky-500/15 text-sky-100",
-  error: "border-red-500/40 bg-red-500/15 text-red-100",
+  success: "border-success/40 bg-success/15 text-success-foreground",
+  info: "border-info/40 bg-info/15 text-info-foreground",
+  error: "border-destructive/40 bg-destructive/15 text-destructive-foreground",
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {

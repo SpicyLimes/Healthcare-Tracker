@@ -93,6 +93,7 @@ export function RecordTable<T extends object>({
             }))
           }
           expandedContent={renderDetailExtra}
+          renderRowActions={renderRowActions}
           isAdmin={isAdmin}
           onEdit={onEdit}
           onDelete={onDelete}

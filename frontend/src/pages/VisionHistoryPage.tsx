@@ -118,10 +118,10 @@ export default function VisionHistoryPage() {
     }
   }
 
-  async function onDelete(id: string) {
+  async function onDelete(id: string, label?: string) {
     const msg = isContributor
-      ? "Submit a deletion request for this vision history record? An Admin must approve before it is removed."
-      : "Delete this vision history record?";
+      ? `Submit a deletion request for ${label ?? "this vision history record"}? An Admin must approve before it is removed.`
+      : `Delete ${label ?? "this vision history record"}?`;
     if (!window.confirm(msg)) return;
     try { await visionHistoryApi.remove(id); await reload(); isContributor
         ? showAck("Deletion submitted for approval.")
@@ -162,7 +162,7 @@ export default function VisionHistoryPage() {
               getHeadline={(r) => r.visit_date ?? "Vision Visit"}
               getSubtitle={(r) => resolveDoctorName(r.provider_id, r.provider_other) || null}
               onEdit={(r) => openEdit(r)}
-              onDelete={(r) => onDelete(r.id)}
+              onDelete={(r) => onDelete(r.id, r.visit_date ?? "Vision Visit")}
               emptyMessage="No vision history records yet."
             />
           </CardContent>

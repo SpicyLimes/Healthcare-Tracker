@@ -181,7 +181,9 @@ export default function ProfilePage() {
       payload.main_doctor_id = mainDoctorId;
       await saveProfile(payload);
     } catch {
-      // silent — user can retry
+      // Was silent. Attaching a POA/healthcare-proxy document could fail, look
+      // like it worked, and be discovered missing in a crisis.
+      setError("Could not attach the document. Please try again.");
     } finally {
       setUploadingContacts((prev) => { const s = new Set(prev); s.delete(index); return s; });
     }
@@ -372,7 +374,7 @@ export default function ProfilePage() {
                             type="button"
                             aria-label={`Remove allergy ${i + 1}`}
                             onClick={() => removeAllergy(i)}
-                            className="absolute right-3 top-3 text-muted-foreground hover:text-destructive"
+                            className="absolute right-3 top-3 text-destructive/70 hover:text-destructive"
                           >
                             ×
                           </button>

@@ -39,6 +39,9 @@ export default function NutritionPlanPage() {
   const [acceptableFoods, setAcceptableFoods] = useState<NutritionAcceptableFood[]>([]);
   const [unacceptableFoods, setUnacceptableFoods] = useState<NutritionUnacceptableFood[]>([]);
   const [docs, setDocs] = useState<DocumentRecord[]>([]);
+  // Never assert an empty restricted-foods list before the fetch resolves —
+  // "No unacceptable foods added yet" is how someone serves a restricted food.
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   // Card 1 add inputs per meal type
@@ -80,7 +83,9 @@ export default function NutritionPlanPage() {
   }
 
   useEffect(() => {
-    reload().catch(() => setError("Failed to load nutrition data"));
+    reload()
+      .catch(() => setError("Failed to load nutrition data"))
+      .finally(() => setLoading(false));
   }, []);
 
   // Card 1: direct add
@@ -309,7 +314,10 @@ export default function NutritionPlanPage() {
             {acceptableOpen && (
               <>
                 <div className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2">
-                  {acceptableFoods.length === 0 && (
+                  {loading && (
+                    <p className="text-xs text-muted-foreground col-span-2">Loading…</p>
+                  )}
+                  {!loading && acceptableFoods.length === 0 && (
                     <p className="text-xs text-muted-foreground col-span-2">No acceptable foods added yet.</p>
                   )}
                   {acceptableFoods.map((food) => (
@@ -395,7 +403,10 @@ export default function NutritionPlanPage() {
             {unacceptableOpen && (
               <>
                 <div className="mt-4 grid grid-cols-1 gap-1 sm:grid-cols-2">
-                  {unacceptableFoods.length === 0 && (
+                  {loading && (
+                    <p className="text-xs text-muted-foreground col-span-2">Loading…</p>
+                  )}
+                  {!loading && unacceptableFoods.length === 0 && (
                     <p className="text-xs text-muted-foreground col-span-2">No unacceptable foods added yet.</p>
                   )}
                   {unacceptableFoods.map((food) => (

@@ -15,6 +15,9 @@ export default function NotesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [notes, setNotes] = useState<Note[]>([]);
+  // Without this the page asserts "No notes yet" while the fetch is still in
+  // flight — stating a negative it has not verified.
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<NoteCreate>(EMPTY);
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -26,7 +29,9 @@ export default function NotesPage() {
   }
 
   useEffect(() => {
-    reload().catch(() => setError("Failed to load notes"));
+    reload()
+      .catch(() => setError("Failed to load notes"))
+      .finally(() => setLoading(false));
   }, []);
 
   async function onAdd(e: FormEvent) {
@@ -135,7 +140,9 @@ export default function NotesPage() {
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
         {/* Notes list */}
-        {notes.length === 0 ? (
+        {loading ? (
+          <p className="text-center text-sm text-muted-foreground py-8">Loading…</p>
+        ) : notes.length === 0 ? (
           <p className="text-center text-sm text-muted-foreground py-8">No notes yet. Add one above.</p>
         ) : (
           <div className="flex flex-col gap-3">

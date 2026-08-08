@@ -102,6 +102,16 @@ export default function ShareLinksPage() {
   }
 
   async function handleRevoke(link: ShareLink) {
+    // Revoking is irreversible — there is no un-revoke endpoint — and it kills
+    // a link a doctor may be reading right now. Delete two lines below has
+    // always confirmed; revoke was missed because the sweep matched on the
+    // word "delete", not on the consequence.
+    if (
+      !window.confirm(
+        `Revoke "${link.label}"? Anyone using this link will immediately lose access, and it cannot be un-revoked.`,
+      )
+    )
+      return;
     try {
       await revokeShareLink(link.id);
       await reload();
@@ -111,7 +121,7 @@ export default function ShareLinksPage() {
   }
 
   async function handleDelete(link: ShareLink) {
-    if (!window.confirm("Permanently delete this share link? This cannot be undone.")) return;
+    if (!window.confirm(`Permanently delete "${link.label}"? This cannot be undone.`)) return;
     try {
       await deleteShareLink(link.id);
       await reload();
