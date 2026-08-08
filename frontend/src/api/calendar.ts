@@ -7,7 +7,8 @@ export type CalendarEventType =
   | "vaccination"
   | "surgery"
   | "hospitalization"
-  | "medication";
+  | "medication"
+  | "follow_up";
 
 export interface CalendarEvent {
   id: string;
@@ -20,13 +21,17 @@ export interface CalendarEvent {
   time?: string | null;         // HH:MM UTC, appointments only
 }
 
+// Must match COLORS in backend/app/routers/calendar.py. Darkened to the
+// -600/-700 steps so white chip text clears WCAG AA at the month grid's 10px
+// size — the -500 steps ranged 1.92:1 to 4.23:1, all failing.
 export const EVENT_COLORS: Record<CalendarEventType, string> = {
-  appointment: "#3b82f6",
-  visit_log: "#8b5cf6",
-  vaccination: "#10b981",
-  surgery: "#ef4444",
-  hospitalization: "#f97316",
-  medication: "#eab308",
+  appointment: "#1d4ed8",
+  visit_log: "#6d28d9",
+  vaccination: "#047857",
+  surgery: "#b91c1c",
+  hospitalization: "#c2410c",
+  medication: "#a16207",
+  follow_up: "#0f766e",
 };
 
 export const EVENT_TYPE_LABELS: Record<CalendarEventType, string> = {
@@ -36,6 +41,7 @@ export const EVENT_TYPE_LABELS: Record<CalendarEventType, string> = {
   surgery: "Procedure",
   hospitalization: "Hospitalization",
   medication: "Medication",
+  follow_up: "Follow-up",
 };
 
 export const calendarApi = {

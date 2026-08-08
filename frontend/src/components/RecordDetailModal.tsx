@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Button } from "@/components/ui/button"
+import { useModalDismiss } from "@/lib/use-modal-dismiss"
 
 export interface DetailField {
   label: string
@@ -27,12 +28,15 @@ export function RecordDetailModal({
   onEdit,
   extra,
 }: RecordDetailModalProps) {
+  const overlayRef = useModalDismiss(onClose)
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      onKeyDown={(e) => e.key === "Escape" && onClose()}
+      ref={overlayRef}
+      tabIndex={-1}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       data-testid="detail-backdrop"
       onClick={onClose}

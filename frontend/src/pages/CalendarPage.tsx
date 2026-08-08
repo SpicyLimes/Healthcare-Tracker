@@ -33,6 +33,9 @@ const EVENT_ROUTES: Partial<Record<CalendarEventType, string>> = {
   hospitalization: "/hospitalizations",
   vaccination: "/vaccinations",
   medication: "/medications",
+  // A follow-up is projected from its visit log, so it links back to the log
+  // that scheduled it.
+  follow_up: "/doc-logs",
 };
 
 const ALL_EVENT_TYPES = Object.keys(EVENT_TYPE_LABELS) as CalendarEventType[];

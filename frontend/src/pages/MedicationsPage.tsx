@@ -251,7 +251,21 @@ export default function MedicationsPage() {
             </FormField>
             <FormField label="Status" htmlFor="med-active">
               <Select id="med-active" value={form.is_active === false ? "false" : "true"}
-                onChange={(e) => setForm((s) => ({ ...s, is_active: e.target.value === "true" }))}>
+                onChange={(e) => {
+                  const active = e.target.value === "true";
+                  setForm((s) => ({
+                    ...s,
+                    is_active: active,
+                    // Stopping a medication records WHEN. is_active and end_date
+                    // were independent, so "when did she stop it?" — asked at
+                    // nearly every follow-up — was unanswerable. Prefilled, not
+                    // forced: the field stays editable below.
+                    end_date:
+                      !active && !s.end_date
+                        ? new Date().toLocaleDateString("en-CA")
+                        : s.end_date,
+                  }));
+                }}>
                 <option value="true">Active</option>
                 <option value="false">Inactive</option>
               </Select>

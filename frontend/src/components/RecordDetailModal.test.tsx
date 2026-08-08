@@ -31,9 +31,11 @@ describe("RecordDetailModal", () => {
   });
 
   it("closes on Escape and on backdrop click", () => {
+    // Escape fires on `document`, not on the dialog node — dispatching straight
+    // at the dialog bypasses focus routing and passes even when Escape is broken.
     const onClose = vi.fn();
     render(<RecordDetailModal title="X" fields={fields} isAdmin onClose={onClose} />);
-    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByTestId("detail-backdrop"));
     expect(onClose).toHaveBeenCalledTimes(2);

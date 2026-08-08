@@ -57,3 +57,38 @@ describe("DoctorPicker", () => {
     expect(screen.getByRole("combobox")).toBeDisabled();
   });
 });
+
+describe("DoctorPicker inline creation", () => {
+  it("creates a doctor without leaving the form and selects it", async () => {
+    // Previously a missing doctor meant abandoning the record form entirely —
+    // the modal closes on backdrop click, so everything typed was lost.
+    mockDoctors();
+    const createSpy = vi
+      .spyOn(doctorsApi.doctorsApi, "create")
+      .mockResolvedValue({
+        id: "d2", name: "Dr. Nadar", specialty: null, practice: null, phone: null,
+        fax: null, address: null, patient_portal_url: null, notes: null,
+      });
+    const onChange = vi.fn();
+    render(<DoctorPicker doctorId={null} doctorOther={null} onChange={onChange} />);
+
+    fireEvent.change(await screen.findByRole("combobox"), { target: { value: "__add__" } });
+    fireEvent.change(screen.getByLabelText(/new doctor name/i), { target: { value: "Dr. Nadar" } });
+    fireEvent.click(screen.getByRole("button", { name: /^add$/i }));
+
+    await waitFor(() => expect(createSpy).toHaveBeenCalledWith({ name: "Dr. Nadar" }));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith("d2", null));
+  });
+
+  it("returns to the dropdown on cancel without creating anything", async () => {
+    mockDoctors();
+    const createSpy = vi.spyOn(doctorsApi.doctorsApi, "create");
+    render(<DoctorPicker doctorId={null} doctorOther={null} onChange={vi.fn()} />);
+
+    fireEvent.change(await screen.findByRole("combobox"), { target: { value: "__add__" } });
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+
+    expect(await screen.findByRole("combobox")).toBeInTheDocument();
+    expect(createSpy).not.toHaveBeenCalled();
+  });
+});

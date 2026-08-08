@@ -1,5 +1,6 @@
 """Tests for emailing a share link (POST /api/share-links/{id}/email)."""
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -199,13 +200,24 @@ def test_email_status_requires_admin(client, db_session):
 
 
 def test_email_expiry_rendered_in_admin_timezone(client, db_session, monkeypatch, smtp_backend):
-    """The email must show the expiry in the sending admin's local time, matching the UI."""
+    """The email must show the expiry in the sending admin's local time, matching the UI.
+
+    The expiry is computed relative to now rather than hardcoded: expires_at is
+    a FutureDatetime, so a fixed date silently becomes unreachable once it
+    passes (this test began failing on 2026-08-02 for that reason). A fixed
+    22:30 UTC clock time keeps the timezone conversion itself deterministic.
+    """
     csrf = _admin(client, db_session)
     client.put("/api/auth/timezone", headers={"X-CSRF-Token": csrf}, json={"timezone": "America/Chicago"})
+
+    # A date far enough out to stay inside the 90-day cap, at a fixed UTC time.
+    target = (datetime.now(timezone.utc) + timedelta(days=30)).replace(
+        hour=22, minute=30, second=0, microsecond=0
+    )
     r = client.post(
         "/api/share-links",
         headers={"X-CSRF-Token": csrf},
-        json={"label": "TZ Link", "expires_at": "2026-08-01T22:30:00+00:00", "allowed_sections": []},
+        json={"label": "TZ Link", "expires_at": target.isoformat(), "allowed_sections": []},
     )
     assert r.status_code == 201, r.text
     link = r.json()
@@ -219,5 +231,6 @@ def test_email_expiry_rendered_in_admin_timezone(client, db_session, monkeypatch
     )
     assert resp.status_code == 204, resp.text
     body = sender.sent[0].text_body
-    # 22:30 UTC on Aug 1 == 5:30 PM CDT the same day
-    assert "August 01, 2026 05:30 PM CDT" in body
+    # 22:30 UTC renders as 5:30 PM CDT (UTC-5) or 4:30 PM CST (UTC-6).
+    expected = target.astimezone(ZoneInfo("America/Chicago")).strftime("%B %d, %Y %I:%M %p %Z")
+    assert expected in body, f"expected {expected!r} in:\n{body}"

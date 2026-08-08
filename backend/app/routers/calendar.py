@@ -17,13 +17,17 @@ from app.schemas.calendar import CalendarEventResponse
 
 router = APIRouter(tags=["calendar"])
 
+# Darkened to the -600/-700 steps so white chip text clears WCAG AA (4.5:1) at
+# the 10px size the month grid uses. The -500 steps measured 1.92:1 (medication)
+# to 4.23:1 (visit_log) — all failing, worst on the yellow.
 COLORS = {
-    "appointment": "#3b82f6",
-    "visit_log": "#8b5cf6",
-    "vaccination": "#10b981",
-    "surgery": "#ef4444",
-    "hospitalization": "#f97316",
-    "medication": "#eab308",
+    "appointment": "#1d4ed8",
+    "visit_log": "#6d28d9",
+    "vaccination": "#047857",
+    "surgery": "#b91c1c",
+    "hospitalization": "#c2410c",
+    "medication": "#a16207",
+    "follow_up": "#0f766e",
 }
 
 APPOINTMENT_TYPE_LABELS = {
@@ -98,6 +102,20 @@ def get_calendar_events(
             "end_date": None,
             "color": COLORS["visit_log"],
         })
+        # Follow-up dates were captured on the visit-log form and read by
+        # nothing — typing "recheck A1c" with a date FELT like scheduling it,
+        # but it never reached the calendar, the dashboard, or Upcoming Events.
+        # Projected read-only: no row is written and no appointment is created,
+        # so this cannot duplicate a real appointment the user also books.
+        if v.follow_up_date is not None:
+            events.append({
+                "id": f"{v.id}:follow-up",
+                "type": "follow_up",
+                "title": f"Follow-up: {v.reason}" if v.reason else "Follow-up",
+                "date": _to_iso(v.follow_up_date),
+                "end_date": None,
+                "color": COLORS["follow_up"],
+            })
 
     # Vaccinations
     vacs = db.execute(

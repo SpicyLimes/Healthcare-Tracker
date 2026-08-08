@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Button } from "@/components/ui/button"
+import { useModalDismiss } from "@/lib/use-modal-dismiss"
 
 export interface RecordFormModalProps {
   title: string
@@ -31,15 +32,36 @@ export function RecordFormModal({
     }
   }
 
+  const overlayRef = useModalDismiss(() => requestClose())
+
+  // Backdrop clicks and Escape discard everything typed. Confirm first if the
+  // user has entered anything — the modal is the only entry path on 13 record
+  // pages, and a stray click on the overlay used to be silently destructive.
+  function requestClose() {
+    const form = overlayRef.current?.querySelector("form")
+    const dirty = form
+      ? [...form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+          "input, textarea, select",
+        )].some((el) => {
+          if (el instanceof HTMLSelectElement) return el.value !== "" && el.selectedIndex > 0
+          if (el.type === "checkbox" || el.type === "radio") return (el as HTMLInputElement).checked
+          return el.value.trim() !== ""
+        })
+      : false
+    if (dirty && !window.confirm("Discard your changes? Anything you've entered will be lost.")) return
+    onClose()
+  }
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      onKeyDown={(e) => e.key === "Escape" && onClose()}
+      ref={overlayRef}
+      tabIndex={-1}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       data-testid="form-backdrop"
-      onClick={onClose}
+      onClick={requestClose}
     >
       <div
         className="mx-4 sm:mx-auto w-full sm:w-[60vw] sm:max-w-3xl rounded-xl border border-border bg-card p-4 sm:p-6 overflow-y-auto max-h-[90vh]"
