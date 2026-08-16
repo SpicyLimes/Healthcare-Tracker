@@ -9,6 +9,10 @@ import type { CalendarEvent } from "../api/calendar";
 import * as apptApiModule from "../api/appointments";
 import * as doctorsApiModule from "../api/doctors";
 
+// useToast throws outside a ToastProvider, and this suite renders the page directly.
+const showToast = vi.fn();
+vi.mock("../components/toast", () => ({ useToast: () => ({ showToast, showAck: vi.fn() }) }));
+
 afterEach(() => vi.restoreAllMocks());
 
 function mockAuth() {
@@ -129,6 +133,24 @@ describe("CalendarPage", () => {
     await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: /\+ add/i }));
     expect(await screen.findByRole("dialog", { name: /add appointment/i })).toBeInTheDocument();
+  });
+
+  it("confirms with a toast after adding an appointment", async () => {
+    // The Appointments card is the only on-screen feedback, and it is easy to
+    // miss; without a toast a successful save looks like nothing happened.
+    showToast.mockClear();
+    mockAuth();
+    vi.spyOn(calApi.calendarApi, "list").mockResolvedValue([]);
+    vi.spyOn(apptApiModule.appointmentsApi, "list").mockResolvedValue([]);
+    vi.spyOn(apptApiModule.appointmentsApi, "create").mockResolvedValue({
+      id: "a1", appointment_datetime: "2026-07-15T14:00:00Z", status: "upcoming",
+    } as unknown as apptApiModule.Appointment);
+    render(<MemoryRouter><CalendarPage /></MemoryRouter>);
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /\+ add/i }));
+    const dialog = await screen.findByRole("dialog", { name: /add appointment/i });
+    fireEvent.submit(dialog.querySelector("form")!);
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith("Appointment added."));
   });
 
   it("agenda rows have click handlers after events load", async () => {

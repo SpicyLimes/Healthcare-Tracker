@@ -15,6 +15,7 @@ import {
 import DoctorPicker from "../components/DoctorPicker";
 import { doctorsApi, type Doctor } from "../api/doctors";
 import { useAuth } from "../auth/useAuth";
+import { useToast } from "../components/toast";
 import DocumentsPanel from "../components/DocumentsPanel";
 import { AppShell } from "@/components/app-shell";
 import { PageLayout } from "@/components/page-layout";
@@ -411,6 +412,9 @@ function AppointmentsSection({ tz, isAdmin, onRegisterOpenById, onRegisterOpenAd
   const [modalMode, setModalMode] = useState<"add" | "edit" | null>(null);
   const [form, setForm] = useState<AppointmentInput>(EMPTY);
   const [modalError, setModalError] = useState("");
+  // Appointments are admin-only (no contributor propose→approve path), so the
+  // plain confirmation is correct here — no showAck branch like the record pages.
+  const { showToast } = useToast();
 
   async function reload() { setRows(await appointmentsApi.list()); }
   useEffect(() => {
@@ -457,8 +461,10 @@ function AppointmentsSection({ tz, isAdmin, onRegisterOpenById, onRegisterOpenAd
       } else {
         await appointmentsApi.create(payload);
       }
+      const wasEdit = modalMode === "edit";
       closeModal();
       await reload();
+      showToast(wasEdit ? "Saved." : "Appointment added.");
     } catch {
       setModalError(modalMode === "edit" ? "Could not update record" : "Could not add record");
     }
@@ -466,8 +472,11 @@ function AppointmentsSection({ tz, isAdmin, onRegisterOpenById, onRegisterOpenAd
 
   async function onDelete(id: string) {
     if (!window.confirm("Delete this appointment?")) return;
-    try { await appointmentsApi.remove(id); await reload(); }
-    catch { setError("Could not delete record"); }
+    try {
+      await appointmentsApi.remove(id);
+      await reload();
+      showToast("Deleted.");
+    } catch { setError("Could not delete record"); }
   }
 
   function openEdit(r: Appointment) {

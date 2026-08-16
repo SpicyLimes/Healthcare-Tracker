@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { getProfile, saveProfile, type ProfileInput } from "../api/profile";
 import { uploadDocument, getDownloadUrl } from "../api/documents";
 import { vitalsApi } from "../api/vitals";
-import { doctorsApi, type Doctor } from "../api/doctors";
+import { doctorsApi, doctorLabel, type Doctor } from "../api/doctors";
 import { formatDate } from "@/lib/format";
 import { useAuth } from "../auth/useAuth";
 import DocumentsPanel from "../components/DocumentsPanel";
@@ -295,7 +295,7 @@ export default function ProfilePage() {
                       <option value="">— Not set —</option>
                       {doctors.map((d) => (
                         <option key={d.id} value={d.id}>
-                          {d.name}{d.specialty ? ` (${d.specialty})` : ""}
+                          {doctorLabel(d)}
                         </option>
                       ))}
                     </Select>

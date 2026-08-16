@@ -17,7 +17,10 @@ vi.mock("../api/vitals", () => ({
   vitalsApi: { list: vi.fn().mockResolvedValue([]) },
 }));
 
-vi.mock("../api/doctors", () => ({
+// Only the network client is stubbed. doctorLabel is a pure formatter, so the
+// real one is used — a hand-written stub would silently drift from it.
+vi.mock("../api/doctors", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/doctors")>()),
   doctorsApi: { list: vi.fn().mockResolvedValue([]) },
 }));
 

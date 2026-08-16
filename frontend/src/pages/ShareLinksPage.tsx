@@ -218,11 +218,11 @@ export default function ShareLinksPage() {
               </FormField>
               {emailError && <p role="alert" className="text-sm text-destructive">{emailError}</p>}
               <div className="flex gap-2">
-                <Button type="submit" size="sm" disabled={emailSending}>
-                  {emailSending ? "Sending…" : "Send"}
-                </Button>
                 <Button type="button" variant="outline" size="sm" onClick={() => setEmailFor(null)}>
                   Cancel
+                </Button>
+                <Button type="submit" size="sm" disabled={emailSending}>
+                  {emailSending ? "Sending…" : "Send"}
                 </Button>
               </div>
             </form>

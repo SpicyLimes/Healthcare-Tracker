@@ -60,6 +60,21 @@ describe("BackupsPage", () => {
     await waitFor(() => expect(restore).toHaveBeenCalledWith("2026-07-12", "2026-07-12"));
   });
 
+  it("puts Cancel before Restore Backup in the confirm dialog", async () => {
+    // Canon app-wide is Cancel -> primary action. Reversed, the destructive
+    // button (it replaces the whole database) sits where muscle memory
+    // expects Cancel.
+    vi.spyOn(api, "listBackups").mockResolvedValue([NIGHTLY]);
+    render(<BackupsPage />);
+    await screen.findAllByText("2026-07-12");
+    fireEvent.click(screen.getByRole("button", { name: /more details for 2026-07-12/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /^restore$/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /confirm restore/i });
+    const labels = Array.from(dialog.querySelectorAll("button")).map((b) => b.textContent?.trim());
+    expect(labels).toEqual(["Cancel", "Restore Backup"]);
+  });
+
   it("delete asks for confirmation", async () => {
     vi.spyOn(api, "listBackups").mockResolvedValue([NIGHTLY]);
     const del = vi.spyOn(api, "deleteBackup").mockResolvedValue();

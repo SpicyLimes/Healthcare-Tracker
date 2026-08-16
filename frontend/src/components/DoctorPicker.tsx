@@ -1,6 +1,6 @@
 // frontend/src/components/DoctorPicker.tsx
 import { useEffect, useState } from "react";
-import { doctorsApi, type Doctor } from "../api/doctors";
+import { doctorsApi, doctorLabel, type Doctor } from "../api/doctors";
 import { Select, Input } from "@/components/ui/form-field";
 import { Button } from "@/components/ui/button";
 
@@ -105,7 +105,7 @@ export default function DoctorPicker({ doctorId, doctorOther, onChange, disabled
       <Select value={selectValue} onChange={handleSelect} disabled={disabled} aria-label="Select doctor">
         <option value="">Select a Doctor…</option>
         {doctors.map((d) => (
-          <option key={d.id} value={d.id}>{d.name}</option>
+          <option key={d.id} value={d.id}>{doctorLabel(d)}</option>
         ))}
         <option value="__other__">Other</option>
         <option value="__add__">+ Add new doctor…</option>

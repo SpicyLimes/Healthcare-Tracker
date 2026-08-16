@@ -22,6 +22,18 @@ describe("DoctorPicker", () => {
     expect(screen.getByText("Other")).toBeInTheDocument();
   });
 
+  it("distinguishes same-named doctors by specialty and practice", async () => {
+    // Duplicate names are real in this data; a bare name makes the two options
+    // identical, so picking a prescriber becomes a coin flip.
+    vi.spyOn(doctorsApi.doctorsApi, "list").mockResolvedValue([
+      { id: "d1", name: "Dr. Alice Renner", specialty: "Cardiology", practice: "Northside", phone: null, fax: null, address: null, patient_portal_url: null, notes: null },
+      { id: "d2", name: "Dr. Alice Renner", specialty: "Dermatology", practice: null, phone: null, fax: null, address: null, patient_portal_url: null, notes: null },
+    ]);
+    render(<DoctorPicker doctorId={null} doctorOther={null} onChange={vi.fn()} />);
+    expect(await screen.findByText("Dr. Alice Renner (Cardiology) — Northside")).toBeInTheDocument();
+    expect(screen.getByText("Dr. Alice Renner (Dermatology)")).toBeInTheDocument();
+  });
+
   it("selecting a known doctor emits (doctor_id, null)", async () => {
     mockDoctors();
     const onChange = vi.fn();

@@ -26,6 +26,18 @@ export interface DoctorInput {
 
 export const doctorsApi = createRecordClient<Doctor, DoctorInput, DoctorInput>("/api/doctors");
 
+/**
+ * Display label for a doctor: "Name (Specialty) — Practice".
+ *
+ * Two doctors can share a name, so a bare name is ambiguous exactly where it
+ * matters most — picking a prescriber or surgeon. Specialty and practice are
+ * appended only when set, so a sparse record still reads as just the name.
+ */
+export function doctorLabel(d: Pick<Doctor, "name" | "specialty" | "practice">): string {
+  const withSpecialty = d.specialty ? `${d.name} (${d.specialty})` : d.name;
+  return d.practice ? `${withSpecialty} — ${d.practice}` : withSpecialty;
+}
+
 /** One record linked to a doctor. */
 export interface RelatedItem {
   id: string;

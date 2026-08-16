@@ -164,19 +164,22 @@ export default function BackupsPage() {
                 onChange={(e) => setConfirmText(e.target.value)}
                 className="w-64 font-mono"
               />
-              <Button
-                variant="destructive"
-                disabled={confirmText !== restoreTarget.id || restoring}
-                onClick={handleRestore}
-              >
-                {restoring ? "Restoring..." : "Restore Backup"}
-              </Button>
+              {/* Cancel first, matching RecordFormModal and every record form. The
+                  reversed order put the destructive action where muscle memory
+                  expects Cancel — and this one replaces the entire database. */}
               <Button
                 variant="outline"
                 disabled={restoring}
                 onClick={() => { setRestoreTarget(null); setConfirmText(""); }}
               >
                 Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={confirmText !== restoreTarget.id || restoring}
+                onClick={handleRestore}
+              >
+                {restoring ? "Restoring..." : "Restore Backup"}
               </Button>
             </div>
           </div>
