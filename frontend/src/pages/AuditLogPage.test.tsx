@@ -18,12 +18,45 @@ const ENTRY: api.AuditLogEntry = {
 };
 
 describe("AuditLogPage", () => {
+  const AI_ENTRY: api.AuditLogEntry = {
+    id: 2,
+    timestamp: "2026-06-04T11:00:00Z",
+    action: "ai_query",
+    actor_type: "user",
+    actor_label: "admin@example.com",
+    section: "ai_chat",
+    record_id: null,
+    detail: "Q: what meds am I on | tools: get_section_records",
+  };
+
   it("renders audit entries", async () => {
     vi.spyOn(api, "listAuditLog").mockResolvedValue([ENTRY]);
     render(<AuditLogPage />);
     expect(await screen.findByText("admin@example.com")).toBeInTheDocument();
-    // "create" appears in both the filter <option> and the table row — confirm at least one cell
-    expect(screen.getAllByText("create").length).toBeGreaterThanOrEqual(1);
+    // "Create" appears in both the filter <option> and the table row — confirm at least one cell
+    expect(screen.getAllByText("Create").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("capitalizes AI in the action filter, the action badge and the section", async () => {
+    vi.spyOn(api, "listAuditLog").mockResolvedValue([AI_ENTRY]);
+    render(<AuditLogPage />);
+    // Filter <option> + the row badge both read "AI Query", never "Ai Query"
+    await waitFor(() => expect(screen.getAllByText("AI Query").length).toBeGreaterThanOrEqual(2));
+    expect(screen.queryByText(/Ai Query/)).not.toBeInTheDocument();
+    expect(screen.getByText("AI Chat")).toBeInTheDocument();
+  });
+
+  it("formats the action, actor type, section and tool list in the detail modal", async () => {
+    vi.spyOn(api, "listAuditLog").mockResolvedValue([AI_ENTRY]);
+    render(<AuditLogPage />);
+    fireEvent.click(await screen.findByRole("button", { name: /more details/i }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("AI Query — admin@example.com");
+    expect(dialog).toHaveTextContent("User");
+    expect(dialog).toHaveTextContent("AI Chat");
+    expect(dialog).toHaveTextContent("Tools: Get Section Records");
+    expect(dialog).not.toHaveTextContent("tools: get_section_records");
   });
 
   it("action filter calls API with action param", async () => {

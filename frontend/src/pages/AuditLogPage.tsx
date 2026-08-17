@@ -18,8 +18,43 @@ const ACTIONS = [
   "backup_create", "backup_download", "backup_upload", "backup_restore", "backup_delete",
 ];
 
+/**
+ * Words that title-casing gets wrong. Keyed by the lower-case token so this
+ * works on action keys, section keys and tool names alike — every one of which
+ * contains "ai", and every one of which used to render as "Ai".
+ */
+const ACRONYMS: Record<string, string> = { ai: "AI", id: "ID" };
+
+/** Title-case an underscored key, honouring ACRONYMS. */
+function humanize(key: string): string {
+  return key
+    .split("_")
+    .map((w) => ACRONYMS[w.toLowerCase()] ?? w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
 function formatAction(action: string): string {
-  return action.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return humanize(action);
+}
+
+/** Section keys used by audit rows are not all record sections (e.g. ai_chat). */
+function formatSection(section: string | null | undefined): string | null {
+  return section ? humanize(section) : null;
+}
+
+/**
+ * The `detail` string is written by the backend as a human sentence, except for
+ * the machine-ish `tools: a,b` suffix the AI router appends
+ * (`ai.py`: `Q: … | tools: get_section_records`). Present that suffix in the
+ * same casing as everything else instead of leaking the raw tool names.
+ */
+function formatDetail(detail: string | null | undefined): string | null {
+  if (!detail) return null;
+  return detail.replace(
+    /\btools:\s*(\S+)/,
+    (_m, list: string) =>
+      `Tools: ${list.split(",").map((t) => humanize(t.trim())).join(", ")}`,
+  );
 }
 
 type ActionBadgeVariant = "default" | "secondary" | "destructive" | "outline";
@@ -132,22 +167,20 @@ export default function AuditLogPage() {
                 {
                   header: "Section",
                   sortKey: "section",
-                  render: (r) => (
-                    <span className="capitalize">{r.section?.replace(/_/g, " ") ?? ""}</span>
-                  ),
+                  render: (r) => <span>{formatSection(r.section) ?? ""}</span>,
                 },
               ]}
-              detailTitle={(r) => `${r.action} — ${r.actor_label}`}
+              detailTitle={(r) => `${formatAction(r.action)} — ${r.actor_label}`}
               detailFields={(r) => [
                 { label: "Timestamp", value: formatDatetime(r.timestamp) },
                 { label: "Actor", value: r.actor_label },
-                { label: "Actor Type", value: r.actor_type },
+                { label: "Actor Type", value: humanize(r.actor_type) },
                 { label: "Action", value: formatAction(r.action) },
-                { label: "Section", value: r.section?.replace(/_/g, " ") ?? null },
+                { label: "Section", value: formatSection(r.section) },
                 { label: "Record ID", value: r.record_id ?? null },
-                { label: "Detail", value: r.detail ?? null },
+                { label: "Detail", value: formatDetail(r.detail) },
               ]}
-              getHeadline={(r) => r.action}
+              getHeadline={(r) => formatAction(r.action)}
               getSubtitle={(r) => `${formatDatetime(r.timestamp)} · ${r.actor_label}`}
               getBadge={(r) => ({ label: formatAction(r.action), variant: actionVariant(r.action) })}
               emptyMessage="No audit log entries."
