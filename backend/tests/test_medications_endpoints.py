@@ -94,3 +94,32 @@ def test_create_and_update_with_pharmacy(client, db_session):
     assert unlinked.status_code == 200
     assert unlinked.json()["pharmacy_id"] is None
     assert unlinked.json()["pharmacy_name"] is None
+
+
+def test_used_for_round_trips_and_survives_partial_update(client, db_session):
+    """`used_for` is why a medication is taken — it must persist, and a partial
+    update of an unrelated field must not silently blank it."""
+    csrf = _admin_login(client, db_session)
+    created = client.post("/api/medications", headers={"X-CSRF-Token": csrf},
+                          json={"name": "Ritalin", "dose": "10 mg", "used_for": "ADD/ADHD"})
+    assert created.status_code == 201
+    assert created.json()["used_for"] == "ADD/ADHD"
+    med_id = created.json()["id"]
+
+    # Editing only the dose must leave the reason intact.
+    updated = client.put(f"/api/medications/{med_id}", headers={"X-CSRF-Token": csrf},
+                         json={"dose": "20 mg"})
+    assert updated.status_code == 200
+    assert updated.json()["used_for"] == "ADD/ADHD"
+    assert updated.json()["dose"] == "20 mg"
+
+    assert client.get(f"/api/medications/{med_id}").json()["used_for"] == "ADD/ADHD"
+
+
+def test_used_for_is_optional_and_defaults_null(client, db_session):
+    """Existing rows predate the column; omitting it must not 422."""
+    csrf = _admin_login(client, db_session)
+    created = client.post("/api/medications", headers={"X-CSRF-Token": csrf},
+                          json={"name": "Aspirin"})
+    assert created.status_code == 201
+    assert created.json()["used_for"] is None

@@ -53,6 +53,7 @@ class MedicationCreate(BaseModel):
     kind: MedicationKind = MedicationKind.medication
     dose: str | None = Field(default=None, max_length=128)
     frequency: str | None = Field(default=None, max_length=128)
+    used_for: str | None = Field(default=None, max_length=256)
     route: str | None = Field(default=None, max_length=128)
     prescribing_doctor: str | None = Field(default=None, max_length=256)
     prescribing_doctor_id: uuid.UUID | None = None
@@ -68,6 +69,7 @@ class MedicationUpdate(BaseModel):
     kind: MedicationKind | None = None
     dose: str | None = Field(default=None, max_length=128)
     frequency: str | None = Field(default=None, max_length=128)
+    used_for: str | None = Field(default=None, max_length=256)
     route: str | None = Field(default=None, max_length=128)
     prescribing_doctor: str | None = Field(default=None, max_length=256)
     prescribing_doctor_id: uuid.UUID | None = None
@@ -86,6 +88,10 @@ class MedicationResponse(BaseModel):
     kind: MedicationKind
     dose: str | None
     frequency: str | None
+    # Defaulted, unlike its neighbours: the contributor create path validates
+    # this model from a raw submission payload dict, and a payload drafted
+    # before this column existed has no `used_for` key at all.
+    used_for: str | None = None
     route: str | None
     # Resolved server-side: linked doctor's name, else the free-text value.
     prescribing_doctor: str | None = Field(

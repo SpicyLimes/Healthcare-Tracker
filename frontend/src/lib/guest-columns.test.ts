@@ -29,6 +29,24 @@ describe("guest columns", () => {
     expect(GUEST_COLUMNS.hospitalizations).toContain("attending_physician");
   });
 
+  it("shows a guest what each medication is for, within the column cap", () => {
+    // The whole point of `used_for`: notes are never shown to guests, so the
+    // reason a med is taken was invisible on a share link.
+    expect(GUEST_COLUMNS.medications).toContain("used_for");
+    expect(GUEST_COLUMNS.medications).not.toContain("notes");
+    // Over the cap, trailing columns are silently sliced off — Status would be
+    // the casualty. Assert the configured list actually fits.
+    expect(GUEST_COLUMNS.medications.length).toBeLessThanOrEqual(MAX_GUEST_COLUMNS);
+
+    const row = {
+      name: "Ritalin", used_for: "ADD/ADHD", dose: "10 mg", frequency: "Daily",
+      prescribing_doctor: "Dr. Lee", is_active: true,
+    };
+    const cols = guestColumns("medications", row);
+    expect(cols).toContain("used_for");
+    expect(cols).toContain("is_active");   // survives the slice
+  });
+
   it("drops configured columns the payload does not actually have", () => {
     const row = { name: "Amoxicillin", dose: "500mg" };
     expect(guestColumns("medications", row)).toEqual(["name", "dose"]);

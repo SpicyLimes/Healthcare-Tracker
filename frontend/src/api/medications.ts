@@ -8,6 +8,8 @@ export interface Medication {
   kind: MedicationKind;
   dose: string | null;
   frequency: string | null;
+  /** What the medication treats, e.g. "ADD/ADHD". Shown to guests; notes are not. */
+  used_for: string | null;
   route: string | null;
   prescribing_doctor: string | null;
   prescribing_doctor_id: string | null;
@@ -24,6 +26,7 @@ export interface MedicationInput {
   kind?: MedicationKind;
   dose?: string | null;
   frequency?: string | null;
+  used_for?: string | null;
   route?: string | null;
   prescribing_doctor?: string | null;
   prescribing_doctor_id?: string | null;

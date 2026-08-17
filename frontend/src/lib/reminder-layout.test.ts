@@ -7,7 +7,7 @@ import type { Medication } from "../api/medications";
 import type { NutritionUnacceptableFood } from "../api/nutritionPlan";
 
 const med = (over: Partial<Medication>): Medication => ({
-  id: "1", name: "Aspirin", kind: "medication", dose: "81mg", frequency: "Once a day",
+  id: "1", name: "Aspirin", kind: "medication", used_for: null, dose: "81mg", frequency: "Once a day",
   route: null, prescribing_doctor: null, prescribing_doctor_id: null, pharmacy_id: null,
   pharmacy_name: null, start_date: null, end_date: null, is_active: true, notes: null, ...over,
 });

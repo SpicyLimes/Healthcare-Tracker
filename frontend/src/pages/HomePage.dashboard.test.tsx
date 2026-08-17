@@ -85,10 +85,10 @@ describe("Dashboard sections", () => {
     mockAuth();
     mockAllApis();
     vi.spyOn(medicationsApiModule.medicationsApi, "list").mockResolvedValue([
-      { id: "m1", name: "Lisinopril", kind: "medication", dose: null, frequency: null,
+      { id: "m1", name: "Lisinopril", kind: "medication", used_for: null, dose: null, frequency: null,
         route: null, prescribing_doctor: null, prescribing_doctor_id: null,
         start_date: null, end_date: null, is_active: true, notes: null },
-      { id: "m2", name: "OldMed", kind: "medication", dose: null, frequency: null,
+      { id: "m2", name: "OldMed", kind: "medication", used_for: null, dose: null, frequency: null,
         route: null, prescribing_doctor: null, prescribing_doctor_id: null,
         start_date: null, end_date: null, is_active: false, notes: null },
     ]);
@@ -101,11 +101,11 @@ describe("Dashboard sections", () => {
     mockAuth();
     mockAllApis();
     vi.spyOn(medicationsApiModule.medicationsApi, "list").mockResolvedValue([
-      { id: "m1", name: "Lisinopril", kind: "medication", dose: null, frequency: null,
+      { id: "m1", name: "Lisinopril", kind: "medication", used_for: null, dose: null, frequency: null,
         route: null, prescribing_doctor: null, prescribing_doctor_id: null,
         pharmacy_id: "p1", pharmacy_name: "CVS Main St",
         start_date: null, end_date: null, is_active: true, notes: null },
-      { id: "m2", name: "PlainMed", kind: "medication", dose: null, frequency: null,
+      { id: "m2", name: "PlainMed", kind: "medication", used_for: null, dose: null, frequency: null,
         route: null, prescribing_doctor: null, prescribing_doctor_id: null,
         pharmacy_id: null, pharmacy_name: null,
         start_date: null, end_date: null, is_active: true, notes: null },

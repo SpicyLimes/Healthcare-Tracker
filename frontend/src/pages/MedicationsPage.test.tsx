@@ -36,7 +36,7 @@ describe("MedicationsPage", () => {
   it("lists medications", async () => {
     mockAuth("viewer");
     vi.spyOn(medsApi.medicationsApi, "list").mockResolvedValue([
-      { id: "1", name: "Aspirin", kind: "medication", dose: "81mg", frequency: null,
+      { id: "1", name: "Aspirin", kind: "medication", used_for: null, dose: "81mg", frequency: null,
         prescribing_doctor: null, start_date: null, end_date: null, is_active: true, notes: null },
     ]);
     render(<MemoryRouter><MedicationsPage /></MemoryRouter>);
@@ -69,7 +69,7 @@ describe("MedicationsPage", () => {
   it("admin opens a pre-filled Edit modal from a row", async () => {
     mockAuth("admin");
     vi.spyOn(medsApi.medicationsApi, "list").mockResolvedValue([
-      { id: "1", name: "Aspirin", kind: "medication", dose: "81mg", frequency: null,
+      { id: "1", name: "Aspirin", kind: "medication", used_for: null, dose: "81mg", frequency: null,
         prescribing_doctor: null, start_date: null, end_date: null, is_active: true, notes: null },
     ]);
     render(<MemoryRouter><MedicationsPage /></MemoryRouter>);
@@ -84,7 +84,7 @@ describe("MedicationsPage", () => {
   it("auto-opens edit modal when ?open=<id> is in the URL", async () => {
     mockAuth("admin");
     vi.spyOn(medsApi.medicationsApi, "list").mockResolvedValue([
-      { id: "med1", name: "Aspirin", kind: "medication", dose: "81mg", frequency: null,
+      { id: "med1", name: "Aspirin", kind: "medication", used_for: null, dose: "81mg", frequency: null,
         prescribing_doctor: null, start_date: null, end_date: null, is_active: true, notes: null },
     ]);
     render(
@@ -116,7 +116,7 @@ describe("MedicationsPage", () => {
     mockAuth("admin");
     mockPharmaciesList();
     vi.spyOn(medsApi.medicationsApi, "list").mockResolvedValue([
-      { id: "m1", name: "Lisinopril", kind: "medication", dose: null, frequency: null,
+      { id: "m1", name: "Lisinopril", kind: "medication", used_for: null, dose: null, frequency: null,
         route: null, prescribing_doctor: "Dr. Resolved Name", prescribing_doctor_id: "d1",
         pharmacy_id: null, pharmacy_name: null,
         start_date: null, end_date: null, is_active: true, notes: null },
@@ -133,11 +133,34 @@ describe("MedicationsPage", () => {
     expect(update.mock.calls[0][1]).toMatchObject({ prescribing_doctor: null, prescribing_doctor_id: "d1" });
   });
 
+  it("shows Used For in the table and preserves it through an edit", async () => {
+    mockAuth("admin");
+    mockPharmaciesList();
+    vi.spyOn(medsApi.medicationsApi, "list").mockResolvedValue([
+      { id: "m1", name: "Ritalin", kind: "medication", used_for: "ADD/ADHD", dose: "10 mg",
+        frequency: null, route: null, prescribing_doctor: null, prescribing_doctor_id: null,
+        pharmacy_id: null, pharmacy_name: null,
+        start_date: null, end_date: null, is_active: true, notes: null },
+    ]);
+    const update = vi.spyOn(medsApi.medicationsApi, "update").mockResolvedValue({} as never);
+    render(<MemoryRouter><MedicationsPage /></MemoryRouter>);
+
+    // Visible at a glance, without opening the record.
+    expect(await screen.findAllByText("ADD/ADHD")).not.toHaveLength(0);
+
+    // Saving an untouched edit form must not blank it — the field has to be
+    // seeded in openEdit, not just rendered.
+    fireEvent.click(screen.getAllByRole("button", { name: /^edit /i })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(update).toHaveBeenCalled());
+    expect(update.mock.calls[0][1]).toMatchObject({ used_for: "ADD/ADHD" });
+  });
+
   it("detail modal shows the pharmacy name", async () => {
     mockAuth("viewer");
     mockPharmaciesList();
     vi.spyOn(medsApi.medicationsApi, "list").mockResolvedValue([
-      { id: "m1", name: "Lisinopril", kind: "medication", dose: null, frequency: null,
+      { id: "m1", name: "Lisinopril", kind: "medication", used_for: null, dose: null, frequency: null,
         route: null, prescribing_doctor: null, prescribing_doctor_id: null,
         pharmacy_id: "p1", pharmacy_name: "CVS Main St",
         start_date: null, end_date: null, is_active: true, notes: null },

@@ -16,7 +16,10 @@
  * needs to act on.
  */
 export const GUEST_COLUMNS: Record<string, string[]> = {
-  medications: ["name", "dose", "frequency", "route", "prescribing_doctor", "is_active"],
+  // `used_for` displaces `route` rather than becoming a 7th column: the list is
+  // capped at MAX_GUEST_COLUMNS, so an extra entry would silently drop Status
+  // off the end. Route is still one click away in the record detail.
+  medications: ["name", "used_for", "dose", "frequency", "prescribing_doctor", "is_active"],
   ailments: ["condition", "status", "onset_date", "treating_doctor", "notes"],
   visit_logs: ["visit_date", "visit_type", "doctor", "reason", "summary", "follow_up_date"],
   vitals: ["measured_at", "bp_systolic", "bp_diastolic", "pulse_bpm", "weight_lb", "temperature_f"],

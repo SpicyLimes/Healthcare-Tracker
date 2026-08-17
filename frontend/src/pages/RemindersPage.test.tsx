@@ -99,6 +99,7 @@ describe("RemindersPage", () => {
         id: "m1",
         name: "Old Med",
         kind: "medication",
+        used_for: null,
         dose: null,
         frequency: null,
         route: null,

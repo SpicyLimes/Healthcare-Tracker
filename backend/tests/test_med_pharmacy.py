@@ -153,3 +153,29 @@ def test_deleting_pharmacy_unlinks_medication(db_session):
     assert survivor is not None
     assert survivor.pharmacy_id is None
     assert survivor.pharmacy_name is None
+
+
+def test_response_tolerates_payload_without_used_for():
+    """A pending submission drafted BEFORE used_for existed has no such key.
+    The contributor approve path validates this model straight from that dict,
+    so a missing key must default rather than 500 on approval."""
+    out = MedicationResponse.model_validate(
+        {
+            "id": str(uuid.uuid4()),
+            "name": "Aspirin",
+            "kind": "medication",
+            "dose": None,
+            "frequency": None,
+            "route": None,
+            "prescribing_doctor": None,
+            "prescribing_doctor_id": None,
+            "pharmacy_id": None,
+            "start_date": None,
+            "end_date": None,
+            "is_active": True,
+            "notes": None,
+            "created_at": "2026-07-14T00:00:00Z",
+            "updated_at": "2026-07-14T00:00:00Z",
+        }
+    ).model_dump(mode="json")
+    assert out["used_for"] is None

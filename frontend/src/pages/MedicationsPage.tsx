@@ -20,6 +20,7 @@ const EMPTY: MedicationInput = {
   kind: "medication",
   dose: null,
   frequency: null,
+  used_for: null,
   route: null,
   prescribing_doctor: null,
   prescribing_doctor_id: null,
@@ -99,6 +100,7 @@ export default function MedicationsPage() {
     setEditingRow(r);
     setForm({
       name: r.name, kind: r.kind, dose: r.dose, frequency: r.frequency,
+      used_for: r.used_for,
       route: r.route,
       // prescribing_doctor arrives RESOLVED (linked doctor's name); writing it
       // back would clobber the free-text column, so null it when linked by id.
@@ -178,12 +180,14 @@ export default function MedicationsPage() {
               defaultSortDir="desc"
               primaryColumns={[
                 { header: "Name", sortKey: "name", render: (r) => r.name, className: "px-4 py-3 font-medium text-foreground" },
+                { header: "Used For", sortKey: "used_for", render: (r) => r.used_for ?? "" },
                 { header: "Dose", sortKey: "dose", render: (r) => r.dose ?? "" },
                 { header: "Active", sortKey: "is_active", render: (r) => (r.is_active ? "Yes" : "No") },
               ]}
               detailTitle={(r) => r.name}
               detailFields={(r) => [
                 { label: "Kind", value: r.kind ? r.kind.charAt(0).toUpperCase() + r.kind.slice(1) : null },
+                { label: "Used For", value: r.used_for },
                 { label: "Dose", value: r.dose },
                 { label: "Frequency", value: r.frequency },
                 { label: "Route", value: r.route ? r.route.charAt(0).toUpperCase() + r.route.slice(1) : null },
@@ -195,7 +199,7 @@ export default function MedicationsPage() {
               ]}
               renderDetailExtra={(r) => <DocumentsPanel section="medications" recordId={r.id} isAdmin={isAdmin} />}
               getHeadline={(r) => r.name}
-              getSubtitle={(r) => [r.dose, r.route, r.frequency].filter(Boolean).join(" · ") || null}
+              getSubtitle={(r) => [r.used_for, r.dose, r.route, r.frequency].filter(Boolean).join(" · ") || null}
               getBadge={(r) => ({ label: r.is_active ? "Active" : "Inactive", variant: r.is_active ? "default" : "secondary" })}
               onEdit={(r) => openEdit(r)}
               onDelete={(r) => onDelete(r.id, r.name)}
@@ -221,6 +225,11 @@ export default function MedicationsPage() {
               <Input id="med-name" required placeholder="e.g. Lisinopril"
                 value={form.name}
                 onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} />
+            </FormField>
+            <FormField label="Used For" htmlFor="med-used-for">
+              <Input id="med-used-for" placeholder="e.g. ADD/ADHD, Blood pressure"
+                value={form.used_for ?? ""}
+                onChange={(e) => setForm((s) => ({ ...s, used_for: e.target.value || null }))} />
             </FormField>
             <FormField label="Kind" htmlFor="med-kind">
               <Select id="med-kind" value={form.kind ?? "medication"}

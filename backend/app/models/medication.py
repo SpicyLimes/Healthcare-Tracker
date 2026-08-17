@@ -35,6 +35,9 @@ class Medication(Base):
     )
     dose: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     frequency: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    # What the medication treats ("ADD/ADHD", "Blood pressure"). Kept separate
+    # from `notes` so it can be shown to guests, who never see notes.
+    used_for: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     route: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     prescribing_doctor: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     prescribing_doctor_id: Mapped[Optional[uuid.UUID]] = mapped_column(
