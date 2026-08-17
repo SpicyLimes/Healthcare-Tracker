@@ -104,8 +104,12 @@ function buildPrintHtml(opts: {
       </ul>`
     : "<p>No vitals on file.</p>";
 
+  // Mirrors the dashboard card: name, then a dimmer "used for · pharmacy" line.
   const medsHtml = activeMeds.length > 0
-    ? `<ul>${activeMeds.map((m) => `<li>${escapeHtml(m.name)}${m.pharmacy_name ? ` · ${escapeHtml(m.pharmacy_name)}` : ""}</li>`).join("")}</ul>`
+    ? `<ul>${activeMeds.map((m) => {
+        const sub = [m.used_for, m.pharmacy_name].filter(Boolean).map((v) => escapeHtml(String(v))).join(" · ");
+        return `<li>${escapeHtml(m.name)}${sub ? `<br><span class="sub">${sub}</span>` : ""}</li>`;
+      }).join("")}</ul>`
     : "<p>None on file.</p>";
 
   const allergiesHtml = allergies.length > 0
@@ -139,6 +143,7 @@ function buildPrintHtml(opts: {
     .item { margin-bottom: 6px; }
     p { margin: 4px 0; }
     .empty { color: #888; font-size: 12px; }
+    .sub { color: #555; font-size: 11px; }
     @media print { body { margin: 0; } }
   </style>
   <script>window.onload = function() { window.print(); }</script>
@@ -411,7 +416,18 @@ export default function HomePage() {
                       {activeMeds.map((m) => (
                         <li key={m.id} className="flex items-start gap-1 text-sm text-foreground">
                           <span aria-hidden="true">•</span>
-                          <span>{m.name}{m.pharmacy_name ? ` · ${m.pharmacy_name}` : ""}</span>
+                          {/* Name on its own line; what it is FOR and where it
+                              comes from drop to a smaller, dimmer second line.
+                              Both are optional, so the line is omitted rather
+                              than left as a stray separator. */}
+                          <span>
+                            <span className="block">{m.name}</span>
+                            {[m.used_for, m.pharmacy_name].some(Boolean) && (
+                              <span className="block text-xs text-muted-foreground">
+                                {[m.used_for, m.pharmacy_name].filter(Boolean).join(" · ")}
+                              </span>
+                            )}
+                          </span>
                         </li>
                       ))}
                     </ul>

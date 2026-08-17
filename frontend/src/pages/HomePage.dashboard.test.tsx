@@ -112,8 +112,38 @@ describe("Dashboard sections", () => {
     ]);
     render(<MemoryRouter><HomePage /></MemoryRouter>);
 
-    await waitFor(() => expect(screen.getByText("Lisinopril · CVS Main St")).toBeInTheDocument());
+    // Name and detail line are separate elements now, not one joined string.
+    await waitFor(() => expect(screen.getByText("Lisinopril")).toBeInTheDocument());
+    expect(screen.getByText("CVS Main St")).toBeInTheDocument();
+    // No pharmacy and no used_for → no stray second line at all.
     expect(screen.getByText("PlainMed")).toBeInTheDocument();
+  });
+
+  it("puts used_for and pharmacy on a smaller, dimmer second line", async () => {
+    mockAuth();
+    mockAllApis();
+    vi.spyOn(medicationsApiModule.medicationsApi, "list").mockResolvedValue([
+      { id: "m1", name: "Ritalin", kind: "medication", used_for: "ADD/ADHD", dose: null,
+        frequency: null, route: null, prescribing_doctor: null, prescribing_doctor_id: null,
+        pharmacy_id: "p1", pharmacy_name: "CVS Main St",
+        start_date: null, end_date: null, is_active: true, notes: null },
+      { id: "m2", name: "Metformin", kind: "medication", used_for: "Type 2 diabetes", dose: null,
+        frequency: null, route: null, prescribing_doctor: null, prescribing_doctor_id: null,
+        pharmacy_id: null, pharmacy_name: null,
+        start_date: null, end_date: null, is_active: true, notes: null },
+    ]);
+    render(<MemoryRouter><HomePage /></MemoryRouter>);
+
+    await waitFor(() => expect(screen.getByText("Ritalin")).toBeInTheDocument());
+
+    const sub = screen.getByText("ADD/ADHD · CVS Main St");
+    expect(sub.className).toContain("text-xs");
+    expect(sub.className).toContain("text-muted-foreground");
+    // The name keeps the card's normal size/colour — it must NOT be dimmed.
+    expect(screen.getByText("Ritalin").className).not.toContain("text-muted-foreground");
+
+    // Only one of the two present → no dangling separator.
+    expect(screen.getByText("Type 2 diabetes")).toBeInTheDocument();
   });
 
   it("shows most recent visit log date and reason", async () => {
