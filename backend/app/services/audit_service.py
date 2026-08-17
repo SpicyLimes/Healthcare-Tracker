@@ -19,6 +19,8 @@ def log_event(
     detail: Optional[str] = None,
     actor_user_id: Optional[uuid.UUID] = None,
     actor_share_link_id: Optional[uuid.UUID] = None,
+    attempted_identity: Optional[str] = None,
+    ai_response: Optional[str] = None,
 ) -> None:
     """Write an audit log entry. Best-effort: never raises."""
     try:
@@ -30,6 +32,8 @@ def log_event(
             section=section,
             record_id=record_id,
             detail=detail,
+            attempted_identity=attempted_identity,
+            ai_response=ai_response,
         )
         db.add(entry)
         db.flush()

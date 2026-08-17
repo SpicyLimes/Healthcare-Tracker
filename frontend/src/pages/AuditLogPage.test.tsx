@@ -46,8 +46,10 @@ describe("AuditLogPage", () => {
     expect(screen.getByText("AI Chat")).toBeInTheDocument();
   });
 
-  it("formats the action, actor type, section and tool list in the detail modal", async () => {
-    vi.spyOn(api, "listAuditLog").mockResolvedValue([AI_ENTRY]);
+  it("unpacks an AI row into Question / Response / Tools Used", async () => {
+    vi.spyOn(api, "listAuditLog").mockResolvedValue([
+      { ...AI_ENTRY, ai_response: "You are taking Metformin." },
+    ]);
     render(<AuditLogPage />);
     fireEvent.click(await screen.findByRole("button", { name: /more details/i }));
 
@@ -55,8 +57,57 @@ describe("AuditLogPage", () => {
     expect(dialog).toHaveTextContent("AI Query — admin@example.com");
     expect(dialog).toHaveTextContent("User");
     expect(dialog).toHaveTextContent("AI Chat");
-    expect(dialog).toHaveTextContent("Tools: Get Section Records");
+    expect(dialog).toHaveTextContent("Question");
+    expect(dialog).toHaveTextContent("what meds am I on");
+    expect(dialog).toHaveTextContent("Response");
+    expect(dialog).toHaveTextContent("You are taking Metformin.");
+    expect(dialog).toHaveTextContent("Tools Used");
+    expect(dialog).toHaveTextContent("Get Section Records");
+    // The packed backend format must not leak through.
+    expect(dialog).not.toHaveTextContent("Q:");
     expect(dialog).not.toHaveTextContent("tools: get_section_records");
+  });
+
+  it("hides the Tools Used row when the AI ran no tools", async () => {
+    vi.spyOn(api, "listAuditLog").mockResolvedValue([
+      { ...AI_ENTRY, detail: "Q: hello there | tools: none", ai_response: "Hi." },
+    ]);
+    render(<AuditLogPage />);
+    fireEvent.click(await screen.findByRole("button", { name: /more details/i }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("hello there");
+    // "Tools: None" used to be crammed into the question text.
+    expect(dialog).not.toHaveTextContent("Tools Used");
+    expect(dialog).not.toHaveTextContent("None");
+  });
+
+  it("omits the Response row entirely on non-AI actions", async () => {
+    vi.spyOn(api, "listAuditLog").mockResolvedValue([ENTRY]);
+    render(<AuditLogPage />);
+    fireEvent.click(await screen.findByRole("button", { name: /more details/i }));
+
+    const dialog = await screen.findByRole("dialog");
+    // Would otherwise render as a blank "Response —" row on all 24 other actions.
+    expect(dialog).not.toHaveTextContent("Response");
+    expect(dialog).toHaveTextContent("Detail");
+    expect(dialog).not.toHaveTextContent("Question");
+  });
+
+  it("renders the attempted email as the actor on a failed login", async () => {
+    vi.spyOn(api, "listAuditLog").mockResolvedValue([
+      {
+        ...ENTRY,
+        id: 3,
+        action: "login_failed",
+        actor_label: "typo@example.com",
+        section: null,
+        detail: "Failed login attempt: typo@example.com",
+      },
+    ]);
+    render(<AuditLogPage />);
+    expect(await screen.findByText("typo@example.com")).toBeInTheDocument();
+    expect(screen.queryByText("unknown")).not.toBeInTheDocument();
   });
 
   it("action filter calls API with action param", async () => {

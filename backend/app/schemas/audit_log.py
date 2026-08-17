@@ -17,3 +17,4 @@ class AuditLogEntry(BaseModel):
     section: str | None
     record_id: str | None
     detail: str | None
+    ai_response: str | None = None   # AI answer; null for every other action

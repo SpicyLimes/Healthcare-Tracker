@@ -65,3 +65,10 @@ class AuditLog(Base):
     section: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     record_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     detail: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    # The identity a failed login was ATTEMPTED as. Deliberately not a FK: the
+    # whole point is that it often matches no user row (typo, probe, ex-staff),
+    # which is exactly why those rows used to render as actor "unknown".
+    attempted_identity: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    # AI assistant's answer, truncated like the question in `detail`. Null for
+    # every other action.
+    ai_response: Mapped[Optional[str]] = mapped_column(String, nullable=True)

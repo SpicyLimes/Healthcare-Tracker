@@ -57,6 +57,28 @@ function formatDetail(detail: string | null | undefined): string | null {
   );
 }
 
+/**
+ * An AI row's `detail` packs three things into one string:
+ * `Q: <question> | tools: <a,b>`. Under a field already labelled "Question" the
+ * `Q:` prefix is redundant, and a bare "Tools: None" is noise — so strip the
+ * prefix and split the tool list into its own field, keeping it only when tools
+ * actually ran.
+ */
+function splitAiDetail(detail: string | null | undefined): {
+  question: string | null;
+  tools: string | null;
+} {
+  if (!detail) return { question: null, tools: null };
+  const m = detail.match(/^Q:\s*([\s\S]*?)\s*\|\s*tools:\s*(\S+)\s*$/);
+  if (!m) return { question: formatDetail(detail), tools: null };
+  const [, question, rawTools] = m;
+  const tools =
+    rawTools === "none"
+      ? null
+      : rawTools.split(",").map((t) => humanize(t.trim())).join(", ");
+  return { question: question || null, tools };
+}
+
 type ActionBadgeVariant = "default" | "secondary" | "destructive" | "outline";
 
 function actionVariant(action: string): ActionBadgeVariant {
@@ -171,15 +193,30 @@ export default function AuditLogPage() {
                 },
               ]}
               detailTitle={(r) => `${formatAction(r.action)} — ${r.actor_label}`}
-              detailFields={(r) => [
-                { label: "Timestamp", value: formatDatetime(r.timestamp) },
-                { label: "Actor", value: r.actor_label },
-                { label: "Actor Type", value: humanize(r.actor_type) },
-                { label: "Action", value: formatAction(r.action) },
-                { label: "Section", value: formatSection(r.section) },
-                { label: "Record ID", value: r.record_id ?? null },
-                { label: "Detail", value: formatDetail(r.detail) },
-              ]}
+              detailFields={(r) => {
+                const base = [
+                  { label: "Timestamp", value: formatDatetime(r.timestamp) },
+                  { label: "Actor", value: r.actor_label },
+                  { label: "Actor Type", value: humanize(r.actor_type) },
+                  { label: "Action", value: formatAction(r.action) },
+                  { label: "Section", value: formatSection(r.section) },
+                  { label: "Record ID", value: r.record_id ?? null },
+                ];
+                if (r.action !== "ai_query") {
+                  return [...base, { label: "Detail", value: formatDetail(r.detail) }];
+                }
+                // An AI row is a Q&A, so unpack it into named fields. These are
+                // appended only here: the modal renders an empty field as "—"
+                // rather than skipping it, so unconditional rows would show up
+                // blank on all 24 other actions.
+                const { question, tools } = splitAiDetail(r.detail);
+                return [
+                  ...base,
+                  { label: "Question", value: question },
+                  { label: "Response", value: r.ai_response ?? null },
+                  ...(tools ? [{ label: "Tools Used", value: tools }] : []),
+                ];
+              }}
               getHeadline={(r) => formatAction(r.action)}
               getSubtitle={(r) => `${formatDatetime(r.timestamp)} · ${r.actor_label}`}
               getBadge={(r) => ({ label: formatAction(r.action), variant: actionVariant(r.action) })}

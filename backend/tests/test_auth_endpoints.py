@@ -257,3 +257,35 @@ def test_failed_login_is_audit_logged(client, db_session):
     assert "Failed login" in entries[0].detail
     from app.models.audit_log import AuditAction
     assert entries[0].action == AuditAction.login_failed
+    # The attempted address is recorded even though it matches no user, so the
+    # Audit Log can name it instead of rendering actor "unknown".
+    assert entries[0].attempted_identity == "notauser@example.com"
+    assert entries[0].actor_user_id is None
+
+
+def test_failed_login_actor_label_is_attempted_email(client, db_session):
+    """The Audit Log must show WHO was attempted, not 'unknown'."""
+    client.post("/api/auth/login", json={"email": "ghost@example.com", "password": "wrong"})
+
+    # An admin session is required to read the audit log.
+    _login(client, db_session)
+    res = client.get("/api/audit-log?action=login_failed")
+    assert res.status_code == 200
+    rows = res.json()
+    row = next(r for r in rows if r["detail"] and "ghost@example.com" in r["detail"])
+    assert row["actor_label"] == "ghost@example.com"
+    assert row["actor_label"] != "unknown"
+
+
+def test_wrong_password_on_real_user_records_that_email(client, db_session):
+    """A real account typed with a bad password is attributed to that address."""
+    from app.models.audit_log import AuditAction, AuditLog
+    user_service.create_user(db_session, "realuser@example.com", "a-strong-passphrase-123", Role.admin)
+
+    client.post("/api/auth/login", json={"email": "realuser@example.com", "password": "not-the-password"})
+
+    entry = db_session.query(AuditLog).filter(
+        AuditLog.action == AuditAction.login_failed,
+        AuditLog.attempted_identity == "realuser@example.com",
+    ).one()
+    assert entry.attempted_identity == "realuser@example.com"

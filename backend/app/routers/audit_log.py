@@ -67,6 +67,11 @@ def list_audit_log(
         elif entry.actor_type == ActorType.guest and entry.actor_share_link_id:
             link = links_by_id.get(entry.actor_share_link_id)
             actor_label = link.label if link else f"deleted link ({entry.actor_share_link_id})"
+        elif entry.attempted_identity:
+            # Failed logins have no actor_user_id when the address matches no
+            # user. Showing what was typed is the whole point of the row —
+            # "unknown" hid the one fact worth auditing.
+            actor_label = entry.attempted_identity
         else:
             actor_label = "unknown"
 
@@ -79,5 +84,6 @@ def list_audit_log(
             section=entry.section,
             record_id=entry.record_id,
             detail=entry.detail,
+            ai_response=entry.ai_response,
         ))
     return result

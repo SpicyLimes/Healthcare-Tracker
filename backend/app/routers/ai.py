@@ -22,6 +22,17 @@ _UNAVAILABLE = HTTPException(
     detail="AI assistant is not available. Configure and enable it in Settings.",
 )
 
+# Both halves of a logged AI exchange are clipped to the same budget. Answers
+# are unbounded, and these rows are PHI that lands in every nightly backup, so
+# the log keeps enough to see what was said without becoming a transcript store.
+AUDIT_TEXT_LIMIT = 500
+
+
+def _clip(text: str | None) -> str:
+    if not text:
+        return ""
+    return text if len(text) <= AUDIT_TEXT_LIMIT else text[:AUDIT_TEXT_LIMIT] + "…"
+
 
 @router.get("/status", response_model=AiStatus,
             dependencies=[Depends(require_authenticated)])
@@ -63,7 +74,8 @@ def chat(
         log_event(
             db, action=AuditAction.ai_query, actor_type=ActorType.user, actor_user_id=current.id,
             section="ai_chat",
-            detail=f"Q: {last_user[:500]} | tools: {','.join(result.tools_used) or 'none'}",
+            detail=f"Q: {_clip(last_user)} | tools: {','.join(result.tools_used) or 'none'}",
+            ai_response=_clip(result.answer),
         )
         db.commit()
     except Exception:

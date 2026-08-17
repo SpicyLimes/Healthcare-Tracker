@@ -221,6 +221,45 @@ def test_chat_happy_path_logs_ai_query(client, db_session, monkeypatch):
     logged = db_session.query(AuditLog).filter(AuditLog.action == AuditAction.ai_query).all()
     assert len(logged) >= 1
     assert "what meds?" in (logged[-1].detail or "")
+    # The answer is logged too, not just the question.
+    assert logged[-1].ai_response == "Hello from AI."
+
+
+def test_chat_logs_truncate_long_answers(client, db_session, monkeypatch):
+    """Answers are unbounded; the audit row must stay clipped like the question."""
+    from app.models.audit_log import AuditAction, AuditLog
+    from app.routers.ai import AUDIT_TEXT_LIMIT
+    from app.services import ai_provider
+    csrf = _login_admin(client, db_session, email="chatlong@example.com")
+    client.put("/api/settings/ai", headers={"X-CSRF-Token": csrf},
+               json={"enabled": True, "base_url": "http://x/v1", "model": "m"})
+
+    long_answer = "A" * 5000
+
+    def fake_completion(base_url, model, messages, tools):
+        return {"message": {"role": "assistant", "content": long_answer, "tool_calls": None}}
+
+    monkeypatch.setattr(ai_provider, "chat_completion", fake_completion)
+    res = client.post("/api/ai/chat", headers={"X-CSRF-Token": csrf},
+                      json={"messages": [{"role": "user", "content": "tell me everything"}]})
+    assert res.status_code == 200
+    # The caller still gets the full answer — only the audit copy is clipped.
+    assert res.json()["answer"] == long_answer
+
+    logged = db_session.query(AuditLog).filter(AuditLog.action == AuditAction.ai_query).all()
+    stored = logged[-1].ai_response
+    assert stored is not None
+    assert len(stored) == AUDIT_TEXT_LIMIT + 1      # +1 for the ellipsis
+    assert stored.endswith("…")
+
+
+def test_non_ai_actions_have_no_ai_response(client, db_session):
+    """ai_response must stay null for everything that is not an AI query."""
+    from app.models.audit_log import AuditAction, AuditLog
+    _login_admin(client, db_session, email="chatnull@example.com")
+    logins = db_session.query(AuditLog).filter(AuditLog.action == AuditAction.login).all()
+    assert len(logins) >= 1
+    assert all(e.ai_response is None for e in logins)
 
 
 def test_chat_provider_unavailable_returns_503(client, db_session, monkeypatch):

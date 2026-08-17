@@ -9,6 +9,8 @@ export interface AuditLogEntry {
   section: string | null;
   record_id: string | null;
   detail: string | null;
+  /** AI assistant's answer, truncated server-side. Null for other actions. */
+  ai_response?: string | null;
 }
 
 export interface AuditLogFilters {
